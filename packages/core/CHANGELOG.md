@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.1.3
+
+### Patch Changes
+
+- 7d89fc6: include dist in package
+
 ## 0.1.2
 
 ### Patch Changes
