@@ -2,19 +2,7 @@
 
 A collection of JavaScript/TypeScript packages for interacting with the Radix Network.
 
-## Packages
-
-### Core [@radix-web3/core](./packages/core)
-
-Core functionality for building and submitting transactions, managing accounts and keypairs.
-
-### Account [@radix-web3/account](./packages/account)
-
-Account management and address derivation utilities.
-
-### Manifests [@radix-web3/manifests](./packages/manifests)
-
-Transaction manifest building and utilities.
+👉 [See docs](https://xstelea.github.io/radix-web3.js/)
 
 ## Getting Started
 
@@ -57,3 +45,17 @@ const { transactionId } = await web3Client.submitTransaction(
 const { fungibleTokens } = await web3Client.getBalances(accountAddress)
 console.log('Balances:', fungibleTokens)
 ```
+
+## Packages
+
+### Core [@radix-web3/core](./packages/core)
+
+Core functionality for building and submitting transactions, managing accounts and keypairs.
+
+### Account [@radix-web3/account](./packages/account)
+
+Account management and address derivation utilities.
+
+### Manifests [@radix-web3/manifests](./packages/manifests)
+
+Transaction manifest building and utilities.
