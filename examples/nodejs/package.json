@@ -1,0 +1,16 @@
+{
+  "name": "nodejs",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "radix-web3.js": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.1",
+    "@types/node": "^22.10.2"
+  }
+}

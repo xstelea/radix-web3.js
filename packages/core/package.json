@@ -1,0 +1,47 @@
+{
+  "name": "radix-web3.js",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./manifests": {
+      "types": "./dist/manifests/index.d.ts",
+      "import": "./dist/manifests/index.js"
+    },
+    "./account": {
+      "types": "./dist/account/index.d.ts",
+      "import": "./dist/account/index.js"
+    },
+    "./keypairs": {
+      "types": "./dist/keypairs/index.d.ts",
+      "import": "./dist/keypairs/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest",
+    "build": "tsup"
+  },
+  "private": true,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.0.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  },
+  "dependencies": {
+    "@radixdlt/babylon-gateway-api-sdk": "^1.9.2",
+    "@radixdlt/radix-engine-toolkit": "^1.0.5"
+  }
+}
