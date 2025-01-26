@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.1.1
+
+### Patch Changes
+
+- 1c77077: Add readme to package
+
 ## 0.1.0
 
 ### Minor Changes
