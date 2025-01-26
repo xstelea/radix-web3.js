@@ -1,28 +1,33 @@
-# Radix Web3.js Monorepo
+---
+slug: /
+title: Get started
+sidebar_position: 1
+---
 
-A collection of JavaScript/TypeScript packages for interacting with the Radix Network.
+# Radix Web3.js
 
-## Packages
+A lightweight, type-safe JavaScript/TypeScript library for interacting with the Radix Network. Built to make Web3 development on Radix simple and intuitive.
 
-### Core [@radix-web3/core](./packages/core)
+## Key Features
 
-Core functionality for building and submitting transactions, managing accounts and keypairs.
+- 🔑 **Simplified Key Management** - Create and manage Ed25519 keypairs
+- 💸 **Transaction Building** - Build, sign, and submit transactions with ease
+- 🔍 **Account Management** - Query balances and transaction history
+- 📝 **Manifest Generation** - Helper functions for common transaction manifests
+- 🌐 **Network Support** - Works with Mainnet, Stokenet, and other Radix networks
+- 🔒 **Type Safety** - Full TypeScript support with comprehensive types
 
-### Account [@radix-web3/account](./packages/account)
+## Quick Start
 
-Account management and address derivation utilities.
+Install the package:
 
-### Manifests [@radix-web3/manifests](./packages/manifests)
-
-Transaction manifest building and utilities.
-
-## Getting Started
-
-```bash
+```shell
 npm install radix-web3.js
 ```
 
-## Quick Example
+## Example Usage
+
+Here's a simple example of creating a wallet and sending XRD tokens:
 
 ```typescript
 import { createEd25519KeyPair, createRadixWeb3Client } from 'radix-web3.js'
