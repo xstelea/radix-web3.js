@@ -2,24 +2,28 @@
   "name": "radix-web3.js",
   "version": "0.1.0",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.ts", 
+      "require": "./dist/index.cjs",
       "import": "./dist/index.js"
     },
     "./manifests": {
       "types": "./dist/manifests/index.d.ts",
+      "require": "./dist/manifests/index.cjs",
       "import": "./dist/manifests/index.js"
     },
     "./account": {
       "types": "./dist/account/index.d.ts",
+      "require": "./dist/account/index.cjs",
       "import": "./dist/account/index.js"
     },
     "./keypairs": {
       "types": "./dist/keypairs/index.d.ts",
+      "require": "./dist/keypairs/index.cjs",
       "import": "./dist/keypairs/index.js"
     }
   },
@@ -28,15 +32,19 @@
     "test": "vitest",
     "build": "tsup"
   },
-  "private": true,
   "license": "MIT",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "tsup": "^8.0.2",
-    "tsx": "^4.7.1",
+    "tsx": "^4.7.1", 
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"
   },

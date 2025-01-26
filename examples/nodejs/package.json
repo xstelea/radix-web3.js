@@ -1,7 +1,8 @@
 {
-  "name": "nodejs",
-  "version": "0.1.0",
+  "name": "nodejs-examples",
+  "version": "0.1.1",
   "type": "module",
+  "private": true,
   "scripts": {
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts"
