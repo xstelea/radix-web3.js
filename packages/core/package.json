@@ -51,5 +51,8 @@
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "^1.9.2",
     "@radixdlt/radix-engine-toolkit": "^1.0.5"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }
