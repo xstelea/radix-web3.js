@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.3.0
+
+### Minor Changes
+
+- 7704c12: update package exports
+
 ## 0.2.0
 
 ### Minor Changes
