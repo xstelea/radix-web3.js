@@ -52,10 +52,10 @@ console.log('Balances:', fungibleTokens)
 
 Core functionality for building and submitting transactions, managing accounts and keypairs.
 
-### Account [@radix-web3/account](./packages/account)
+### Account [@radix-web3/account](./packages/core/src/account)
 
 Account management and address derivation utilities.
 
-### Manifests [@radix-web3/manifests](./packages/manifests)
+### Manifests [@radix-web3/manifests](./packages/core/src/manifests)
 
 Transaction manifest building and utilities.

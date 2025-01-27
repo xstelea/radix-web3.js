@@ -1,14 +1,19 @@
-import { createRadixWeb3Client } from 'radix-web3.js'
-import { getXrdFromFaucetManifest } from 'radix-web3.js/manifests'
-import { fromPublicKey } from 'radix-web3.js/account'
-import { createEd25519KeyPair } from 'radix-web3.js/keypairs'
+import {
+  createRadixWeb3Client,
+  manifests,
+  account,
+  createEd25519KeyPair,
+} from 'radix-web3.js'
 
 export const getXrdFromFaucet = {
   name: 'getXrdFromFaucet',
   procedure: async () => {
     const ed25519KeyPair = createEd25519KeyPair()
 
-    const accountAddress = await fromPublicKey(ed25519KeyPair.publicKey(), 2)
+    const accountAddress = await account.fromPublicKey(
+      ed25519KeyPair.publicKey(),
+      2,
+    )
 
     const client = createRadixWeb3Client({
       networkId: 'Stokenet',
@@ -17,7 +22,9 @@ export const getXrdFromFaucet = {
     })
 
     console.log(
-      await client.submitTransaction(getXrdFromFaucetManifest(accountAddress)),
+      await client.submitTransaction(
+        manifests.getXrdFromFaucetManifest(accountAddress),
+      ),
     )
   },
 }

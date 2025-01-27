@@ -10,21 +10,6 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.js"
-    },
-    "./manifests": {
-      "types": "./dist/manifests/index.d.ts",
-      "require": "./dist/manifests/index.cjs",
-      "import": "./dist/manifests/index.js"
-    },
-    "./account": {
-      "types": "./dist/account/index.d.ts",
-      "require": "./dist/account/index.cjs",
-      "import": "./dist/account/index.js"
-    },
-    "./keypairs": {
-      "types": "./dist/keypairs/index.d.ts",
-      "require": "./dist/keypairs/index.cjs",
-      "import": "./dist/keypairs/index.js"
     }
   },
   "scripts": {
