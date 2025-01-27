@@ -10,14 +10,21 @@ import {
 import { createTransactionHeader } from '@/transaction/transactionHeader'
 import { createStringMessage } from '@/transaction/transactionMessage'
 import { transformStringManifest } from '@/transaction/transformStringManifest'
-import { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk'
+import {
+  GatewayApiClient,
+  TransactionStatusResponse as TransactionStatusResponseType,
+} from '@radixdlt/babylon-gateway-api-sdk'
 import {
   Intent,
   Message,
   PublicKey,
+  Signature,
   TransactionHeader,
   TransactionManifest,
 } from '@radixdlt/radix-engine-toolkit'
+
+export type Manifest = TransactionManifest | string | WithManifestHelper
+export type TransactionStatusResponse = TransactionStatusResponseType
 
 export type SubmitTransactionOptions = {
   transactionHeader?: TransactionHeader
@@ -34,7 +41,10 @@ export type CreateWeb3ClientOptions = {
   notaryPublicKey?: PublicKey
   signer?: TransactionSigner
   notarizer?: TransactionNotarizer
+  messageSigner?: (message: string) => Promise<Signature> | Signature
 }
+
+export type RadixWeb3Client = ReturnType<typeof createRadixWeb3Client>
 
 export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
   const {
@@ -43,6 +53,7 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     notaryPublicKey: defaultNotaryPublicKey,
     signer: defaultSigner,
     notarizer: defaultNotarizer,
+    messageSigner,
   } = options ?? {}
 
   const radixNetworkClient = createRadixNetworkClient({
@@ -114,7 +125,7 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
   }
 
   const submitTransaction = (
-    manifest: TransactionManifest | string | WithManifestHelper,
+    manifest: Manifest,
     options?: SubmitTransactionOptions,
   ) =>
     resolveManifest(manifest)
@@ -163,5 +174,14 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     submitTransaction,
     getBalances,
     networkClient: radixNetworkClient,
+    signMessage: async (message: string) => {
+      if (!messageSigner) {
+        throw new Error('Message signer not provided')
+      }
+
+      return Promise.resolve(message)
+        .then(messageSigner)
+        .then((signature) => signature.hex())
+    },
   }
 }
