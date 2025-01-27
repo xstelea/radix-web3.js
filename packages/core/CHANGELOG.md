@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.2.0
+
+### Minor Changes
+
+- e69195e: include resource metadata
+
 ## 0.1.3
 
 ### Patch Changes
