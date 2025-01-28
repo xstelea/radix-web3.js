@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PrivateKey } from '@radixdlt/radix-engine-toolkit'
 
-import { account } from '@/account'
+import { deriveAccountAddressFromPublicKey } from '@/account'
 import { createRadixWeb3Client } from '@/client'
 import { getXrdFromFaucetManifest } from '@/manifests/getXrdFromFaucet'
 import { manifests } from '@/manifests'
@@ -17,12 +17,12 @@ const keyPair2 = new PrivateKey.Ed25519(
   'faceb00cfaceb00cfaceb00cfaceb00cfaceb00cfaceb00cfaceb00cfaceb00c',
 )
 
-const accountAddress = await account.fromPublicKey(
+const accountAddress = await deriveAccountAddressFromPublicKey(
   keyPair.publicKey(),
   networkId,
 )
 
-const accountAddress2 = await account.fromPublicKey(
+const accountAddress2 = await deriveAccountAddressFromPublicKey(
   keyPair2.publicKey(),
   networkId,
 )
