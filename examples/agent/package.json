@@ -1,0 +1,17 @@
+{
+  "name": "agent",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "NODE_NO_WARNINGS=1 pnpm dlx tsx ./src/index.ts"
+  },
+  "dependencies": {
+    "ai": "^4.1.16",
+    "lowdb": "^7.0.1",
+    "openai": "^4.81.0",
+    "ora": "^8.1.1",
+    "uuid": "^11.0.5",
+    "zod": "catalog:",
+    "dotenv": "catalog:"
+  }
+}

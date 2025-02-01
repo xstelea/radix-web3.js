@@ -1,4 +1,10 @@
 packages:
-  - "examples/*"
-  - "packages/*"
-  - "apps/*"
+  - 'examples/*'
+  - 'packages/*'
+  - 'apps/*'
+
+catalog:
+  '@goat-sdk/core': '^0.4.6'
+  'zod': '^3.24.1'
+  'tsup': '^8.0.2'
+  'dotenv': '^16.4.5'
