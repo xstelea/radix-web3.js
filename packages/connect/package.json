@@ -34,8 +34,7 @@
     "zod": "catalog:"
   },
   "files": [
-    "dist",
-    "package.json"
+    "dist"
   ],
   "license": "MIT",
   "publishConfig": {
