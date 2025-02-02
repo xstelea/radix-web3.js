@@ -118,7 +118,7 @@ importers:
         specifier: ^11.0.5
         version: 11.0.5
       zod:
-        specifier: 'catalog:'
+        specifier: ^3.24.1
         version: 3.24.1
 
   examples/nodejs:

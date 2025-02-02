@@ -7,11 +7,11 @@
   },
   "dependencies": {
     "ai": "^4.1.16",
+    "dotenv": "catalog:",
     "lowdb": "^7.0.1",
     "openai": "^4.81.0",
     "ora": "^8.1.1",
     "uuid": "^11.0.5",
-    "zod": "catalog:",
-    "dotenv": "catalog:"
+    "zod": "^3.24.1"
   }
 }
