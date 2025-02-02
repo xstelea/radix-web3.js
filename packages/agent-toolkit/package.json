@@ -13,6 +13,7 @@
   "dependencies": {
     "@goat-sdk/core": "catalog:",
     "radix-web3.js": "workspace:*",
+    "radix-connect": "workspace:*",
     "zod": "catalog:"
   },
   "files": [

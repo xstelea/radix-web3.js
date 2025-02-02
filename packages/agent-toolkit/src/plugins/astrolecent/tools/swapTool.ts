@@ -7,10 +7,10 @@ export const swapTokensToolDefinition = {
   parameters: z.object({
     inputToken: z
       .string()
-      .describe('The resource address of the token to swap from'),
+      .describe('resource address of the token to swap from'),
     outputToken: z
       .string()
-      .describe('The resource address of the token to swap to'),
+      .describe('resource address of the token to swap to'),
     inputAmount: z
       .number()
       .describe(
@@ -18,7 +18,7 @@ export const swapTokensToolDefinition = {
       ),
     fromAddress: z.string().describe('The account address to perform the swap'),
   }),
-  description: `This tool is used to swap tokens Radix tokens through Astrolecent.`,
+  description: `This tool is used to swap input token to output token using Astrolecent DEX.`,
 }
 
 export const swapTokensMethod = async (
@@ -26,6 +26,9 @@ export const swapTokensMethod = async (
 ) => {
   try {
     const { inputToken, outputToken, inputAmount, fromAddress } = parameters
+    if (inputToken === outputToken) {
+      throw new Error('inputToken and outputToken cannot be the same')
+    }
     return await astrolecentApiClient
       .swap({
         inputToken,
