@@ -11,6 +11,6 @@
     "ai": "^4.1.16",
     "radix-agent-toolkit": "workspace:*",
     "radix-web3.js": "workspace:*",
-    "zod": "catalog:"
+    "zod": "^3.24.1"
   }
 }

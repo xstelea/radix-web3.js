@@ -149,7 +149,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
       zod:
-        specifier: 'catalog:'
+        specifier: ^3.24.1
         version: 3.24.1
 
   packages/agent-toolkit:
