@@ -24,9 +24,6 @@ catalogs:
     blakejs:
       specifier: ^1.2.1
       version: 1.2.1
-    dotenv:
-      specifier: ^16.4.5
-      version: 16.4.7
     tsup:
       specifier: ^8.0.2
       version: 8.3.5
@@ -103,7 +100,7 @@ importers:
         specifier: ^4.1.16
         version: 4.1.16(react@19.0.0)(zod@3.24.1)
       dotenv:
-        specifier: 'catalog:'
+        specifier: ^16.4.5
         version: 16.4.7
       lowdb:
         specifier: ^7.0.1
