@@ -1,0 +1,35 @@
+{
+  "name": "radix-agent-toolkit",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@goat-sdk/core": "catalog:",
+    "radix-web3.js": "workspace:*",
+    "zod": "catalog:"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "package.json"
+  ],
+  "keywords": [
+    "radix dlt",
+    "web3",
+    "crypto",
+    "ai",
+    "agent"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "catalog:"
+  }
+}

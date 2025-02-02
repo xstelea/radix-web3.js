@@ -1,0 +1,16 @@
+{
+  "name": "vercel-ai",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "pnpm dlx tsx ./src/index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.1.9",
+    "@goat-sdk/adapter-vercel-ai": "^0.2.7",
+    "ai": "^4.1.16",
+    "radix-agent-toolkit": "workspace:*",
+    "radix-web3.js": "workspace:*",
+    "zod": "catalog:"
+  }
+}
