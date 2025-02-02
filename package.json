@@ -9,7 +9,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "publish-packages": "turbo run build && changeset version && changeset publish",
     "ci:version": "changeset version",
-    "ci:publish": "pnpm run build && pnpm publish -r"
+    "ci:publish": "pnpm run build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
