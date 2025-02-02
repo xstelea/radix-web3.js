@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "ai": "^4.1.16",
-    "dotenv": "catalog:",
+    "dotenv": "^16.4.5",
     "lowdb": "^7.0.1",
     "openai": "^4.81.0",
     "ora": "^8.1.1",
