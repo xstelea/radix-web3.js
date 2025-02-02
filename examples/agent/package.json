@@ -2,6 +2,7 @@
   "name": "agent",
   "version": "0.1.0",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "start": "NODE_NO_WARNINGS=1 pnpm dlx tsx ./src/index.ts"
   },

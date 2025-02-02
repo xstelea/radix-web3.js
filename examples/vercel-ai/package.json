@@ -2,6 +2,7 @@
   "name": "vercel-ai",
   "version": "0.1.0",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "start": "pnpm dlx tsx ./src/index.ts"
   },
