@@ -6,6 +6,7 @@ import {
   StateEntityFungiblesPageResponse,
   StateEntityNonFungiblesPageRequest,
   StateEntityNonFungiblesPageResponse,
+  RadixNetworkConfigById,
 } from '@radixdlt/babylon-gateway-api-sdk'
 import { submitTransactionFactory } from './submitTransaction'
 import { pollTransactionStatusFactory } from './pollTransactionStatus'
@@ -27,6 +28,8 @@ export const createRadixNetworkClient = (input: {
       networkId: input.networkId,
       applicationName: 'radix-web3.js',
     })
+
+  const networkConfig = RadixNetworkConfigById[input.networkId]
 
   const pollTransactionStatus = pollTransactionStatusFactory(gatewayApiClient)
 
@@ -240,6 +243,7 @@ export const createRadixNetworkClient = (input: {
     pollTransactionStatus,
     getTransactionStatus,
     getCurrentEpoch,
+    getCurrentStateVersion,
     getKnownAddresses,
     previewTransaction,
     estimateTransactionFee,
@@ -248,5 +252,6 @@ export const createRadixNetworkClient = (input: {
     getNonFungibleTokens: (address: string) =>
       getNonFungibleTokens(address).then(convertResourcesToBalances),
     gatewayApiClient,
+    networkConfig,
   }
 }

@@ -1,13 +1,12 @@
 {
-  "name": "nodejs-examples",
+  "name": "transaction-stream-example",
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts"
+    "start:example": "tsx watch src/index.ts"
   },
   "dependencies": {
-    "radix-web3.js": "workspace:*"
+    "radix-transaction-stream": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.7.1",
