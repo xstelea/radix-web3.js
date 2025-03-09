@@ -1,0 +1,35 @@
+{
+  "name": "radix-transaction-stream",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsx --watch src/index.ts",
+    "dev:debug": "tsx --inspect-brk --watch src/index.ts",
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsup": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@radixdlt/babylon-core-api-sdk": "catalog:",
+    "@radixdlt/babylon-gateway-api-sdk": "catalog:",
+    "@radixdlt/radix-dapp-toolkit": "catalog:",
+    "neverthrow": "catalog:",
+    "pino": "catalog:",
+    "radix-web3.js": "workspace:"
+  }
+}
