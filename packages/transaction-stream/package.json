@@ -1,6 +1,6 @@
 {
   "name": "radix-transaction-stream",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -30,6 +30,6 @@
     "@radixdlt/radix-dapp-toolkit": "catalog:",
     "neverthrow": "catalog:",
     "pino": "catalog:",
-    "radix-web3.js": "workspace:"
+    "radix-web3.js": "workspace:*"
   }
 }
