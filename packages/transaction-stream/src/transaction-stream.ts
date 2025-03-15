@@ -5,12 +5,14 @@ import { RadixNetworkClient, createRadixNetworkClient } from 'radix-web3.js'
 import { GetTransactionsOutput, GetTransactionsErrorOutput } from './types'
 import { createTransactionStreamCaller } from './helpers/getTransactionStream'
 import { createStateVersionManager } from './helpers/stateVersionManager'
+import { TransactionDetailsOptIns } from '@radixdlt/babylon-gateway-api-sdk'
 export type TransactionStream = ReturnType<typeof createTransactionStream>
 
 export type TransactionStreamInput = Partial<{
   gatewayApi: RadixNetworkClient
   startStateVersion: number
   numberOfTransactions: number
+  optIns?: TransactionDetailsOptIns
   debug?: boolean
   logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'trace'
 }>
@@ -22,6 +24,7 @@ export const createTransactionStream = (input?: TransactionStreamInput) => {
     numberOfTransactions = 100,
     debug,
     logLevel = 'debug',
+    optIns,
   } = input ?? {}
 
   const logger = debug ? createLogger({ level: logLevel }) : undefined
@@ -35,6 +38,7 @@ export const createTransactionStream = (input?: TransactionStreamInput) => {
   const getTransactionStream = createTransactionStreamCaller({
     baseUrl: gatewayApi.networkConfig.gatewayUrl,
     numberOfTransactions,
+    optIns,
   })
 
   const getTransactions = (

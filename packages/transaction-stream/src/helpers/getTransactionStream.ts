@@ -1,5 +1,6 @@
 import { fetchWrapper } from './fetchWrapper'
 import {
+  type TransactionDetailsOptIns,
   type StreamTransactionsResponse,
   type ErrorResponse as GatewayErrorResponse,
 } from '@radixdlt/babylon-gateway-api-sdk'
@@ -19,9 +20,13 @@ export const createTransactionStreamCaller =
   ({
     baseUrl,
     numberOfTransactions,
+    optIns = {
+      detailed_events: true,
+    },
   }: {
     baseUrl: string
     numberOfTransactions: number
+    optIns?: TransactionDetailsOptIns
   }) =>
   (fromStateVersion: number) =>
     fetchWrapper<
@@ -39,9 +44,7 @@ export const createTransactionStreamCaller =
           kind_filter: 'User',
           order: 'Asc',
           from_ledger_state: { state_version: fromStateVersion },
-          opt_ins: {
-            receipt_events: true,
-          },
+          optIns,
         }),
       }),
     ).mapErr((error) => {

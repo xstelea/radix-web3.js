@@ -19,8 +19,8 @@ catalogs:
       specifier: ^1.2.3
       version: 1.3.0
     '@radixdlt/babylon-gateway-api-sdk':
-      specifier: ^1.6.1
-      version: 1.9.2
+      specifier: ^1.10.1
+      version: 1.10.1
     '@radixdlt/radix-dapp-toolkit':
       specifier: ^2.0.3
       version: 2.2.1
@@ -284,7 +284,7 @@ importers:
         version: 1.3.0
       '@radixdlt/babylon-gateway-api-sdk':
         specifier: 'catalog:'
-        version: 1.9.2
+        version: 1.10.1
       '@radixdlt/radix-dapp-toolkit':
         specifier: 'catalog:'
         version: 2.2.1(typescript@5.6.3)
@@ -295,7 +295,7 @@ importers:
         specifier: 'catalog:'
         version: 9.6.0
       radix-web3.js:
-        specifier: 'workspace:'
+        specifier: workspace:*
         version: link:../core
     devDependencies:
       '@types/node':
@@ -2054,6 +2054,9 @@ packages:
 
   '@radixdlt/babylon-core-api-sdk@1.3.0':
     resolution: {integrity: sha512-Tgtv8t3/Yk6K83Sf+7zCA8yJDcwyxRrE+jTRabF+tHfd1sTrMNqxyC7+jtW8jIgXsUEVR/FSQ4hQUJ/CkAAK6g==}
+
+  '@radixdlt/babylon-gateway-api-sdk@1.10.1':
+    resolution: {integrity: sha512-l/Pt1qaxi2I99ykl9oS4pO+AzBmpMY6oqMOBq0ABbpg7YqqaugZU3OUP/tI0SQsIR1QvXYGdxlsS+HnhioeHlA==}
 
   '@radixdlt/babylon-gateway-api-sdk@1.9.2':
     resolution: {integrity: sha512-AgAqNMKpqlHKfm/NRaYMKOObmAihXCNPDqGUH4/w6kFBQnWl4DAcITUinJDoW5QubdU+qW+awhUiYQfLj3Uxqg==}
@@ -9301,6 +9304,8 @@ snapshots:
   '@polka/url@1.0.0-next.28': {}
 
   '@radixdlt/babylon-core-api-sdk@1.3.0': {}
+
+  '@radixdlt/babylon-gateway-api-sdk@1.10.1': {}
 
   '@radixdlt/babylon-gateway-api-sdk@1.9.2': {}
 
