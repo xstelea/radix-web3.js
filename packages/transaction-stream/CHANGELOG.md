@@ -1,5 +1,11 @@
 # radix-transaction-stream
 
+## 0.2.0
+
+### Minor Changes
+
+- 71543e0: include stream optins
+
 ## 0.1.3
 
 ### Patch Changes
