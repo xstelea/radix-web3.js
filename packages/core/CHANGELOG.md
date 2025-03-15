@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.3.2
+
+### Patch Changes
+
+- 732f37d: expose networkConfig
+
 ## 0.3.1
 
 ### Patch Changes
