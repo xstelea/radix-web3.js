@@ -1,5 +1,11 @@
 # radix-transaction-stream
 
+## 0.2.1
+
+### Patch Changes
+
+- 307aacf: expose optins
+
 ## 0.2.0
 
 ### Minor Changes
