@@ -1,5 +1,12 @@
 # radix-agent-toolkit
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [97409bc]
+  - radix-connect@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # radix-connect
 
+## 0.1.3
+
+### Patch Changes
+
+- 97409bc: fetch network error when switching app on ios
+
 ## 0.1.2
 
 ### Patch Changes
