@@ -66,7 +66,12 @@ export const createRadixConnectRelayTransport = (
         throw new Error('Request aborted')
       }
 
-      response = await apiClient.getResponses(sessionId)
+      try {
+        response = await apiClient.getResponses(sessionId)
+      } catch (error) {
+        console.error(error)
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 1_000))
     }
     return response[0]
