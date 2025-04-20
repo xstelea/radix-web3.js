@@ -1,5 +1,11 @@
 # radix-connect
 
+## 0.3.0
+
+### Minor Changes
+
+- f241973: add helper to derive private key from bip39 mnemonic
+
 ## 0.2.0
 
 ### Minor Changes

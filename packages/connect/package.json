@@ -1,6 +1,6 @@
 {
   "name": "radix-connect",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -30,7 +30,9 @@
     "@noble/curves": "catalog:",
     "@noble/hashes": "catalog:",
     "base64url": "catalog:",
+    "bip39": "catalog:",
     "blakejs": "catalog:",
+    "ed25519-hd-key": "catalog:",
     "zod": "catalog:"
   },
   "files": [
