@@ -1,5 +1,12 @@
 # radix-agent-toolkit
 
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [55eea50]
+  - radix-web3.js@0.4.0
+
 ## 0.1.5
 
 ### Patch Changes

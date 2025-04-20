@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.4.0
+
+### Minor Changes
+
+- 55eea50: fix bug that defaulted to mainnet when submitting tracsation
+
 ## 0.3.3
 
 ### Patch Changes
