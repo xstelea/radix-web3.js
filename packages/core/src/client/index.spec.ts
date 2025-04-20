@@ -6,6 +6,7 @@ import { createRadixWeb3Client } from '@/client'
 import { getXrdFromFaucetManifest } from '@/manifests/getXrdFromFaucet'
 import { manifests } from '@/manifests'
 import { getKnownAddresses } from '@/transaction/helpers/getKnownAddresses'
+import { createFungibleToken } from './createHookahFungibleToken'
 
 const networkId = 2
 
@@ -64,6 +65,14 @@ describe('RadixWeb3Client', () => {
         expect(balances.fungibleTokens.some((r) => r.symbol === 'XRD')).toBe(
           true,
         )
+      })
+
+      it('should create resource', async () => {
+        const { response } = await web3Client.submitTransaction(
+          createFungibleToken(accountAddress),
+        )
+
+        expect(response.status).toBe('CommittedSuccess')
       })
     },
     { timeout: 30000 },

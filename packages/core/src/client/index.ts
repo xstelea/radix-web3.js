@@ -107,7 +107,7 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     notaryPublicKey?: PublicKey
   }): Promise<Intent> =>
     Promise.all([
-      transformStringManifest(manifest),
+      transformStringManifest(manifest, radixNetworkClient.networkId),
       createTransactionIntentHeader(header, notaryPublicKey),
     ]).then(([manifest, header]) => ({
       manifest,

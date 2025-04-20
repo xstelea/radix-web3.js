@@ -30,8 +30,8 @@ export const createTransactionHeader = (
   return async ({
     getCurrentEpoch,
     networkId,
-  }: RadixNetworkClient): Promise<TransactionHeaderType> =>
-    getCurrentEpoch()
+  }: RadixNetworkClient): Promise<TransactionHeaderType> => {
+    return getCurrentEpoch()
       .then(epochBounds)
       .then(({ startEpochInclusive, endEpochExclusive }) => ({
         networkId,
@@ -42,4 +42,5 @@ export const createTransactionHeader = (
         notaryIsSignatory,
         tipPercentage,
       }))
+  }
 }
