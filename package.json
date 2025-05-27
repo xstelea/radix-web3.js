@@ -5,17 +5,19 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "test": "turbo test",
-    "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "publish-packages": "turbo run build && changeset version && changeset publish",
     "ci:version": "changeset version",
-    "ci:publish": "pnpm run build && changeset publish"
+    "ci:publish": "pnpm run build && changeset publish",
+    "format": "biome format --write ./packages/**/**/*.ts",
+    "lint": "biome lint --write ./packages/**/**/*.ts",
+    "check-types": "biome check --write ./packages/**/**/*.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
     "prettier": "^3.2.5",
     "turbo": "^2.3.3",
-    "typescript": "5.5.4"
+    "typescript": "5.5.4",
+    "@biomejs/biome": "1.9.4"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {

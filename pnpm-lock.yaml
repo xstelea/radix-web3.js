@@ -24,12 +24,18 @@ catalogs:
     '@radixdlt/radix-dapp-toolkit':
       specifier: ^2.0.3
       version: 2.2.1
+    '@radixdlt/radix-engine-toolkit':
+      specifier: ^1.0.5
+      version: 1.0.5
     '@types/node':
       specifier: ^22.10.2
       version: 22.10.2
     base64url:
       specifier: ^3.0.1
       version: 3.0.1
+    bignumber.js:
+      specifier: ^9.2.1
+      version: 9.3.0
     bip39:
       specifier: ^3.1.0
       version: 3.1.0
@@ -39,6 +45,9 @@ catalogs:
     ed25519-hd-key:
       specifier: ^1.3.0
       version: 1.3.0
+    effect:
+      specifier: ^3.14.1
+      version: 3.15.4
     neverthrow:
       specifier: ^8.0.0
       version: 8.2.0
@@ -65,6 +74,9 @@ importers:
 
   .:
     devDependencies:
+      '@biomejs/biome':
+        specifier: 1.9.4
+        version: 1.9.4
       '@changesets/cli':
         specifier: ^2.27.12
         version: 2.27.12
@@ -216,7 +228,7 @@ importers:
         version: 22.10.2
       tsup:
         specifier: 'catalog:'
-        version: 8.3.5(jiti@1.21.7)(postcss@8.4.49)(tsx@4.19.2)(typescript@5.6.3)
+        version: 8.3.5(jiti@1.21.7)(postcss@8.4.49)(tsx@4.19.2)(typescript@5.7.3)
 
   packages/connect:
     dependencies:
@@ -267,10 +279,10 @@ importers:
   packages/core:
     dependencies:
       '@radixdlt/babylon-gateway-api-sdk':
-        specifier: ^1.9.2
-        version: 1.9.2
+        specifier: 'catalog:'
+        version: 1.10.1
       '@radixdlt/radix-engine-toolkit':
-        specifier: ^1.0.5
+        specifier: 'catalog:'
         version: 1.0.5
     devDependencies:
       '@types/node':
@@ -287,6 +299,77 @@ importers:
         version: 5.5.4
       vitest:
         specifier: ^1.2.1
+        version: 1.6.0(@types/node@22.10.2)(terser@5.37.0)
+
+  packages/effects:
+    dependencies:
+      '@radixdlt/babylon-gateway-api-sdk':
+        specifier: 'catalog:'
+        version: 1.10.1
+      '@radixdlt/radix-engine-toolkit':
+        specifier: 'catalog:'
+        version: 1.0.5
+      bignumber.js:
+        specifier: 'catalog:'
+        version: 9.3.0
+      decimal.js:
+        specifier: ^10.5.0
+        version: 10.5.0
+      effect:
+        specifier: 'catalog:'
+        version: 3.15.4
+      neverthrow:
+        specifier: 'catalog:'
+        version: 8.2.0
+      radix-web3.js:
+        specifier: workspace:*
+        version: link:../core
+      sbor-ez-mode:
+        specifier: workspace:*
+        version: link:../sbor-ez-mode
+      zod:
+        specifier: 'catalog:'
+        version: 3.24.1
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.10.2
+      tsup:
+        specifier: 'catalog:'
+        version: 8.3.5(jiti@1.21.7)(postcss@8.4.49)(tsx@4.19.2)(typescript@5.6.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.6.3
+      vitest:
+        specifier: 'catalog:'
+        version: 1.6.0(@types/node@22.10.2)(terser@5.37.0)
+
+  packages/sbor-ez-mode:
+    dependencies:
+      '@radixdlt/babylon-gateway-api-sdk':
+        specifier: 'catalog:'
+        version: 1.10.1
+      neverthrow:
+        specifier: 'catalog:'
+        version: 8.2.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.10.2
+      tsup:
+        specifier: 'catalog:'
+        version: 8.3.5(jiti@1.21.7)(postcss@8.4.49)(tsx@4.19.2)(typescript@5.6.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.6.3
+      vitest:
+        specifier: 'catalog:'
         version: 1.6.0(@types/node@22.10.2)(terser@5.37.0)
 
   packages/transaction-stream:
@@ -1006,6 +1089,59 @@ packages:
   '@babel/types@7.26.7':
     resolution: {integrity: sha512-t8kDRGrKXyp6+tjUh7hw2RLyclsW4TRoRvRHtSyAX9Bb5ldlFh+90YAYY6awRXrlB4G5G2izNeGySpATlFzmOg==}
     engines: {node: '>=6.9.0'}
+
+  '@biomejs/biome@1.9.4':
+    resolution: {integrity: sha512-1rkd7G70+o9KkTn5KLmDYXihGoTaIGO9PIIN2ZB7UJxFrWw04CZHPYiMRjYsaDvVV7hP1dYNRLxSANLaBFGpog==}
+    engines: {node: '>=14.21.3'}
+    hasBin: true
+
+  '@biomejs/cli-darwin-arm64@1.9.4':
+    resolution: {integrity: sha512-bFBsPWrNvkdKrNCYeAp+xo2HecOGPAy9WyNyB/jKnnedgzl4W4Hb9ZMzYNbf8dMCGmUdSavlYHiR01QaYR58cw==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@biomejs/cli-darwin-x64@1.9.4':
+    resolution: {integrity: sha512-ngYBh/+bEedqkSevPVhLP4QfVPCpb+4BBe2p7Xs32dBgs7rh9nY2AIYUL6BgLw1JVXV8GlpKmb/hNiuIxfPfZg==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@biomejs/cli-linux-arm64-musl@1.9.4':
+    resolution: {integrity: sha512-v665Ct9WCRjGa8+kTr0CzApU0+XXtRgwmzIf1SeKSGAv+2scAlW6JR5PMFo6FzqqZ64Po79cKODKf3/AAmECqA==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@biomejs/cli-linux-arm64@1.9.4':
+    resolution: {integrity: sha512-fJIW0+LYujdjUgJJuwesP4EjIBl/N/TcOX3IvIHJQNsAqvV2CHIogsmA94BPG6jZATS4Hi+xv4SkBBQSt1N4/g==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@biomejs/cli-linux-x64-musl@1.9.4':
+    resolution: {integrity: sha512-gEhi/jSBhZ2m6wjV530Yy8+fNqG8PAinM3oV7CyO+6c3CEh16Eizm21uHVsyVBEB6RIM8JHIl6AGYCv6Q6Q9Tg==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [linux]
+
+  '@biomejs/cli-linux-x64@1.9.4':
+    resolution: {integrity: sha512-lRCJv/Vi3Vlwmbd6K+oQ0KhLHMAysN8lXoCI7XeHlxaajk06u7G+UsFSO01NAs5iYuWKmVZjmiOzJ0OJmGsMwg==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [linux]
+
+  '@biomejs/cli-win32-arm64@1.9.4':
+    resolution: {integrity: sha512-tlbhLk+WXZmgwoIKwHIHEBZUwxml7bRJgk0X2sPyNR3S93cdRq6XulAZRQJ17FYGGzWne0fgrXBKpl7l4M87Hg==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@biomejs/cli-win32-x64@1.9.4':
+    resolution: {integrity: sha512-8Y5wMhVIPaWe6jw2H+KlEm4wP/f7EW3810ZLmDlrEEy5KvBsb9ECEfu/kMWD484ijfQ8+nIi0giMgu9g1UAuuA==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [win32]
 
   '@changesets/apply-release-plan@7.0.8':
     resolution: {integrity: sha512-qjMUj4DYQ1Z6qHawsn7S71SujrExJ+nceyKKyI9iB+M5p9lCL55afuEd6uLBPRpLGWQwkwvWegDHtwHJb1UjpA==}
@@ -2070,9 +2206,6 @@ packages:
   '@radixdlt/babylon-gateway-api-sdk@1.10.1':
     resolution: {integrity: sha512-l/Pt1qaxi2I99ykl9oS4pO+AzBmpMY6oqMOBq0ABbpg7YqqaugZU3OUP/tI0SQsIR1QvXYGdxlsS+HnhioeHlA==}
 
-  '@radixdlt/babylon-gateway-api-sdk@1.9.2':
-    resolution: {integrity: sha512-AgAqNMKpqlHKfm/NRaYMKOObmAihXCNPDqGUH4/w6kFBQnWl4DAcITUinJDoW5QubdU+qW+awhUiYQfLj3Uxqg==}
-
   '@radixdlt/radix-dapp-toolkit@2.2.1':
     resolution: {integrity: sha512-NiKZ+mP7M6TuVw00MQf4noch6SsahmBLlFovf/DwdDbPSAJD/GRycDAumlvNKujITEEKupolPseMh4XpJZZN6g==}
     engines: {node: '>=18'}
@@ -2203,6 +2336,9 @@ packages:
 
   '@slorber/remark-comment@1.0.0':
     resolution: {integrity: sha512-RCE24n7jsOj1M0UPvIQCHTe7fI0sFL4S2nwKVWwHyVr/wI/H8GosgsJGyhnsZoGFnD/P2hLf1mSbrrgSLN93NA==}
+
+  '@standard-schema/spec@1.0.0':
+    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
   '@svgr/babel-plugin-add-jsx-attribute@8.0.0':
     resolution: {integrity: sha512-b9MIk7yhdS1pMCZM8VeNfUlSKVRhsHZNMl5O9SfaX0l0t5wjdgu4IDzGB8bpnGBBOjGST3rRFVsaaEtI4W6f7g==}
@@ -2747,6 +2883,9 @@ packages:
   big.js@5.2.2:
     resolution: {integrity: sha512-vyL2OymJxmarO8gxMr0mhChsO9QGwhynfuu4+MHTAW6czfq9humCB7rKpUjDd9YUiDPU4mzpyupFSvOClAwbmQ==}
 
+  bignumber.js@9.3.0:
+    resolution: {integrity: sha512-EM7aMFTXbptt/wZdMlBv2t8IViwQL+h6SLHosp8Yf0dqJMTnY6iL32opnAB6kAdL0SZPuvcAzFr31o0c/R3/RA==}
+
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
@@ -3260,6 +3399,9 @@ packages:
   decimal.js@10.4.3:
     resolution: {integrity: sha512-VBBaLc1MgL5XpzgIP7ny5Z6Nx3UrRkIViUkPUdtl9aya5amy3De1gsUUSB1g3+3sExYNjCAsAznmukyxCb1GRA==}
 
+  decimal.js@10.5.0:
+    resolution: {integrity: sha512-8vDa8Qxvr/+d94hSh5P3IJwI5t8/c0KsMp+g8bNw9cY2icONa5aPfvKeieW1WlG0WQYwwhJ7mjui2xtiePQSXw==}
+
   decode-named-character-reference@1.0.2:
     resolution: {integrity: sha512-O8x12RzrUF8xyVcY0KJowWsmaJxQbmy0/EtnNtHRpsOcT7dFk5W598coHqBVpmWo1oQQfsCqfCmkZN5DJrZVdg==}
 
@@ -3410,6 +3552,9 @@ packages:
 
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
+
+  effect@3.15.4:
+    resolution: {integrity: sha512-bcikyXIhzIEsUNjlgNhEC3J6xAn8iDM8z/x9k52fb3daN5iKm1rlr6Ho3TNgXM48tUUYBnTAyunk+kVzx/u8kA==}
 
   electron-to-chromium@1.5.88:
     resolution: {integrity: sha512-K3C2qf1o+bGzbilTDCTBhTQcMS9KW60yTAaTeeXsfvQuTDDwlokLam/AdqlqcSy9u4UainDgsHV23ksXAOgamw==}
@@ -3622,6 +3767,10 @@ packages:
   external-editor@3.1.0:
     resolution: {integrity: sha512-hMQ4CX1p1izmuLYyZqLMO/qGNw10wSv9QDCPfzXfyFrOaCSSoRfqE1Kf1s5an66J5JZC62NewG+mK49jOCtQew==}
     engines: {node: '>=4'}
+
+  fast-check@3.23.2:
+    resolution: {integrity: sha512-h5+1OzzfCC3Ef7VbtKdcv7zsstUQwUDlYpUTvjeUsJAssPgLn7QzbboPtL5ro04Mq0rPOsMzl7q5hIbRs2wD1A==}
+    engines: {node: '>=8.0.0'}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -4845,6 +4994,7 @@ packages:
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
+    deprecated: Use your platform's native DOMException instead
 
   node-emoji@2.2.0:
     resolution: {integrity: sha512-Z3lTE9pLaJF47NyMhd4ww1yFTAP8YhYI8SleJiHzM46Fgpm5cnNzSl9XfzFNqbaz+VlJrIj3fXQ4DeN1Rjm6cw==}
@@ -5640,6 +5790,9 @@ packages:
   pupa@3.1.0:
     resolution: {integrity: sha512-FLpr4flz5xZTSJxSeaheeMKN/EDzMdK7b8PTOC6a5PYFKTucWbdqjgqaEyH0shFiSJrVB1+Qqi4Tk19ccU6Aug==}
     engines: {node: '>=12.20'}
+
+  pure-rand@6.1.0:
+    resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
   qrcode-terminal@0.12.0:
     resolution: {integrity: sha512-EXtzRZmC+YGmGlDFbXKxQiMZNwCLEO6BANKXG4iCtSIM0yqc/pappSx3RIKr4r0uh5JsBckOXeKrB3Iz7mdQpQ==}
@@ -6500,6 +6653,11 @@ packages:
 
   typescript@5.6.3:
     resolution: {integrity: sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@5.7.3:
+    resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -7782,6 +7940,41 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.25.9
       '@babel/helper-validator-identifier': 7.25.9
+
+  '@biomejs/biome@1.9.4':
+    optionalDependencies:
+      '@biomejs/cli-darwin-arm64': 1.9.4
+      '@biomejs/cli-darwin-x64': 1.9.4
+      '@biomejs/cli-linux-arm64': 1.9.4
+      '@biomejs/cli-linux-arm64-musl': 1.9.4
+      '@biomejs/cli-linux-x64': 1.9.4
+      '@biomejs/cli-linux-x64-musl': 1.9.4
+      '@biomejs/cli-win32-arm64': 1.9.4
+      '@biomejs/cli-win32-x64': 1.9.4
+
+  '@biomejs/cli-darwin-arm64@1.9.4':
+    optional: true
+
+  '@biomejs/cli-darwin-x64@1.9.4':
+    optional: true
+
+  '@biomejs/cli-linux-arm64-musl@1.9.4':
+    optional: true
+
+  '@biomejs/cli-linux-arm64@1.9.4':
+    optional: true
+
+  '@biomejs/cli-linux-x64-musl@1.9.4':
+    optional: true
+
+  '@biomejs/cli-linux-x64@1.9.4':
+    optional: true
+
+  '@biomejs/cli-win32-arm64@1.9.4':
+    optional: true
+
+  '@biomejs/cli-win32-x64@1.9.4':
+    optional: true
 
   '@changesets/apply-release-plan@7.0.8':
     dependencies:
@@ -9221,7 +9414,7 @@ snapshots:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       '@types/yargs': 17.0.33
       chalk: 4.1.2
 
@@ -9352,8 +9545,6 @@ snapshots:
 
   '@radixdlt/babylon-gateway-api-sdk@1.10.1': {}
 
-  '@radixdlt/babylon-gateway-api-sdk@1.9.2': {}
-
   '@radixdlt/radix-dapp-toolkit@2.2.1(typescript@5.6.3)':
     dependencies:
       '@noble/curves': 1.8.1
@@ -9470,6 +9661,8 @@ snapshots:
       micromark-util-character: 1.2.0
       micromark-util-symbol: 1.1.0
 
+  '@standard-schema/spec@1.0.0': {}
+
   '@svgr/babel-plugin-add-jsx-attribute@8.0.0(@babel/core@7.26.7)':
     dependencies:
       '@babel/core': 7.26.7
@@ -9576,20 +9769,20 @@ snapshots:
   '@types/body-parser@1.19.5':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/bonjour@3.5.13':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/connect-history-api-fallback@1.5.4':
     dependencies:
       '@types/express-serve-static-core': 5.0.5
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/debug@4.1.12':
     dependencies:
@@ -9615,14 +9808,14 @@ snapshots:
 
   '@types/express-serve-static-core@4.19.6':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       '@types/qs': 6.9.18
       '@types/range-parser': 1.2.7
       '@types/send': 0.17.4
 
   '@types/express-serve-static-core@5.0.5':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       '@types/qs': 6.9.18
       '@types/range-parser': 1.2.7
       '@types/send': 0.17.4
@@ -9650,7 +9843,7 @@ snapshots:
 
   '@types/http-proxy@1.17.15':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
@@ -9676,12 +9869,12 @@ snapshots:
 
   '@types/node-fetch@2.6.12':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       form-data: 4.0.1
 
   '@types/node-forge@1.3.11':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/node@12.20.55': {}
 
@@ -9734,20 +9927,20 @@ snapshots:
 
   '@types/sax@1.2.7':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/secp256k1@4.0.3':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/secure-random@1.1.0':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/send@0.17.4':
     dependencies:
       '@types/mime': 1.3.5
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/serve-index@1.9.4':
     dependencies:
@@ -9756,12 +9949,12 @@ snapshots:
   '@types/serve-static@1.15.7':
     dependencies:
       '@types/http-errors': 2.0.4
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       '@types/send': 0.17.4
 
   '@types/sockjs@0.3.36':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/trusted-types@2.0.7': {}
 
@@ -9771,7 +9964,7 @@ snapshots:
 
   '@types/ws@8.5.14':
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -10093,6 +10286,8 @@ snapshots:
       is-windows: 1.0.2
 
   big.js@5.2.2: {}
+
+  bignumber.js@9.3.0: {}
 
   binary-extensions@2.3.0: {}
 
@@ -10674,6 +10869,8 @@ snapshots:
 
   decimal.js@10.4.3: {}
 
+  decimal.js@10.5.0: {}
+
   decode-named-character-reference@1.0.2:
     dependencies:
       character-entities: 2.0.2
@@ -10830,6 +11027,11 @@ snapshots:
       tweetnacl: 1.0.3
 
   ee-first@1.1.1: {}
+
+  effect@3.15.4:
+    dependencies:
+      '@standard-schema/spec': 1.0.0
+      fast-check: 3.23.2
 
   electron-to-chromium@1.5.88: {}
 
@@ -11054,7 +11256,7 @@ snapshots:
 
   eval@0.1.8:
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       require-like: 0.1.2
 
   event-target-shim@5.0.1: {}
@@ -11138,6 +11340,10 @@ snapshots:
       chardet: 0.7.0
       iconv-lite: 0.4.24
       tmp: 0.0.33
+
+  fast-check@3.23.2:
+    dependencies:
+      pure-rand: 6.1.0
 
   fast-deep-equal@3.1.3: {}
 
@@ -11866,7 +12072,7 @@ snapshots:
   jest-util@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
@@ -11874,13 +12080,13 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
   jest-worker@29.7.0:
     dependencies:
-      '@types/node': 22.10.2
+      '@types/node': 22.13.10
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
@@ -13490,6 +13696,8 @@ snapshots:
     dependencies:
       escape-goat: 4.0.0
 
+  pure-rand@6.1.0: {}
+
   qrcode-terminal@0.12.0: {}
 
   qs@6.13.0:
@@ -14447,6 +14655,33 @@ snapshots:
       - tsx
       - yaml
 
+  tsup@8.3.5(jiti@1.21.7)(postcss@8.4.49)(tsx@4.19.2)(typescript@5.7.3):
+    dependencies:
+      bundle-require: 5.1.0(esbuild@0.24.2)
+      cac: 6.7.14
+      chokidar: 4.0.3
+      consola: 3.3.1
+      debug: 4.3.7
+      esbuild: 0.24.2
+      joycon: 3.1.1
+      picocolors: 1.1.1
+      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.4.49)(tsx@4.19.2)
+      resolve-from: 5.0.0
+      rollup: 4.29.1
+      source-map: 0.8.0-beta.0
+      sucrase: 3.35.0
+      tinyexec: 0.3.1
+      tinyglobby: 0.2.10
+      tree-kill: 1.2.2
+    optionalDependencies:
+      postcss: 8.4.49
+      typescript: 5.7.3
+    transitivePeerDependencies:
+      - jiti
+      - supports-color
+      - tsx
+      - yaml
+
   tsx@4.19.2:
     dependencies:
       esbuild: 0.23.1
@@ -14503,6 +14738,9 @@ snapshots:
   typescript@5.5.4: {}
 
   typescript@5.6.3: {}
+
+  typescript@5.7.3:
+    optional: true
 
   ufo@1.5.4: {}
 
