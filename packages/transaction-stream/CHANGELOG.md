@@ -1,5 +1,12 @@
 # radix-transaction-stream
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [b674d38]
+  - radix-web3.js@0.5.0
+
 ## 0.2.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
-  "name": "radix-web3.js",
-  "version": "0.5.0",
+  "name": "radix-effects",
+  "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -27,15 +27,20 @@
     "url": "git+https://github.com/xstelea/radix-web3.js.git"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "tsup": "^8.0.2",
-    "tsx": "^4.7.1",
-    "typescript": "^5.3.3",
-    "vitest": "^1.2.1"
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
-    "@radixdlt/radix-engine-toolkit": "catalog:"
+    "@radixdlt/radix-engine-toolkit": "catalog:",
+    "effect": "catalog:",
+    "radix-web3.js": "workspace:*",
+    "zod": "catalog:",
+    "sbor-ez-mode": "workspace:*",
+    "bignumber.js": "catalog:"
   },
   "files": [
     "dist"
