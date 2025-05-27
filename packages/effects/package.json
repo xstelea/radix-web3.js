@@ -1,6 +1,6 @@
 {
   "name": "radix-effects",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -36,11 +36,13 @@
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
     "@radixdlt/radix-engine-toolkit": "catalog:",
+    "bignumber.js": "catalog:",
+    "decimal.js": "^10.5.0",
     "effect": "catalog:",
     "radix-web3.js": "workspace:*",
-    "zod": "catalog:",
     "sbor-ez-mode": "workspace:*",
-    "bignumber.js": "catalog:"
+    "zod": "catalog:",
+    "neverthrow": "catalog:"
   },
   "files": [
     "dist"
