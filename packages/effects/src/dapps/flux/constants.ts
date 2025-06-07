@@ -1,3 +1,6 @@
+import { CaviarNineConstants } from "../caviarnine/constants";
+import { Assets } from "../../assets/constants";
+
 export const FluxConstants = {
   receiptResourceAddress:
     "resource_rdx1ntz3kr363rnnf8rjkf7hddf8hrhuu8aqmg5g6ufwxm86anxrqhvtxp",
@@ -11,16 +14,14 @@ export const FluxConstants = {
     "internal_keyvaluestore_rdx1kzmrvytjphqf78dvkhe4h6myg2r2ycln20qzxkee8ggmej6jf5q4ew",
   collaterals: {
     xrd: {
-      collateralAddress:
-        "resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd",
+      collateralAddress: Assets.Fungible.XRD,
       stabilityPoolAddress:
         "pool_rdx1c5nzge2kpylwrtls7ydhnd03vs5f7w8w0jhzh99x82mw660war8y77",
       stabilityPoolTokenAddress:
         "resource_rdx1tk6gnvp5tmxqdr5zppuu50p2q9uvv89q2gyz432ukrh5md7ft4xesr",
     },
     lsulp: {
-      collateralAddress:
-        "resource_rdx1thksg5ng70g9mmy9ne7wz0sc7auzrrwy7fmgcxzel2gvp8pj0xxfmf",
+      collateralAddress: CaviarNineConstants.LSULP.resourceAddress,
       stabilityPoolAddress:
         "pool_rdx1c540e9ytpktwpqrq808xz3r0a8qxm2plrt4e5u5ecllzjcavrc9h8m",
       stabilityPoolTokenAddress:

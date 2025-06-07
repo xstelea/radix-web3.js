@@ -163,14 +163,14 @@ export const GetFluxCdpsLive = Layer.effect(
         const [xrdInterestData, lsulpInterestData] = yield* Effect.all([
           keyValueStoreDataService({
             key_value_store_address: FluxConstants.xrdKvsAddress,
-            keys: xrdKeys.items.map((k: any) => ({
+            keys: xrdKeys.items.map((k) => ({
               key_json: k.key.programmatic_json,
             })),
             at_ledger_state: input.at_ledger_state,
           }),
           keyValueStoreDataService({
             key_value_store_address: FluxConstants.lsulpKvsAddress,
-            keys: lsulpKeys.items.map((k: any) => ({
+            keys: lsulpKeys.items.map((k) => ({
               key_json: k.key.programmatic_json,
             })),
             at_ledger_state: input.at_ledger_state,
@@ -206,13 +206,15 @@ export const GetFluxCdpsLive = Layer.effect(
               ? xrdInterestData.entries
               : lsulpInterestData.entries;
 
-          const interestInfo = interestData.find((entry: any) => {
+          const interestInfo = interestData.find((entry) => {
             const nodeData = entry.value.programmatic_json;
-            return (
-              nodeData &&
-              nodeData.kind === "Tuple" &&
-              new BigNumber(nodeData.fields[0].value).isEqualTo(interestRate)
-            );
+            if (nodeData.kind === "Tuple") {
+              const tupleFields = nodeData.fields;
+              if (tupleFields[0] && tupleFields[0].kind === "Decimal") {
+                const interestRateValue = new BigNumber(tupleFields[0].value);
+                return interestRateValue.isEqualTo(interestRate);
+              }
+            }
           });
 
           let realDebt = poolDebt;
