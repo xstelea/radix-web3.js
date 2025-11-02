@@ -2,10 +2,10 @@ import type {
   ProgrammaticScryptoSborValue,
   ProgrammaticScryptoSborValueEnum,
   ProgrammaticScryptoSborValueTuple,
-} from "@radixdlt/babylon-gateway-api-sdk";
-import { SborError, SborSchema } from "../sborSchema";
-import type { ParsedType, StructSchema } from "./struct"; // Assuming you have this from your previous code
-import type { OrderedTupleSchema } from "./orderedTuple"; // Assuming you have this from your previous code
+} from '@radixdlt/babylon-gateway-api-sdk';
+import { SborError, SborSchema } from '../sborSchema';
+import type { OrderedTupleSchema } from './orderedTuple'; // Assuming you have this from your previous code
+import type { ParsedType, StructSchema } from './struct'; // Assuming you have this from your previous code
 
 export interface VariantDefinition<
   S extends StructSchema<any, any> | OrderedTupleSchema<any>,
@@ -16,9 +16,9 @@ export interface VariantDefinition<
 
 // Helper types to extract parsed and output types from variant schemas
 type VariantParsedType<T extends VariantDefinition<any>> =
-  T["schema"] extends StructSchema<infer U, any>
+  T['schema'] extends StructSchema<infer U, any>
     ? { [K in keyof U]: ParsedType<U[K]> }
-    : T["schema"] extends OrderedTupleSchema<infer U>
+    : T['schema'] extends OrderedTupleSchema<infer U>
       ? { [K in keyof U]: ParsedType<U[K]> }
       : never;
 
@@ -26,11 +26,11 @@ export type EnumParsedType<T extends VariantDefinition<any>[]> = {
   [K in keyof T]: T[K] extends VariantDefinition<infer S>
     ? S extends StructSchema<any, any>
       ? {
-          variant: T[K]["variant"];
+          variant: T[K]['variant'];
           value: VariantParsedType<T[K]>;
         }
       : S extends OrderedTupleSchema<any>
-        ? { variant: T[K]["variant"]; value: VariantParsedType<T[K]> }
+        ? { variant: T[K]['variant']; value: VariantParsedType<T[K]> }
         : never
     : never;
 }[number];
@@ -38,24 +38,24 @@ export type EnumParsedType<T extends VariantDefinition<any>[]> = {
 export class EnumSchema<T extends VariantDefinition<any>[]> extends SborSchema<
   {
     [K in keyof T]: T[K] extends VariantDefinition<any>
-      ? { variant: T[K]["variant"]; value: VariantParsedType<T[K]> }
+      ? { variant: T[K]['variant']; value: VariantParsedType<T[K]> }
       : never;
   }[number]
 > {
   public variants: Map<string, VariantDefinition<any>>;
 
   constructor(variants: T) {
-    super(["Enum"]);
+    super(['Enum']);
     this.variants = new Map(variants.map((v) => [v.variant, v]));
   }
   validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
     if (
       !value ||
-      typeof value !== "object" ||
-      !("kind" in value) ||
-      value.kind !== "Enum"
+      typeof value !== 'object' ||
+      !('kind' in value) ||
+      value.kind !== 'Enum'
     ) {
-      throw new SborError("Invalid enum structure", path);
+      throw new SborError('Invalid enum structure', path);
     }
 
     const enumValue = value as ProgrammaticScryptoSborValueEnum;
@@ -64,8 +64,8 @@ export class EnumSchema<T extends VariantDefinition<any>[]> extends SborSchema<
     const variantName = enumValue.variant_name;
     if (!variantName || !this.variants.has(variantName)) {
       throw new SborError(
-        `Unknown variant: ${variantName || "undefined"}`,
-        path
+        `Unknown variant: ${variantName || 'undefined'}`,
+        path,
       );
     }
 
@@ -76,7 +76,7 @@ export class EnumSchema<T extends VariantDefinition<any>[]> extends SborSchema<
       if (enumValue.fields.length > 0) {
         throw new SborError(
           `Empty variant ${variantName} should have no fields`,
-          path
+          path,
         );
       }
       return true;
@@ -84,7 +84,7 @@ export class EnumSchema<T extends VariantDefinition<any>[]> extends SborSchema<
 
     // Validate the variant's contents using its schema
     const tupleValue: ProgrammaticScryptoSborValueTuple = {
-      kind: "Tuple",
+      kind: 'Tuple',
       fields: enumValue.fields,
       field_name: enumValue.field_name,
       type_name: enumValue.type_name,
@@ -94,7 +94,7 @@ export class EnumSchema<T extends VariantDefinition<any>[]> extends SborSchema<
 
   parse(
     value: ProgrammaticScryptoSborValue,
-    path: string[]
+    path: string[],
   ): EnumParsedType<T> {
     this.validate(value, path);
     const enumValue = value as ProgrammaticScryptoSborValueEnum;
@@ -108,7 +108,7 @@ export class EnumSchema<T extends VariantDefinition<any>[]> extends SborSchema<
 
     // Parse variant with contents
     const tupleValue: ProgrammaticScryptoSborValueTuple = {
-      kind: "Tuple",
+      kind: 'Tuple',
       fields: enumValue.fields,
       field_name: enumValue.field_name,
       type_name: enumValue.type_name,

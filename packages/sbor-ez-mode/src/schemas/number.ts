@@ -1,17 +1,17 @@
 import type {
   ProgrammaticScryptoSborValue,
-  ProgrammaticScryptoSborValueI128,
+  ProgrammaticScryptoSborValueI8,
   ProgrammaticScryptoSborValueI16,
   ProgrammaticScryptoSborValueI32,
   ProgrammaticScryptoSborValueI64,
-  ProgrammaticScryptoSborValueI8,
-  ProgrammaticScryptoSborValueU128,
+  ProgrammaticScryptoSborValueI128,
+  ProgrammaticScryptoSborValueU8,
   ProgrammaticScryptoSborValueU16,
   ProgrammaticScryptoSborValueU32,
   ProgrammaticScryptoSborValueU64,
-  ProgrammaticScryptoSborValueU8,
-} from "@radixdlt/babylon-gateway-api-sdk";
-import { SborError, SborSchema } from "../sborSchema";
+  ProgrammaticScryptoSborValueU128,
+} from '@radixdlt/babylon-gateway-api-sdk';
+import { SborError, SborSchema } from '../sborSchema';
 
 type ProgrammaticScryptoSborValueNumber =
   | ProgrammaticScryptoSborValueI8
@@ -25,22 +25,22 @@ type ProgrammaticScryptoSborValueNumber =
   | ProgrammaticScryptoSborValueU64
   | ProgrammaticScryptoSborValueU128;
 
-type SborKind = ProgrammaticScryptoSborValue["kind"];
+type SborKind = ProgrammaticScryptoSborValue['kind'];
 
 // Add this new class alongside your existing schemas
 export class NumberSchema extends SborSchema<number> {
   constructor() {
     const validKinds: SborKind[] = [
-      "U8",
-      "U16",
-      "U32",
-      "U64",
-      "U128", // Unsigned integers
-      "I8",
-      "I16",
-      "I32",
-      "I64",
-      "I128", // Signed integers
+      'U8',
+      'U16',
+      'U32',
+      'U64',
+      'U128', // Unsigned integers
+      'I8',
+      'I16',
+      'I32',
+      'I64',
+      'I128', // Signed integers
     ];
     super(validKinds);
   }
@@ -50,8 +50,8 @@ export class NumberSchema extends SborSchema<number> {
 
     if (!this.kinds.includes(value.kind)) {
       throw new SborError(
-        `Invalid number kind. Expected one of ${this.kinds.join(", ")}, got ${value.kind}`,
-        path
+        `Invalid number kind. Expected one of ${this.kinds.join(', ')}, got ${value.kind}`,
+        path,
       );
     }
 
@@ -59,8 +59,8 @@ export class NumberSchema extends SborSchema<number> {
     const number = value as ProgrammaticScryptoSborValueNumber;
 
     // Validate that the value is a string representation of a number
-    if (typeof number.value !== "string") {
-      throw new SborError("Number value must be a string", path);
+    if (typeof number.value !== 'string') {
+      throw new SborError('Number value must be a string', path);
     }
 
     // Parse the string to verify it's a valid number
@@ -68,8 +68,8 @@ export class NumberSchema extends SborSchema<number> {
     const num = BigInt(numStr); // Use BigInt to handle large numbers
 
     // For unsigned integers, ensure the number is non-negative
-    if (value.kind.startsWith("U") && num < 0) {
-      throw new SborError("Unsigned integer cannot be negative", path);
+    if (value.kind.startsWith('U') && num < 0) {
+      throw new SborError('Unsigned integer cannot be negative', path);
     }
 
     // Check range constraints based on the kind
@@ -93,7 +93,7 @@ export class NumberSchema extends SborSchema<number> {
     if (num < range.min || num > range.max) {
       throw new SborError(
         `Number out of range for ${value.kind}. Must be between ${range.min} and ${range.max}`,
-        path
+        path,
       );
     }
 

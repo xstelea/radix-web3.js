@@ -1,9 +1,9 @@
 import type {
   ProgrammaticScryptoSborValue,
   ProgrammaticScryptoSborValueArray,
-} from "@radixdlt/babylon-gateway-api-sdk";
-import { SborError, SborSchema } from "../sborSchema";
-import type { ParsedType } from "./struct";
+} from '@radixdlt/babylon-gateway-api-sdk';
+import { SborError, SborSchema } from '../sborSchema';
+import type { ParsedType } from './struct';
 
 export class ArraySchema<T extends SborSchema<unknown>> extends SborSchema<
   ParsedType<T>[]
@@ -11,18 +11,18 @@ export class ArraySchema<T extends SborSchema<unknown>> extends SborSchema<
   public itemSchema: T;
 
   constructor(itemSchema: T) {
-    super(["Array"]);
+    super(['Array']);
     this.itemSchema = itemSchema;
   }
 
   validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
     if (
       !value ||
-      typeof value !== "object" ||
-      !("kind" in value) ||
-      value.kind !== "Array"
+      typeof value !== 'object' ||
+      !('kind' in value) ||
+      value.kind !== 'Array'
     ) {
-      throw new SborError("Invalid array structure", path);
+      throw new SborError('Invalid array structure', path);
     }
 
     const arrayValue = value as ProgrammaticScryptoSborValueArray;
@@ -39,7 +39,7 @@ export class ArraySchema<T extends SborSchema<unknown>> extends SborSchema<
     const items = arrayValue.elements;
 
     return items.map((item, index) =>
-      this.itemSchema.parse(item, [...path, index.toString()])
+      this.itemSchema.parse(item, [...path, index.toString()]),
     ) as ParsedType<T>[];
   }
 }

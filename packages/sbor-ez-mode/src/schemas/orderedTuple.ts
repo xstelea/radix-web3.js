@@ -1,8 +1,8 @@
 import type {
   ProgrammaticScryptoSborValue,
   ProgrammaticScryptoSborValueTuple,
-} from "@radixdlt/babylon-gateway-api-sdk";
-import { SborError, SborSchema } from "../sborSchema";
+} from '@radixdlt/babylon-gateway-api-sdk';
+import { SborError, SborSchema } from '../sborSchema';
 
 export type TupleSchema = SborSchema<unknown>[];
 
@@ -12,18 +12,18 @@ export class OrderedTupleSchema<T extends TupleSchema> extends SborSchema<{
   public schemas: T;
 
   constructor(schemas: T) {
-    super(["Tuple"]);
+    super(['Tuple']);
     this.schemas = schemas;
   }
 
   validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
     if (
       !value ||
-      typeof value !== "object" ||
-      !("kind" in value) ||
-      value.kind !== "Tuple"
+      typeof value !== 'object' ||
+      !('kind' in value) ||
+      value.kind !== 'Tuple'
     ) {
-      throw new SborError("The object is not a tuple", path);
+      throw new SborError('The object is not a tuple', path);
     }
 
     const tupleValue = value as ProgrammaticScryptoSborValueTuple;
@@ -32,7 +32,7 @@ export class OrderedTupleSchema<T extends TupleSchema> extends SborSchema<{
     if (fields.length !== this.schemas.length) {
       throw new SborError(
         `Expected ${this.schemas.length} fields, got ${fields.length}`,
-        path
+        path,
       );
     }
 
@@ -49,7 +49,7 @@ export class OrderedTupleSchema<T extends TupleSchema> extends SborSchema<{
       if (!schema.kinds.includes(field.kind)) {
         throw new SborError(
           `Expected kind ${schema.kinds}, got ${field.kind}`,
-          [...path, index.toString()]
+          [...path, index.toString()],
         );
       }
 
@@ -59,7 +59,7 @@ export class OrderedTupleSchema<T extends TupleSchema> extends SborSchema<{
 
   parse(
     value: ProgrammaticScryptoSborValue,
-    path: string[]
+    path: string[],
   ): {
     [K in keyof T]: T[K] extends SborSchema<infer U> ? U : never;
   } {

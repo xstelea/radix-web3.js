@@ -1,16 +1,19 @@
 import type {
   ProgrammaticScryptoSborValue,
   ProgrammaticScryptoSborValueTuple,
-} from "@radixdlt/babylon-gateway-api-sdk";
-import { SborError, SborSchema } from "../sborSchema";
+} from '@radixdlt/babylon-gateway-api-sdk';
+import { SborError, SborSchema } from '../sborSchema';
 
 // Tuple schema (acting like a struct)
 export interface StructDefinition {
   [key: string]: SborSchema<unknown>;
 }
 
-export type ParsedType<T extends SborSchema<unknown>> =
-  T extends SborSchema<infer U> ? U : never;
+export type ParsedType<T extends SborSchema<unknown>> = T extends SborSchema<
+  infer U
+>
+  ? U
+  : never;
 
 export class StructSchema<
   T extends StructDefinition,
@@ -27,7 +30,7 @@ export class StructSchema<
    *                     if false, missing fields will be a parsing error.
    */
   constructor(definition: T, allowMissing: O) {
-    super(["Tuple"]);
+    super(['Tuple']);
     this.definition = definition;
     this.allowMissing = allowMissing;
   }
@@ -35,11 +38,11 @@ export class StructSchema<
   validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
     if (
       !value ||
-      typeof value !== "object" ||
-      !("kind" in value) ||
-      value.kind !== "Tuple"
+      typeof value !== 'object' ||
+      !('kind' in value) ||
+      value.kind !== 'Tuple'
     ) {
-      throw new SborError("Invalid tuple structure", path);
+      throw new SborError('Invalid tuple structure', path);
     }
 
     const tupleValue = value as ProgrammaticScryptoSborValueTuple;
@@ -50,12 +53,12 @@ export class StructSchema<
     if (!this.allowMissing) {
       const fieldNames = fields.map((f) => f.field_name).filter(Boolean);
       const missingFields = definedFields.filter(
-        (name) => !fieldNames.includes(name)
+        (name) => !fieldNames.includes(name),
       );
       if (missingFields.length > 0) {
         throw new SborError(
-          `Missing required fields: ${missingFields.join(", ")}`,
-          path
+          `Missing required fields: ${missingFields.join(', ')}`,
+          path,
         );
       }
     }
@@ -81,7 +84,7 @@ export class StructSchema<
       if (!schema.kinds.includes(field.kind)) {
         throw new SborError(
           `Expected kind ${schema.kinds} for field ${name}, got ${field.kind}`,
-          [...path, name]
+          [...path, name],
         );
       }
       schema.validate(field, [...path, name]);
@@ -92,7 +95,7 @@ export class StructSchema<
 
   parse(
     value: ProgrammaticScryptoSborValue,
-    path: string[]
+    path: string[],
   ): {
     [K in keyof T]: O extends true ? ParsedType<T[K]> | null : ParsedType<T[K]>;
   } {

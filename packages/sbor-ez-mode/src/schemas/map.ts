@@ -1,8 +1,8 @@
 import type {
   ProgrammaticScryptoSborValue,
   ProgrammaticScryptoSborValueMap,
-} from "@radixdlt/babylon-gateway-api-sdk";
-import { SborError, SborSchema } from "../sborSchema";
+} from '@radixdlt/babylon-gateway-api-sdk';
+import { SborError, SborSchema } from '../sborSchema';
 
 export interface MapDefinition<T, U> {
   key: SborSchema<T>;
@@ -13,25 +13,25 @@ export class MapSchema<K, V> extends SborSchema<Map<K, V>> {
   public definition: MapDefinition<K, V>;
 
   constructor(definition: MapDefinition<K, V>) {
-    super(["Map"]);
+    super(['Map']);
     this.definition = definition;
   }
 
   validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
     if (
       !value ||
-      typeof value !== "object" ||
-      !("kind" in value) ||
-      value.kind !== "Map"
+      typeof value !== 'object' ||
+      !('kind' in value) ||
+      value.kind !== 'Map'
     ) {
-      throw new SborError("Invalid map structure", path);
+      throw new SborError('Invalid map structure', path);
     }
 
     const entries = value.entries;
 
     return entries.every((entry, index) => {
       if (!entry.key || !entry.value) {
-        throw new SborError("Invalid map entry", [...path, index.toString()]);
+        throw new SborError('Invalid map entry', [...path, index.toString()]);
       }
 
       return (
@@ -50,7 +50,7 @@ export class MapSchema<K, V> extends SborSchema<Map<K, V>> {
       entries.map((entry, index) => [
         this.definition.key.parse(entry.key, [...path, index.toString()]),
         this.definition.value.parse(entry.value, [...path, index.toString()]),
-      ])
+      ]),
     );
   }
 }

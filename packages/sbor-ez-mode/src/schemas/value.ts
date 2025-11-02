@@ -1,5 +1,5 @@
-import type { ProgrammaticScryptoSborValue } from "@radixdlt/babylon-gateway-api-sdk";
-import { kinds, SborSchema } from "../sborSchema";
+import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
+import { SborSchema, kinds } from '../sborSchema';
 
 // Primitive schemas
 export class ValueSchema extends SborSchema<ProgrammaticScryptoSborValue> {

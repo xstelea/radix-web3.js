@@ -1,19 +1,19 @@
-import type { SborSchema } from "./sborSchema";
-import { ArraySchema } from "./schemas/array";
-import { BoolSchema } from "./schemas/bool";
-import { DecimalSchema } from "./schemas/decimal";
-import { NumberSchema } from "./schemas/number";
-import { OrderedTupleSchema, type TupleSchema } from "./schemas/orderedTuple";
-import { AddressSchema } from "./schemas/address";
-import { StringSchema } from "./schemas/string";
-import { type StructDefinition, StructSchema } from "./schemas/struct";
-import { ValueSchema } from "./schemas/value";
-import { EnumSchema, type VariantDefinition } from "./schemas/enum"; // Add this import
-import { NonFungibleLocalIdSchema } from "./schemas/nonfungiblelocalid";
-import { type MapDefinition, MapSchema } from "./schemas/map";
-import { InternalAddressSchema } from "./schemas/internalAddress";
-import { InstantSchema } from "./schemas/instant";
-import { OptionSchema } from "./schemas/option";
+import type { SborSchema } from './sborSchema';
+import { AddressSchema } from './schemas/address';
+import { ArraySchema } from './schemas/array';
+import { BoolSchema } from './schemas/bool';
+import { DecimalSchema } from './schemas/decimal';
+import { EnumSchema, type VariantDefinition } from './schemas/enum'; // Add this import
+import { InstantSchema } from './schemas/instant';
+import { InternalAddressSchema } from './schemas/internalAddress';
+import { type MapDefinition, MapSchema } from './schemas/map';
+import { NonFungibleLocalIdSchema } from './schemas/nonfungiblelocalid';
+import { NumberSchema } from './schemas/number';
+import { OptionSchema } from './schemas/option';
+import { OrderedTupleSchema, type TupleSchema } from './schemas/orderedTuple';
+import { StringSchema } from './schemas/string';
+import { type StructDefinition, StructSchema } from './schemas/struct';
+import { ValueSchema } from './schemas/value';
 
 /**
  * The main object through which to build schemas for parsing SBOR values.
@@ -190,7 +190,7 @@ export const s = {
     D extends StructDefinition,
     B extends boolean,
   >(
-    variants: VARIANT_DEF
+    variants: VARIANT_DEF,
   ): EnumSchema<VARIANT_DEF> => new EnumSchema(variants),
   /**
    * A utility schema for the Option enum in Rust. This is a common pattern in Rust to represent
@@ -228,6 +228,7 @@ export namespace s {
    * type MyStruct = s.infer<typeof myStructSchema>;
    * ```
    */
-  export type infer<T extends SborSchema<any>> =
-    T extends SborSchema<infer R> ? R : never;
+  export type infer<T extends SborSchema<any>> = T extends SborSchema<infer R>
+    ? R
+    : never;
 }
