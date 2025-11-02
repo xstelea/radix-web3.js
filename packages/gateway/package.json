@@ -1,0 +1,40 @@
+{
+  "name": "@radix-effects/gateway",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:inspect": "vitest --inspect-brk",
+    "build": "tsdown"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@radixdlt/babylon-gateway-api-sdk": "catalog:",
+    "@radixdlt/radix-engine-toolkit": "catalog:",
+    "bignumber.js": "catalog:",
+    "effect": "catalog:",
+    "sbor-ez-mode": "workspace:*",
+    "zod": "catalog:"
+  },
+  "files": [
+    "dist"
+  ]
+}
