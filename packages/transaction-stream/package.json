@@ -1,10 +1,21 @@
 {
-  "name": "radix-transaction-stream",
-  "version": "0.2.4",
+  "name": "@radix-effects/transaction-stream",
+  "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "dev:debug": "tsx --inspect-brk --watch src/index.ts",
@@ -18,10 +29,8 @@
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@radixdlt/babylon-core-api-sdk": "catalog:",
-    "@radixdlt/babylon-gateway-api-sdk": "catalog:",
-    "@radixdlt/radix-dapp-toolkit": "catalog:",
-    "neverthrow": "catalog:",
-    "radix-web3.js": "workspace:*"
-  }
+    "effect": "catalog:",
+    "@radix-effects/gateway": "workspace:*"
+  },
+  "license": "MIT"
 }
