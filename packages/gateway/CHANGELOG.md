@@ -1,5 +1,11 @@
 # @radix-effects/gateway
 
+## 0.3.1
+
+### Patch Changes
+
+- 65192ac: add transactionPreview method
+
 ## 0.3.0
 
 ### Minor Changes
