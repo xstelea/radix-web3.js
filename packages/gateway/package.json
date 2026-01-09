@@ -1,6 +1,6 @@
 {
   "name": "@radix-effects/gateway",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,7 +33,8 @@
     "bignumber.js": "catalog:",
     "effect": "catalog:",
     "sbor-ez-mode": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@radixdlt/babylon-core-api-sdk": "catalog:"
   },
   "files": [
     "dist"
