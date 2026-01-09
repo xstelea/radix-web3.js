@@ -1,5 +1,11 @@
 # @radix-effects/gateway
 
+## 0.3.2
+
+### Patch Changes
+
+- 8a54739: expose networkId
+
 ## 0.3.1
 
 ### Patch Changes
