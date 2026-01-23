@@ -1,50 +1,50 @@
-import { WithManifestHelper } from '@/manifests/types'
-import { createRadixNetworkClient } from '@/network'
-import { RadixNetworkId } from '@/network/getRadixGatewayBaseUrl'
-import { PollTransactionStatusOptions } from '@/network/pollTransactionStatus'
+import type { WithManifestHelper } from '@/manifests/types';
+import { createRadixNetworkClient } from '@/network';
+import { RadixNetworkId } from '@/network/getRadixGatewayBaseUrl';
+import type { PollTransactionStatusOptions } from '@/network/pollTransactionStatus';
 import {
+  type TransactionNotarizer,
+  type TransactionSigner,
   createTransactionHelper,
-  TransactionNotarizer,
-  TransactionSigner,
-} from '@/transaction'
-import { createTransactionHeader } from '@/transaction/transactionHeader'
-import { createStringMessage } from '@/transaction/transactionMessage'
-import { transformStringManifest } from '@/transaction/transformStringManifest'
-import {
+} from '@/transaction';
+import { createTransactionHeader } from '@/transaction/transactionHeader';
+import { createStringMessage } from '@/transaction/transactionMessage';
+import { transformStringManifest } from '@/transaction/transformStringManifest';
+import type {
   GatewayApiClient,
   TransactionStatusResponse as TransactionStatusResponseType,
-} from '@radixdlt/babylon-gateway-api-sdk'
-import {
+} from '@radixdlt/babylon-gateway-api-sdk';
+import type {
   Intent,
   Message,
   PublicKey,
   Signature,
   TransactionHeader,
   TransactionManifest,
-} from '@radixdlt/radix-engine-toolkit'
+} from '@radixdlt/radix-engine-toolkit';
 
-export type Manifest = TransactionManifest | string | WithManifestHelper
-export type TransactionStatusResponse = TransactionStatusResponseType
+export type Manifest = TransactionManifest | string | WithManifestHelper;
+export type TransactionStatusResponse = TransactionStatusResponseType;
 
 export type SubmitTransactionOptions = {
-  transactionHeader?: TransactionHeader
-  notaryPublicKey?: PublicKey
-  message?: Message | string
-  signer?: TransactionSigner
-  notarizer?: TransactionNotarizer
-  pollingOptions?: PollTransactionStatusOptions
-}
+  transactionHeader?: TransactionHeader;
+  notaryPublicKey?: PublicKey;
+  message?: Message | string;
+  signer?: TransactionSigner;
+  notarizer?: TransactionNotarizer;
+  pollingOptions?: PollTransactionStatusOptions;
+};
 
 export type CreateWeb3ClientOptions = {
-  networkId?: keyof typeof RadixNetworkId
-  gatewayApiClient?: GatewayApiClient
-  notaryPublicKey?: PublicKey
-  signer?: TransactionSigner
-  notarizer?: TransactionNotarizer
-  messageSigner?: (message: string) => Promise<Signature> | Signature
-}
+  networkId?: keyof typeof RadixNetworkId;
+  gatewayApiClient?: GatewayApiClient;
+  notaryPublicKey?: PublicKey;
+  signer?: TransactionSigner;
+  notarizer?: TransactionNotarizer;
+  messageSigner?: (message: string) => Promise<Signature> | Signature;
+};
 
-export type RadixWeb3Client = ReturnType<typeof createRadixWeb3Client>
+export type RadixWeb3Client = ReturnType<typeof createRadixWeb3Client>;
 
 export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
   const {
@@ -54,26 +54,26 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     signer: defaultSigner,
     notarizer: defaultNotarizer,
     messageSigner,
-  } = options ?? {}
+  } = options ?? {};
 
   const radixNetworkClient = createRadixNetworkClient({
     networkId: RadixNetworkId[networkId],
     gatewayApiClient,
-  })
+  });
 
   const getDefaultNotaryPublicKey = () => {
     if (!defaultNotaryPublicKey) {
-      throw new Error('Notary public key not provided')
+      throw new Error('Notary public key not provided');
     }
-    return defaultNotaryPublicKey
-  }
+    return defaultNotaryPublicKey;
+  };
 
   const getDefaultNotarizer = () => {
     if (!defaultNotarizer) {
-      throw new Error('Notarizer not provided')
+      throw new Error('Notarizer not provided');
     }
-    return defaultNotarizer
-  }
+    return defaultNotarizer;
+  };
 
   const createTransactionIntentHeader = (
     transactionHeader?: TransactionHeader,
@@ -83,17 +83,17 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
       ? Promise.resolve(transactionHeader)
       : createTransactionHeader(notaryPublicKey ?? getDefaultNotaryPublicKey())(
           radixNetworkClient,
-        )
+        );
 
   const createTransactionIntentMessage = (value?: Message | string) => {
-    const defaultMessage: Message = { kind: 'None' }
+    const defaultMessage: Message = { kind: 'None' };
 
     return value === undefined
       ? defaultMessage
       : typeof value === 'string'
         ? createStringMessage(value)
-        : value
-  }
+        : value;
+  };
 
   const createTransactionIntent = ({
     manifest,
@@ -101,10 +101,10 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     message,
     notaryPublicKey,
   }: {
-    manifest: TransactionManifest | string
-    header?: TransactionHeader
-    message?: Message | string
-    notaryPublicKey?: PublicKey
+    manifest: TransactionManifest | string;
+    header?: TransactionHeader;
+    message?: Message | string;
+    notaryPublicKey?: PublicKey;
   }): Promise<Intent> =>
     Promise.all([
       transformStringManifest(manifest, radixNetworkClient.networkId),
@@ -113,16 +113,16 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
       manifest,
       header,
       message: createTransactionIntentMessage(message),
-    }))
+    }));
 
   const resolveManifest = (
     input: TransactionManifest | string | WithManifestHelper,
   ): Promise<TransactionManifest | string> => {
     if (typeof input === 'function') {
-      return input({ getKnownAddresses: radixNetworkClient.getKnownAddresses })
+      return input({ getKnownAddresses: radixNetworkClient.getKnownAddresses });
     }
-    return Promise.resolve(input)
-  }
+    return Promise.resolve(input);
+  };
 
   const submitTransaction = (
     manifest: Manifest,
@@ -159,7 +159,7 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
                 response,
               })),
           ),
-      )
+      );
 
   const getBalances = (address: string) =>
     Promise.all([
@@ -168,7 +168,7 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     ]).then(([fungibleTokens, nonFungibleTokens]) => ({
       fungibleTokens,
       nonFungibleTokens,
-    }))
+    }));
 
   return {
     submitTransaction,
@@ -176,12 +176,12 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     networkClient: radixNetworkClient,
     signMessage: async (message: string) => {
       if (!messageSigner) {
-        throw new Error('Message signer not provided')
+        throw new Error('Message signer not provided');
       }
 
       return Promise.resolve(message)
         .then(messageSigner)
-        .then((signature) => signature.hex())
+        .then((signature) => signature.hex());
     },
-  }
-}
+  };
+};

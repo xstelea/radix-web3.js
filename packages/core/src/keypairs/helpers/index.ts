@@ -1,1 +1,1 @@
-export * from './randomBytes'
+export * from './randomBytes';

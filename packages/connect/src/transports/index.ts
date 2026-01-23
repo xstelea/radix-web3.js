@@ -1,1 +1,1 @@
-export * from './radix-connect-relay'
+export * from './radix-connect-relay';

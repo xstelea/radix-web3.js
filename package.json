@@ -13,14 +13,14 @@
     "check-types": "biome check --write ./packages/**/**/*.ts"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.12",
-    "prettier": "^3.2.5",
-    "turbo": "^2.3.3",
-    "typescript": "5.5.4",
-    "@biomejs/biome": "1.9.4"
+    "@biomejs/biome": "1.9.4",
+    "@changesets/cli": "^2.29.8",
+    "prettier": "^3.7.4",
+    "turbo": "^2.6.2",
+    "typescript": "5.5.4"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.15.0",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

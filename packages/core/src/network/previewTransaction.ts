@@ -1,28 +1,28 @@
-import {
-  TransactionPreviewOperationRequest,
-  PublicKey as GatewayPublicKey,
+import type {
   GatewayApiClient,
-} from '@radixdlt/babylon-gateway-api-sdk'
+  PublicKey as GatewayPublicKey,
+  TransactionPreviewOperationRequest,
+} from '@radixdlt/babylon-gateway-api-sdk';
 import {
-  Intent,
-  PublicKey,
+  type Intent,
+  type PublicKey,
   RadixEngineToolkit,
-} from '@radixdlt/radix-engine-toolkit'
+} from '@radixdlt/radix-engine-toolkit';
 
 export type PartialTransactionPreviewResponse = {
   receipt: {
-    status: 'Succeeded' | 'Failed' | 'Rejected'
+    status: 'Succeeded' | 'Failed' | 'Rejected';
     fee_summary: {
-      execution_cost_units_consumed: number
-      finalization_cost_units_consumed: number
-      xrd_total_execution_cost: string
-      xrd_total_finalization_cost: string
-      xrd_total_royalty_cost: string
-      xrd_total_storage_cost: string
-      xrd_total_tipping_cost: string
-    }
-  }
-}
+      execution_cost_units_consumed: number;
+      finalization_cost_units_consumed: number;
+      xrd_total_execution_cost: string;
+      xrd_total_finalization_cost: string;
+      xrd_total_royalty_cost: string;
+      xrd_total_storage_cost: string;
+      xrd_total_tipping_cost: string;
+    };
+  };
+};
 
 const retPublicKeyToGatewayPublicKey = (
   publicKey: PublicKey,
@@ -32,31 +32,31 @@ const retPublicKeyToGatewayPublicKey = (
       return {
         key_type: 'EcdsaSecp256k1',
         key_hex: publicKey.hex(),
-      }
+      };
     case 'Ed25519':
       return {
         key_type: 'EddsaEd25519',
         key_hex: publicKey.hex(),
-      }
+      };
   }
-}
+};
 
 export const previewTransactionFactory =
   ({
     networkId,
     gatewayApiClient,
   }: {
-    networkId: number
-    gatewayApiClient: GatewayApiClient
+    networkId: number;
+    gatewayApiClient: GatewayApiClient;
   }) =>
   async ({
     intent,
     signerPublicKeys,
     blobsHex = [],
   }: {
-    intent: Intent
-    signerPublicKeys: PublicKey[]
-    blobsHex?: string[]
+    intent: Intent;
+    signerPublicKeys: PublicKey[];
+    blobsHex?: string[];
   }) => {
     // Translate the RET models to the gateway models for preview.
     const request: TransactionPreviewOperationRequest = {
@@ -85,9 +85,9 @@ export const previewTransactionFactory =
           use_free_credit: false,
         },
       },
-    }
+    };
 
     return gatewayApiClient.transaction.innerClient
       .transactionPreview(request)
-      .then((response) => response as PartialTransactionPreviewResponse)
-  }
+      .then((response) => response as PartialTransactionPreviewResponse);
+  };

@@ -1,2 +1,2 @@
-export * from './wallet/RadixWalletClient'
-export * from './plugins'
+export * from './wallet/RadixWalletClient';
+export * from './plugins';

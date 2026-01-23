@@ -1,5 +1,5 @@
-import { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk'
-import { Bytes, Convert } from '@radixdlt/radix-engine-toolkit'
+import type { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk';
+import { type Bytes, Convert } from '@radixdlt/radix-engine-toolkit';
 
 /**
  * Submits a compiled transaction to the network
@@ -15,4 +15,4 @@ export const submitTransactionFactory =
             ? compiledTransaction
             : Convert.Uint8Array.toHexString(compiledTransaction),
       },
-    })
+    });

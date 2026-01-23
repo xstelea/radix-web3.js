@@ -1,31 +1,31 @@
-import { PluginBase, createTool } from '@goat-sdk/core'
-import { RadixWalletClient } from '@/wallet/RadixWalletClient'
-import { z } from 'zod'
-import { sendXRDMethod } from './tools/sendXrd'
-import { sendXRDParametersSchema } from './tools/sendXrd'
-import { createRadixConnectClient, Metadata } from 'radix-connect'
+import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
+import { PluginBase, createTool } from '@goat-sdk/core';
+import type { Metadata, createRadixConnectClient } from 'radix-connect';
+import type { z } from 'zod';
 import {
   getAccountMethod,
   getAccountParametersSchema,
-} from './tools/getAccount'
-import { sendTransactionMethod } from './tools/sendTransaction'
-import { sendTransactionParametersSchema } from './tools/sendTransaction'
+} from './tools/getAccount';
+import { sendTransactionMethod } from './tools/sendTransaction';
+import { sendTransactionParametersSchema } from './tools/sendTransaction';
+import { sendXRDMethod } from './tools/sendXrd';
+import { sendXRDParametersSchema } from './tools/sendXrd';
 
 export class RadixCorePlugin extends PluginBase<RadixWalletClient> {
-  private radixConnectClient: ReturnType<typeof createRadixConnectClient>
-  private metadata: Metadata
+  private radixConnectClient: ReturnType<typeof createRadixConnectClient>;
+  private metadata: Metadata;
 
   constructor(input: {
-    radixConnectClient: ReturnType<typeof createRadixConnectClient>
-    metadata: Metadata
+    radixConnectClient: ReturnType<typeof createRadixConnectClient>;
+    metadata: Metadata;
   }) {
-    super('radix-core', [])
-    this.radixConnectClient = input.radixConnectClient
-    this.metadata = input.metadata
+    super('radix-core', []);
+    this.radixConnectClient = input.radixConnectClient;
+    this.metadata = input.metadata;
   }
 
   // @ts-expect-error: will be available once https://github.com/goat-sdk/goat/pull/293 is merged
-  supportsChain = (chain: Chain) => chain.type === 'radix'
+  supportsChain = (chain: Chain) => chain.type === 'radix';
 
   getTools(walletClient: RadixWalletClient): ReturnType<typeof createTool>[] {
     const sendTool = createTool(
@@ -36,7 +36,7 @@ export class RadixCorePlugin extends PluginBase<RadixWalletClient> {
       },
       (parameters: z.infer<typeof sendXRDParametersSchema>) =>
         sendXRDMethod(walletClient, parameters),
-    )
+    );
 
     const getAccountTool = createTool(
       {
@@ -46,7 +46,7 @@ export class RadixCorePlugin extends PluginBase<RadixWalletClient> {
       },
       (parameters: z.infer<typeof getAccountParametersSchema>) =>
         getAccountMethod(this.radixConnectClient, this.metadata),
-    )
+    );
 
     const sendTransactionTool = createTool(
       {
@@ -60,8 +60,8 @@ export class RadixCorePlugin extends PluginBase<RadixWalletClient> {
           this.radixConnectClient,
           this.metadata,
         ),
-    )
+    );
 
-    return [sendTool, getAccountTool, sendTransactionTool]
+    return [sendTool, getAccountTool, sendTransactionTool];
   }
 }

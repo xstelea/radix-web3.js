@@ -1,5 +1,5 @@
-import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit'
-import { NotarizedTransaction } from '@radixdlt/radix-engine-toolkit'
+import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
+import type { NotarizedTransaction } from '@radixdlt/radix-engine-toolkit';
 
 /**
  * Compiles a notarized transaction to a hexadecimal string
@@ -8,4 +8,4 @@ import { NotarizedTransaction } from '@radixdlt/radix-engine-toolkit'
  */
 export const compileTransaction = (
   notarizedTransaction: NotarizedTransaction,
-) => RadixEngineToolkit.NotarizedTransaction.compile(notarizedTransaction)
+) => RadixEngineToolkit.NotarizedTransaction.compile(notarizedTransaction);

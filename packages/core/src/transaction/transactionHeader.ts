@@ -1,20 +1,20 @@
 import {
-  TransactionHeader as TransactionHeaderType,
-  PublicKey,
+  type PublicKey,
+  type TransactionHeader as TransactionHeaderType,
   generateRandomNonce,
-} from '@radixdlt/radix-engine-toolkit'
-import { RadixNetworkClient } from '../network'
+} from '@radixdlt/radix-engine-toolkit';
+import type { RadixNetworkClient } from '../network';
 
 export const createTransactionHeader = (
   notaryPublicKey: PublicKey,
   options?: Partial<{
-    tipPercentage?: number
-    nonce?: number
-    notaryIsSignatory?: boolean
+    tipPercentage?: number;
+    nonce?: number;
+    notaryIsSignatory?: boolean;
     epochBounds?: (currentEpoch: number) => {
-      startEpochInclusive: number
-      endEpochExclusive: number
-    }
+      startEpochInclusive: number;
+      endEpochExclusive: number;
+    };
   }>,
 ) => {
   const {
@@ -25,7 +25,7 @@ export const createTransactionHeader = (
       startEpochInclusive: currentEpoch,
       endEpochExclusive: currentEpoch + 2,
     }),
-  } = options || {}
+  } = options || {};
 
   return async ({
     getCurrentEpoch,
@@ -41,6 +41,6 @@ export const createTransactionHeader = (
         notaryPublicKey,
         notaryIsSignatory,
         tipPercentage,
-      }))
-  }
-}
+      }));
+  };
+};

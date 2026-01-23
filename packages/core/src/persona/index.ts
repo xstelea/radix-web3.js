@@ -1,4 +1,7 @@
-import { PublicKey, RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit'
+import {
+  type PublicKey,
+  RadixEngineToolkit,
+} from '@radixdlt/radix-engine-toolkit';
 
 export const deriveIdentityAddressFromPublicKey = (
   publicKey: PublicKey,
@@ -7,4 +10,4 @@ export const deriveIdentityAddressFromPublicKey = (
   RadixEngineToolkit.Derive.virtualIdentityAddressFromPublicKey(
     publicKey,
     networkId,
-  )
+  );

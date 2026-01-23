@@ -1,9 +1,9 @@
 import {
+  ManifestBuilder,
   bucket,
   decimal,
-  ManifestBuilder,
-} from '@radixdlt/radix-engine-toolkit'
-import { ManifestHelper } from './types'
+} from '@radixdlt/radix-engine-toolkit';
+import type { ManifestHelper } from './types';
 
 export const getXrdFromFaucetManifest =
   (accountAddress: string) =>
@@ -20,4 +20,4 @@ export const getXrdFromFaucetManifest =
             builder.callMethod(accountAddress, 'deposit', [bucket(bucketId)]),
         )
         .build(),
-    )
+    );

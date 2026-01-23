@@ -1,17 +1,17 @@
-import { concatBytes } from '@noble/hashes/utils'
-import { blake2b } from '../crypto/blake2b'
-import { fromHex } from '../crypto'
+import { concatBytes } from '@noble/hashes/utils';
+import { fromHex } from '../crypto';
+import { blake2b } from '../crypto/blake2b';
 
 export const createRolaMessage = ({
   dAppDefinitionAddress,
   origin,
   challenge,
 }: {
-  dAppDefinitionAddress: string
-  origin: string
-  challenge: string
+  dAppDefinitionAddress: string;
+  origin: string;
+  challenge: string;
 }) => {
-  const encoder = new TextEncoder()
+  const encoder = new TextEncoder();
 
   return blake2b(
     concatBytes(
@@ -21,5 +21,5 @@ export const createRolaMessage = ({
       encoder.encode(dAppDefinitionAddress),
       encoder.encode(origin),
     ),
-  )
-}
+  );
+};

@@ -1,4 +1,4 @@
-import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit'
+import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
 
 export const getKnownAddresses = (networkId: number) =>
-  RadixEngineToolkit.Utils.knownAddresses(networkId)
+  RadixEngineToolkit.Utils.knownAddresses(networkId);

@@ -12,10 +12,9 @@
     "noEmit": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "isolatedModules": true
     // "incremental": true,
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"],
-
+  "include": ["src/**/*", "example/index.ts"],
+  "exclude": ["node_modules"]
 }

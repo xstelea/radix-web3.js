@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["nodejs-examples", "docs"]
+  "ignore": ["docs"]
 }

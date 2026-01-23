@@ -1,144 +1,126 @@
-# Radix Transaction Stream
+# @radix-effects/transaction-stream
 
-A utility package for streaming transactions from the Radix ledger in a reliable and efficient manner.
+Stream transactions from the Radix network using [Effect](https://effect.website/).
 
 ## Installation
 
 ```bash
-npm install radix-transaction-stream
+npm install @radix-effects/transaction-stream
 ```
-
-## Features
-
-- Stream transactions from the Radix ledger with automatic state version management
-- Error handling for common issues like state version beyond known ledger
-- Configurable transaction batch size
-- Optional debug logging
-- Type-safe API with proper error handling using `neverthrow`
 
 ## Usage
 
-### Basic Usage
-
 ```typescript
-import { createTransactionStream } from 'radix-transaction-stream'
+import { Effect, Layer, Stream, Ref, Option, Duration } from 'effect';
+import {
+  TransactionStreamService,
+  ConfigService,
+  TransactionDetailsOptInsSchema,
+} from '@radix-effects/transaction-stream';
 
-// Create a transaction stream with default settings
-const transactionStream = createTransactionStream()
+const program = Effect.gen(function* () {
+  // Create the transaction stream
+  const stream = yield* TransactionStreamService.pipe(
+    Effect.provide(TransactionStreamService.Default),
+  );
 
-// Process transactions in a loop
-const processTransactions = async () => {
-  while (true) {
-    const result = await transactionStream.next()
+  // Configure the stream
+  const configRef = yield* ConfigService.make;
+  yield* Ref.update(configRef, (config) => ({
+    ...config,
+    stateVersion: Option.some(1), // Start from state version 1
+    limitPerPage: 100,
+    waitTime: Duration.seconds(60),
+    optIns: TransactionDetailsOptInsSchema.make({
+      detailed_events: true,
+      balance_changes: true,
+    }),
+  }));
 
-    if (result.isErr()) {
-      // Handle errors
-      console.error('Error fetching transactions:', result.error)
-
-      // Special handling for state version beyond known ledger
-      if (
-        'parsedError' in result.error &&
-        result.error.parsedError === 'StateVersionBeyondEndOfKnownLedger'
-      ) {
-        console.log('Reached end of ledger, waiting for new transactions...')
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        continue
-      }
-    } else {
-      // Process transactions
-      const { stateVersion, transactions } = result.value
-      console.log(
-        `Processing ${transactions.length} transactions at state version ${stateVersion}`,
-      )
-
-      // Your transaction processing logic here
+  // Process transactions
+  yield* Stream.runForEach(stream, (transactions) =>
+    Effect.gen(function* () {
       for (const tx of transactions) {
-        // Process each transaction
+        yield* Effect.log(`Processing tx: ${tx.intent_hash}`);
       }
-    }
-  }
-}
-
-processTransactions()
+    }),
+  ).pipe(
+    Effect.provide(Layer.effect(ConfigService, Effect.succeed(configRef))),
+  );
+});
 ```
 
-### Advanced Configuration
+## Configuration
+
+The `ConfigService` allows you to configure the transaction stream:
+
+| Option         | Type                        | Default             | Description                                   |
+| -------------- | --------------------------- | ------------------- | --------------------------------------------- |
+| `stateVersion` | `Option<number>`            | `Option.none()`     | Starting state version (none = current)       |
+| `limitPerPage` | `number`                    | `100`               | Number of transactions per page               |
+| `waitTime`     | `Duration`                  | `Duration.seconds(60)` | Wait time when no new transactions available |
+| `optIns`       | `TransactionDetailsOptIns`  | See below           | Optional data to include in response          |
+
+### Opt-ins
+
+Control what data is included in the transaction response:
 
 ```typescript
-import { createTransactionStream } from 'radix-transaction-stream'
-import { createRadixNetworkClient } from 'radix-web3.js'
-
-// Create a custom network client
-const gatewayApi = createRadixNetworkClient({
-  networkId: 1, // Mainnet
-  // Other configuration options
-})
-
-// Create a transaction stream with custom settings
-const transactionStream = createTransactionStream({
-  gatewayApi, // Custom network client
-  startStateVersion: 1000, // Start from a specific state version
-  numberOfTransactions: 50, // Number of transactions to fetch per request
-  debug: true, // Enable debug logging
-  logLevel: 'debug', // Log level (debug, info, warn, error, trace)
-})
-
-// Use the transaction stream
-const result = await transactionStream.next()
+TransactionDetailsOptInsSchema.make({
+  raw_hex: false,                  // Raw transaction hex
+  receipt_state_changes: false,    // State changes in receipt
+  receipt_fee_summary: false,      // Fee summary in receipt
+  receipt_fee_source: false,       // Fee source in receipt
+  receipt_fee_destination: false,  // Fee destination in receipt
+  receipt_costing_parameters: false, // Costing parameters in receipt
+  receipt_events: false,           // Events in receipt (deprecated)
+  detailed_events: false,          // Detailed events object
+  receipt_output: true,            // Transaction receipt output
+  affected_global_entities: false, // Affected global entities
+  manifest_instructions: false,    // Manifest instructions
+  balance_changes: false,          // Fungible/non-fungible balance changes
+});
 ```
 
-## API Reference
+## Multiple Networks
 
-### `createTransactionStream(options?)`
-
-Creates a new transaction stream instance.
-
-#### Options
-
-| Option                 | Type                                                | Default                                      | Description                                 |
-| ---------------------- | --------------------------------------------------- | -------------------------------------------- | ------------------------------------------- |
-| `gatewayApi`           | `RadixNetworkClient`                                | `createRadixNetworkClient({ networkId: 1 })` | The Radix network client to use             |
-| `startStateVersion`    | `number`                                            | Current state version                        | The state version to start streaming from   |
-| `numberOfTransactions` | `number`                                            | `100`                                        | Number of transactions to fetch per request |
-| `debug`                | `boolean`                                           | `false`                                      | Enable debug logging                        |
-| `logLevel`             | `'debug' \| 'info' \| 'warn' \| 'error' \| 'trace'` | `'debug'`                                    | Log level when debug is enabled             |
-
-#### Returns
-
-A transaction stream object with the following methods:
-
-- `next()`: Fetches the next batch of transactions
-- `setStateVersion(version: number)`: Manually set the current state version
-- `getStateVersion()`: Get the current state version
-
-### Transaction Result
-
-The `next()` method returns a `Result` object (from the `neverthrow` library) that contains either:
-
-#### Success Case
+You can run multiple streams for different networks simultaneously:
 
 ```typescript
-{
-  stateVersion: number;
-  transactions: Transaction[];
-}
+import { ConfigProvider, Fiber } from 'effect';
+
+const program = Effect.gen(function* () {
+  // Configure for Stokenet (network ID 2)
+  const stokenetConfig = Layer.setConfigProvider(
+    ConfigProvider.fromJson({ NETWORK_ID: '2' }),
+  );
+
+  const stokenetStream = yield* TransactionStreamService.pipe(
+    Effect.provide(TransactionStreamService.Default),
+    Effect.provide(stokenetConfig),
+  );
+
+  // Mainnet uses default config (network ID 1)
+  const mainnetStream = yield* TransactionStreamService.pipe(
+    Effect.provide(TransactionStreamService.Default),
+  );
+
+  // Run both streams concurrently
+  const stokenetFiber = yield* Effect.fork(
+    Stream.runForEach(stokenetStream, processTransactions).pipe(
+      Effect.provide(Layer.effect(ConfigService, Effect.succeed(stokenetConfigRef))),
+    ),
+  );
+
+  const mainnetFiber = yield* Effect.fork(
+    Stream.runForEach(mainnetStream, processTransactions).pipe(
+      Effect.provide(Layer.effect(ConfigService, Effect.succeed(mainnetConfigRef))),
+    ),
+  );
+
+  yield* Fiber.joinAll([stokenetFiber, mainnetFiber]);
+});
 ```
-
-Where `Transaction` is a transaction object from the Radix Gateway API.
-
-#### Error Case
-
-Various error types with appropriate context information.
-
-## Error Handling
-
-The transaction stream uses the `neverthrow` library for error handling, which means all operations return a `Result` type that must be checked.
-
-Common errors include:
-
-- `StateVersionBeyondEndOfKnownLedger`: Occurs when trying to fetch transactions beyond the current ledger state
-- Network errors
-- Gateway API errors
 
 ## License
 

@@ -37,7 +37,5 @@
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
     "@radixdlt/radix-engine-toolkit": "catalog:"
   },
-  "files": [
-    "dist"
-  ]
+  "files": ["dist"]
 }

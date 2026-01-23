@@ -989,4 +989,4 @@ export const rolaTestVectors = [
     challenge:
       '20619c1df905a28e7a76d431f2b59e99dd1a8f386842e1701862e765806a5c47',
   },
-]
+];

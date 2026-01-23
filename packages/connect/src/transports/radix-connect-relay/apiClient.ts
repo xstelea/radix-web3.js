@@ -1,24 +1,24 @@
 export type RadixConnectRelayApiClient = ReturnType<
   typeof createRadixConnectRelayApiClient
->
+>;
 
 export type RadixConnectRelaySuccessResponse = {
-  sessionId: string
-  publicKey: string
-  data: string
-}
+  sessionId: string;
+  publicKey: string;
+  data: string;
+};
 
 export type RadixConnectRelayErrorResponse = {
-  sessionId: string
-  error: string
-}
+  sessionId: string;
+  error: string;
+};
 
 export type RadixConnectRelayResponse =
   | RadixConnectRelaySuccessResponse
-  | RadixConnectRelayErrorResponse
+  | RadixConnectRelayErrorResponse;
 
 export const createRadixConnectRelayApiClient = (input: {
-  baseUrl: string
+  baseUrl: string;
 }) => {
   const getResponses = (sessionId: string) =>
     fetch(input.baseUrl, {
@@ -29,9 +29,9 @@ export const createRadixConnectRelayApiClient = (input: {
       }),
     })
       .then((response) => response.json())
-      .then((data): RadixConnectRelayResponse[] => data)
+      .then((data): RadixConnectRelayResponse[] => data);
 
   return {
     getResponses,
-  }
-}
+  };
+};

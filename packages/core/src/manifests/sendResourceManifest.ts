@@ -1,10 +1,10 @@
 import {
+  ManifestBuilder,
   address,
   bucket,
   decimal,
   enumeration,
-  ManifestBuilder,
-} from '@radixdlt/radix-engine-toolkit'
+} from '@radixdlt/radix-engine-toolkit';
 
 export const sendResourceManifest = ({
   resourceAddress,
@@ -13,11 +13,11 @@ export const sendResourceManifest = ({
   amount,
   feeAmount = 10,
 }: {
-  resourceAddress: string
-  fromAddress: string
-  toAddress: string
-  amount: string
-  feeAmount?: number
+  resourceAddress: string;
+  fromAddress: string;
+  toAddress: string;
+  amount: string;
+  feeAmount?: number;
 }) =>
   new ManifestBuilder()
     .callMethod(fromAddress, 'lock_fee', [decimal(feeAmount)])
@@ -34,4 +34,4 @@ export const sendResourceManifest = ({
           enumeration(0),
         ]),
     )
-    .build()
+    .build();

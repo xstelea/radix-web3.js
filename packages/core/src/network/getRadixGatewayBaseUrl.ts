@@ -13,7 +13,7 @@ export const RadixNetworkId = {
   Nergalnet: 35,
   Mardunet: 36,
   Dumunet: 37,
-} as const
+} as const;
 
 const RadixNetwork = {
   Mainnet: {
@@ -82,8 +82,8 @@ const RadixNetwork = {
     gatewayUrl: 'https://dumunet-gateway.radixdlt.com',
     dashboardUrl: 'https://dumunet-dashboard.rdx-works-main.extratools.works',
   },
-} as const
+} as const;
 
 export const getRadixGatewayBaseUrl = (
   networkId: keyof typeof RadixNetwork = 'Mainnet',
-) => RadixNetwork[networkId].gatewayUrl
+) => RadixNetwork[networkId].gatewayUrl;

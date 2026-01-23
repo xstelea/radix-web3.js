@@ -1,1 +1,1 @@
-export * from './walletInteraction'
+export * from './walletInteraction';

@@ -1,3 +1,3 @@
-export * from './helpers'
-export * from './RadixConnectRelayTransport'
-export * from './apiClient'
+export * from './helpers';
+export * from './RadixConnectRelayTransport';
+export * from './apiClient';

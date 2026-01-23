@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto';
 
 export const secureRandom = (byteCount: number) =>
-  crypto.getRandomValues(new Uint8Array(byteCount))
+  crypto.getRandomValues(new Uint8Array(byteCount));

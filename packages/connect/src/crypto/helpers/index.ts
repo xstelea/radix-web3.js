@@ -1,3 +1,3 @@
-export * from './concat'
-export * from './fromHex'
-export * from './toHex'
+export * from './concat';
+export * from './fromHex';
+export * from './toHex';

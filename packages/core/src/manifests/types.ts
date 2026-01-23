@@ -1,10 +1,10 @@
-import { RadixNetworkClient } from '@/network'
-import { TransactionManifest } from '@radixdlt/radix-engine-toolkit'
+import type { RadixNetworkClient } from '@/network';
+import type { TransactionManifest } from '@radixdlt/radix-engine-toolkit';
 
 export type ManifestHelper = {
-  getKnownAddresses: RadixNetworkClient['getKnownAddresses']
-}
+  getKnownAddresses: RadixNetworkClient['getKnownAddresses'];
+};
 
 export type WithManifestHelper = (
   helpers: ManifestHelper,
-) => Promise<TransactionManifest | string>
+) => Promise<TransactionManifest | string>;

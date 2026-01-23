@@ -1,16 +1,16 @@
-import { z } from 'zod'
-import { astrolecentApiClient } from '../astrolecentApiClient'
-import { createTool } from '@goat-sdk/core'
+import { createTool } from '@goat-sdk/core';
+import { z } from 'zod';
+import { astrolecentApiClient } from '../astrolecentApiClient';
 
 export const getTokenPricesParametersSchema = z.object({
   symbols: z.array(z.string()),
-})
+});
 
 export const getTokenPricesMethod = async (
   parameters: z.infer<typeof getTokenPricesParametersSchema>,
 ) => {
   try {
-    const { symbols } = parameters
+    const { symbols } = parameters;
     return await astrolecentApiClient
       .prices()
       .then((data) =>
@@ -48,11 +48,11 @@ export const getTokenPricesMethod = async (
           )
           .sort((a, b) => b.tvl - a.tvl),
       )
-      .then((data) => JSON.stringify(data))
+      .then((data) => JSON.stringify(data));
   } catch (error) {
-    throw new Error(`Failed to swap: ${error}`)
+    throw new Error(`Failed to swap: ${error}`);
   }
-}
+};
 
 export const getTokenPricesTool = createTool(
   {
@@ -63,4 +63,4 @@ export const getTokenPricesTool = createTool(
   },
   (parameters: z.infer<typeof getTokenPricesParametersSchema>) =>
     getTokenPricesMethod(parameters),
-)
+);

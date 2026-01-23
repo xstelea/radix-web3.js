@@ -1,35 +1,35 @@
 import {
-  Intent,
-  Signature,
-  SignatureWithPublicKey,
+  type Intent,
+  type Signature,
+  type SignatureWithPublicKey,
   TransactionBuilder,
-  TransactionBuilderIntentSignaturesStep,
-  TransactionHash,
-} from '@radixdlt/radix-engine-toolkit'
-import { compileTransaction } from './helpers/compileTransaction'
-import { getIntentHash } from './helpers/getIntentHash'
+  type TransactionBuilderIntentSignaturesStep,
+  type TransactionHash,
+} from '@radixdlt/radix-engine-toolkit';
+import { compileTransaction } from './helpers/compileTransaction';
+import { getIntentHash } from './helpers/getIntentHash';
 
-export type TransactionHelper = ReturnType<typeof createTransactionHelper>
+export type TransactionHelper = ReturnType<typeof createTransactionHelper>;
 
 export type TransactionSigner = (
   hash: Uint8Array,
 ) =>
   | Promise<SignatureWithPublicKey | SignatureWithPublicKey[]>
   | SignatureWithPublicKey
-  | SignatureWithPublicKey[]
+  | SignatureWithPublicKey[];
 
 export type TransactionNotarizer = (
   hash: Uint8Array,
-) => Promise<Signature> | Signature
+) => Promise<Signature> | Signature;
 
 export const createTransactionHelper = ({
   intent,
   signer = () => [],
   notarizer,
 }: {
-  intent: Intent
-  signer?: TransactionSigner
-  notarizer: TransactionNotarizer
+  intent: Intent;
+  signer?: TransactionSigner;
+  notarizer: TransactionNotarizer;
 }) => {
   /**
    * Signs the transaction intent with one or more signatures
@@ -41,16 +41,16 @@ export const createTransactionHelper = ({
     intentHash,
     builder,
   }: {
-    builder: TransactionBuilderIntentSignaturesStep
-    intentHash: TransactionHash
+    builder: TransactionBuilderIntentSignaturesStep;
+    intentHash: TransactionHash;
   }) =>
     Promise.resolve(intentHash)
       .then(({ hash }) => signer(hash))
       .then((value) => (Array.isArray(value) ? value : [value]))
       .then((signatures) => {
-        signatures.forEach(builder.sign)
-        return builder
-      })
+        signatures.forEach(builder.sign);
+        return builder;
+      });
 
   /**
    * Prepares a transaction builder with the intent (header, message, manifest)
@@ -68,11 +68,11 @@ export const createTransactionHelper = ({
           .manifest(intent.manifest),
         intentHash,
       }),
-    )
+    );
 
   const signAndNotarize = async (): Promise<{
-    transactionId: string
-    compiledTransaction: Uint8Array
+    transactionId: string;
+    compiledTransaction: Uint8Array;
   }> =>
     prepareBuildProcedure().then(({ intentHash, builder }) =>
       signProcedure({ builder, intentHash }).then((builder) =>
@@ -84,9 +84,9 @@ export const createTransactionHelper = ({
             transactionId: intentHash.id,
           })),
       ),
-    )
+    );
 
   return {
     signAndNotarize,
-  }
-}
+  };
+};

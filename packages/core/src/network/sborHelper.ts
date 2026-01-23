@@ -1,56 +1,56 @@
 import type {
   ProgrammaticScryptoSborValue,
   ProgrammaticScryptoSborValueMapEntry,
-} from '@radixdlt/babylon-gateway-api-sdk'
+} from '@radixdlt/babylon-gateway-api-sdk';
 
 const getEnumFields = (
   data: ProgrammaticScryptoSborValue,
 ): ProgrammaticScryptoSborValue[] | undefined => {
-  if (data.kind === 'Enum') return data.fields
-  return undefined
-}
+  if (data.kind === 'Enum') return data.fields;
+  return undefined;
+};
 
 const getMapEntries = (
   data: ProgrammaticScryptoSborValue,
 ): ProgrammaticScryptoSborValueMapEntry[] | undefined => {
-  if (data.kind === 'Map') return data.entries
-  return undefined
-}
+  if (data.kind === 'Map') return data.entries;
+  return undefined;
+};
 
 const getTupleFields = (
   data: ProgrammaticScryptoSborValue,
 ): ProgrammaticScryptoSborValue[] | undefined => {
-  if (data.kind === 'Tuple') return data.fields
-  return
-}
+  if (data.kind === 'Tuple') return data.fields;
+  return;
+};
 
 const getArrayElements = (
   data: ProgrammaticScryptoSborValue,
 ): ProgrammaticScryptoSborValue[] | undefined => {
-  if (data.kind === 'Array') return data.elements
-  return
-}
+  if (data.kind === 'Array') return data.elements;
+  return;
+};
 
 const getStringFieldValue = (
   data: ProgrammaticScryptoSborValue,
 ): string | undefined => {
-  if (data.kind === 'String') return data.value
-  return
-}
+  if (data.kind === 'String') return data.value;
+  return;
+};
 
 const getDecimalFieldValue = (
   data: ProgrammaticScryptoSborValue,
 ): string | undefined => {
-  if (data.kind === 'Decimal') return data.value
-  return
-}
+  if (data.kind === 'Decimal') return data.value;
+  return;
+};
 
 const getReferenceFieldValue = (
   data: ProgrammaticScryptoSborValue,
 ): string | undefined => {
-  if (data.kind === 'Reference') return data.value
-  return
-}
+  if (data.kind === 'Reference') return data.value;
+  return;
+};
 
 export const SborHelper = {
   getEnumFields,
@@ -60,4 +60,4 @@ export const SborHelper = {
   getStringFieldValue,
   getDecimalFieldValue,
   getReferenceFieldValue,
-} as const
+} as const;

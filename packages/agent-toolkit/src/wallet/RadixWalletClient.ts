@@ -1,25 +1,25 @@
-import { WalletClientBase } from '@goat-sdk/core'
-import type { Chain } from '@goat-sdk/core'
-import type { Balance, Signature } from '@goat-sdk/core'
-import {
+import { WalletClientBase } from '@goat-sdk/core';
+import type { Chain } from '@goat-sdk/core';
+import type { Balance, Signature } from '@goat-sdk/core';
+import type {
   Manifest,
   RadixWeb3Client,
   TransactionStatusResponse,
-} from 'radix-web3.js'
+} from 'radix-web3.js';
 
 export type RadixWalletClientCtorParams = {
-  accountAddress: string
-  client: RadixWeb3Client
-}
+  accountAddress: string;
+  client: RadixWeb3Client;
+};
 
 export class RadixWalletClient extends WalletClientBase {
-  protected client: RadixWeb3Client
-  protected accountAddress: string
+  protected client: RadixWeb3Client;
+  protected accountAddress: string;
 
   constructor(params: RadixWalletClientCtorParams) {
-    super()
-    this.client = params.client
-    this.accountAddress = params.accountAddress
+    super();
+    this.client = params.client;
+    this.accountAddress = params.accountAddress;
   }
 
   getChain(): Chain {
@@ -27,19 +27,21 @@ export class RadixWalletClient extends WalletClientBase {
       // @ts-expect-error: Added once https://github.com/goat-sdk/goat/pull/293 is merged
       type: 'radix',
       id: this.client.networkClient.networkId,
-    } as const
+    } as const;
   }
 
   getClient(): RadixWeb3Client {
-    return this.client
+    return this.client;
   }
 
   getAddress(): string {
-    return this.accountAddress
+    return this.accountAddress;
   }
 
   async signMessage(message: string): Promise<Signature> {
-    return this.client.signMessage(message).then((signature) => ({ signature }))
+    return this.client
+      .signMessage(message)
+      .then((signature) => ({ signature }));
   }
 
   async sendTransaction(
@@ -50,17 +52,17 @@ export class RadixWalletClient extends WalletClientBase {
       .then(({ response, transactionId }) => ({
         response,
         transactionId,
-      }))
+      }));
   }
 
   async balanceOf(address: string): Promise<Balance> {
-    const balance = await this.client.getBalances(address)
-    const knownAddresses = await this.client.networkClient.getKnownAddresses()
-    const xrdAddress = knownAddresses.resourceAddresses.xrd
+    const balance = await this.client.getBalances(address);
+    const knownAddresses = await this.client.networkClient.getKnownAddresses();
+    const xrdAddress = knownAddresses.resourceAddresses.xrd;
     const xrdBalance =
       balance.fungibleTokens.find(
         (token) => token?.resourceAddress === xrdAddress,
-      )?.amount ?? '0'
+      )?.amount ?? '0';
 
     return {
       decimals: 18,
@@ -68,6 +70,6 @@ export class RadixWalletClient extends WalletClientBase {
       name: 'Radix',
       value: xrdBalance,
       inBaseUnits: xrdBalance,
-    }
+    };
   }
 }

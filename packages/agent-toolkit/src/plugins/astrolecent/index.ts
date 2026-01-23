@@ -1,18 +1,18 @@
-import { createTool } from '@goat-sdk/core'
-import { RadixWalletClient } from '@/wallet/RadixWalletClient'
-import { PluginBase } from '@goat-sdk/core'
-import { getTokenPricesTool } from './tools/getTokenPricesTool'
-import { swapTokensTool } from './tools/swapTool'
+import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
+import type { createTool } from '@goat-sdk/core';
+import { PluginBase } from '@goat-sdk/core';
+import { getTokenPricesTool } from './tools/getTokenPricesTool';
+import { swapTokensTool } from './tools/swapTool';
 
 export class AstrolecentPlugin extends PluginBase<RadixWalletClient> {
   constructor() {
-    super('astrolecent', [])
+    super('astrolecent', []);
   }
 
   // @ts-expect-error
-  supportsChain = (chain: Chain) => chain.type === 'radix'
+  supportsChain = (chain: Chain) => chain.type === 'radix';
 
   getTools(): ReturnType<typeof createTool>[] {
-    return [getTokenPricesTool, swapTokensTool]
+    return [getTokenPricesTool, swapTokensTool];
   }
 }

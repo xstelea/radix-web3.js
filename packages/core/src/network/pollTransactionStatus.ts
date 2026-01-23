@@ -1,15 +1,15 @@
-import {
+import type {
   GatewayApiClient,
   TransactionStatusResponse,
-} from '@radixdlt/babylon-gateway-api-sdk'
+} from '@radixdlt/babylon-gateway-api-sdk';
 
 export type PollTransactionStatusOptions = Partial<{
-  abortSignal: AbortSignal
-  baseDelay: number
-  maxRetries: number
-  maxDelay: number
-  delayFn: (retry: number) => number
-}>
+  abortSignal: AbortSignal;
+  baseDelay: number;
+  maxRetries: number;
+  maxDelay: number;
+  delayFn: (retry: number) => number;
+}>;
 
 export const pollTransactionStatusFactory =
   (gatewayApiClient: GatewayApiClient) =>
@@ -19,46 +19,45 @@ export const pollTransactionStatusFactory =
       baseDelay = 1000,
       maxRetries = 10,
       maxDelay = 10000,
-      delayFn = (retry: number) =>
-        Math.min(baseDelay * Math.pow(2, retry), maxDelay),
-    } = options || {}
+      delayFn = (retry: number) => Math.min(baseDelay * 2 ** retry, maxDelay),
+    } = options || {};
 
     return new Promise<TransactionStatusResponse>(async (resolve, reject) => {
-      let response: TransactionStatusResponse | undefined
-      let retry = 0
+      let response: TransactionStatusResponse | undefined;
+      let retry = 0;
 
       if (abortSignal?.aborted) {
-        reject(new Error('Transaction polling was aborted'))
-        return
+        reject(new Error('Transaction polling was aborted'));
+        return;
       }
 
       abortSignal?.addEventListener(
         'abort',
         () => {
-          reject(new Error('Transaction polling was aborted'))
+          reject(new Error('Transaction polling was aborted'));
         },
         { once: true },
-      )
+      );
 
       while (!response && retry < maxRetries) {
         const result =
-          await gatewayApiClient.transaction.getStatus(transactionId)
+          await gatewayApiClient.transaction.getStatus(transactionId);
 
         if (result.intent_status !== 'Pending') {
-          response = result
-          break
+          response = result;
+          break;
         }
 
-        const delay = delayFn(retry)
-        retry = retry + 1
-        await new Promise((resolve) => setTimeout(resolve, delay))
+        const delay = delayFn(retry);
+        retry = retry + 1;
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
       if (!response) {
-        reject(new Error('Transaction polling timed out'))
-        return
+        reject(new Error('Transaction polling timed out'));
+        return;
       }
 
-      resolve(response)
-    })
-  }
+      resolve(response);
+    });
+  };

@@ -35,9 +35,7 @@
     "ed25519-hd-key": "catalog:",
     "zod": "catalog:"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "publishConfig": {
     "access": "public",
@@ -47,11 +45,5 @@
     "type": "git",
     "url": "git+https://github.com/xstelea/radix-web3.js.git"
   },
-  "tags": [
-    "radix",
-    "web3",
-    "crypto",
-    "wallet",
-    "connect"
-  ]
+  "tags": ["radix", "web3", "crypto", "wallet", "connect"]
 }

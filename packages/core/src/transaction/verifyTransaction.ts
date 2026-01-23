@@ -1,7 +1,7 @@
-import {
+import type {
   GatewayApiClient,
   TransactionStatusResponse,
-} from '@radixdlt/babylon-gateway-api-sdk'
+} from '@radixdlt/babylon-gateway-api-sdk';
 
 const defaultHandler = (
   response: TransactionStatusResponse,
@@ -11,7 +11,7 @@ const defaultHandler = (
       return {
         shouldSubmitTransaction: false,
         shouldPollTransaction: false,
-      }
+      };
     case 'Pending':
     case 'CommitPendingOutcomeUnknown':
     case 'LikelyButNotCertainRejection':
@@ -19,46 +19,46 @@ const defaultHandler = (
       return {
         shouldSubmitTransaction: false,
         shouldPollTransaction: true,
-      }
+      };
 
     case 'CommittedFailure':
     case 'PermanentlyRejected':
       return {
         shouldSubmitTransaction: true,
         shouldPollTransaction: false,
-      }
+      };
 
     default:
       return {
         shouldSubmitTransaction: false,
         shouldPollTransaction: false,
-      }
+      };
   }
-}
+};
 
 type VerifyTransactionOutput = {
-  shouldSubmitTransaction: boolean
-  shouldPollTransaction: boolean
-}
+  shouldSubmitTransaction: boolean;
+  shouldPollTransaction: boolean;
+};
 
 export type VerifyTransactionHandler = (
   response: TransactionStatusResponse,
-) => VerifyTransactionOutput | undefined
+) => VerifyTransactionOutput | undefined;
 
-export type VerifyTransaction = ReturnType<typeof VerifyTransaction>
+export type VerifyTransaction = ReturnType<typeof VerifyTransaction>;
 
 export const VerifyTransaction =
   (gatewayApi: GatewayApiClient, handlers: VerifyTransactionHandler[]) =>
   async (transactionId: string) => {
     try {
-      const response = await gatewayApi.transaction.getStatus(transactionId)
+      const response = await gatewayApi.transaction.getStatus(transactionId);
 
       for (const handler of handlers) {
-        const result = handler(response)
-        if (result) return { ...result, status: response.intent_status }
+        const result = handler(response);
+        if (result) return { ...result, status: response.intent_status };
       }
 
-      return { ...defaultHandler(response), status: response.intent_status }
+      return { ...defaultHandler(response), status: response.intent_status };
     } catch (error) {
       if (
         typeof error === 'object' &&
@@ -73,7 +73,7 @@ export const VerifyTransaction =
             return {
               shouldSubmitTransaction: false,
               shouldPollTransaction: true,
-            }
+            };
 
           case 'AccountLockerNotFoundError':
           case 'EntityNotFoundError':
@@ -84,9 +84,9 @@ export const VerifyTransaction =
             return {
               shouldSubmitTransaction: false,
               shouldPollTransaction: false,
-            }
+            };
         }
       }
-      throw error
+      throw error;
     }
-  }
+  };

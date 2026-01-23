@@ -1,20 +1,20 @@
-import {
+import type {
   WalletInteraction,
   WalletInteractionResponse,
-} from './schemas/walletInteraction'
-import { RadixConnectTransport } from './types'
+} from './schemas/walletInteraction';
+import type { RadixConnectTransport } from './types';
 
 export const createRadixConnectClient = ({
   transport,
 }: {
-  transport: RadixConnectTransport
+  transport: RadixConnectTransport;
 }) => {
   const sendRequest = async (
     walletInteraction: WalletInteraction,
   ): Promise<WalletInteractionResponse> =>
-    transport.sendRequest(walletInteraction)
+    transport.sendRequest(walletInteraction);
 
   return {
     sendRequest,
-  }
-}
+  };
+};

@@ -1,7 +1,7 @@
-import { z } from 'zod'
-import { createRadixConnectClient, Metadata } from 'radix-connect'
+import type { Metadata, createRadixConnectClient } from 'radix-connect';
+import { z } from 'zod';
 
-export const getAccountParametersSchema = z.object({})
+export const getAccountParametersSchema = z.object({});
 
 export const getAccountMethod = async (
   radixConnectClient: ReturnType<typeof createRadixConnectClient>,
@@ -20,8 +20,8 @@ export const getAccountMethod = async (
           },
         },
       },
-    })
+    });
   } catch (error) {
-    throw new Error(`Failed get account: ${error}`)
+    throw new Error(`Failed get account: ${error}`);
   }
-}
+};

@@ -16,18 +16,8 @@
     "radix-connect": "workspace:*",
     "zod": "catalog:"
   },
-  "files": [
-    "dist/**/*",
-    "README.md",
-    "package.json"
-  ],
-  "keywords": [
-    "radix dlt",
-    "web3",
-    "crypto",
-    "ai",
-    "agent"
-  ],
+  "files": ["dist/**/*", "README.md", "package.json"],
+  "keywords": ["radix dlt", "web3", "crypto", "ai", "agent"],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.10.2",

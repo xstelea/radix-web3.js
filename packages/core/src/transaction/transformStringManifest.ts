@@ -1,11 +1,11 @@
 import {
-  type TransactionManifest as TransactionManifestType,
   RadixEngineToolkit,
-} from '@radixdlt/radix-engine-toolkit'
+  type TransactionManifest as TransactionManifestType,
+} from '@radixdlt/radix-engine-toolkit';
 
 export const transformStringManifest = async (
   transactionManifest: TransactionManifestType | string,
-  networkId: number = 1,
+  networkId = 1,
   blobs: Uint8Array[] = [],
 ): Promise<TransactionManifestType> => {
   if (typeof transactionManifest === 'string') {
@@ -13,8 +13,8 @@ export const transformStringManifest = async (
       { kind: 'String', value: transactionManifest },
       networkId,
       'Parsed',
-    )
-    return { instructions, blobs }
+    );
+    return { instructions, blobs };
   }
-  return transactionManifest
-}
+  return transactionManifest;
+};

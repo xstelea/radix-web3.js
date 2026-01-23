@@ -1,4 +1,4 @@
-import { Message } from '@radixdlt/radix-engine-toolkit'
+import type { Message } from '@radixdlt/radix-engine-toolkit';
 
 export const createStringMessage = (value: string): Message => ({
   kind: 'PlainText',
@@ -6,4 +6,4 @@ export const createStringMessage = (value: string): Message => ({
     message: { kind: 'String', value },
     mimeType: 'text/plain',
   },
-})
+});

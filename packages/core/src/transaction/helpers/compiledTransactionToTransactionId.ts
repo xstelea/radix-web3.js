@@ -1,5 +1,5 @@
-import { decompileTransaction } from './decompileTransaction'
-import { getIntentHash } from './getIntentHash'
+import { decompileTransaction } from './decompileTransaction';
+import { getIntentHash } from './getIntentHash';
 
 export const compiledTransactionToTransactionId = (
   compiledTransaction: Uint8Array,
@@ -8,4 +8,4 @@ export const compiledTransactionToTransactionId = (
     .then((notarizedTransaction) =>
       getIntentHash(notarizedTransaction.signedIntent.intent),
     )
-    .then((intentHash) => intentHash.id)
+    .then((intentHash) => intentHash.id);

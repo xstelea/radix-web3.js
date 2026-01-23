@@ -1,4 +1,4 @@
-import { concatBytes } from '@noble/hashes/utils'
+import { concatBytes } from '@noble/hashes/utils';
 
 const deriveCryptoKey = (input: Uint8Array) =>
   crypto.subtle.importKey(
@@ -10,20 +10,20 @@ const deriveCryptoKey = (input: Uint8Array) =>
     },
     false,
     ['encrypt', 'decrypt'],
-  )
+  );
 
 export const decrypt = ({
   data,
   encryptionKey,
   iv,
 }: {
-  data: Uint8Array
-  encryptionKey: Uint8Array
-  iv: Uint8Array
+  data: Uint8Array;
+  encryptionKey: Uint8Array;
+  iv: Uint8Array;
 }) =>
   deriveCryptoKey(encryptionKey)
     .then((key) => crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data))
-    .then((decrypted) => new Uint8Array(decrypted))
+    .then((decrypted) => new Uint8Array(decrypted));
 
 export const encrypt = (
   data: Uint8Array,
@@ -47,4 +47,4 @@ export const encrypt = (
       combined: concatBytes(iv, cipherText),
       iv,
       cipherText,
-    }))
+    }));

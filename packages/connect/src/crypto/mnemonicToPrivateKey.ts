@@ -1,18 +1,18 @@
-import bip39 from 'bip39'
-import { derivePath } from 'ed25519-hd-key'
-import { secureRandom } from './secureRandom'
-import { toHex } from './helpers'
+import bip39 from 'bip39';
+import { derivePath } from 'ed25519-hd-key';
+import { toHex } from './helpers';
+import { secureRandom } from './secureRandom';
 
 export const RADIX_KEY_TYPE = {
   TRANSACTION_SIGNING: 1460,
   AUTHENTICATION_SIGNING: 1678,
   MESSAGE_ENCRYPTION: 1391,
-} as const
+} as const;
 
 export const RADIX_ENTITY_TYPE = {
   ACCOUNT: 525,
   IDENTITY: 618,
-} as const
+} as const;
 
 /**
  * Generates a BIP39 derivation path for Radix Ed25519 keys
@@ -31,15 +31,15 @@ export const getRadixBIP39DerivationPath = ({
   entityType,
   index = 0,
 }: {
-  networkId: number
-  keyType: keyof typeof RADIX_KEY_TYPE
-  entityType: keyof typeof RADIX_ENTITY_TYPE
-  index?: number
+  networkId: number;
+  keyType: keyof typeof RADIX_KEY_TYPE;
+  entityType: keyof typeof RADIX_ENTITY_TYPE;
+  index?: number;
 }) =>
-  `m/44'/1022'/${networkId}'/${RADIX_ENTITY_TYPE[entityType]}'/${RADIX_KEY_TYPE[keyType]}'/${index}'`
+  `m/44'/1022'/${networkId}'/${RADIX_ENTITY_TYPE[entityType]}'/${RADIX_KEY_TYPE[keyType]}'/${index}'`;
 
-export const generateBIP39Mnemonic = (byteCount: number = 32) =>
-  bip39.entropyToMnemonic(toHex(secureRandom(byteCount)))
+export const generateBIP39Mnemonic = (byteCount = 32) =>
+  bip39.entropyToMnemonic(toHex(secureRandom(byteCount)));
 
 /**
  * Converts a BIP39 mnemonic phrase to a private key using a derivation path.
@@ -54,12 +54,12 @@ export const mnemonicToPrivateKey = async ({
   password,
   derivationPath,
 }: {
-  mnemonic: string
-  password?: string
-  derivationPath: string
+  mnemonic: string;
+  password?: string;
+  derivationPath: string;
 }) =>
   bip39
     .mnemonicToSeed(mnemonic, password)
     .then((seedBuffer) => seedBuffer.toString('hex'))
     .then((seedHex) => derivePath(derivationPath, seedHex))
-    .then((childKey) => childKey.key.toString('hex'))
+    .then((childKey) => childKey.key.toString('hex'));

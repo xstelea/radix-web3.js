@@ -1,9 +1,9 @@
-import { z } from 'zod'
-import { createRadixConnectClient, Metadata } from 'radix-connect'
+import type { Metadata, createRadixConnectClient } from 'radix-connect';
+import { z } from 'zod';
 
 export const sendTransactionParametersSchema = z.object({
   transactionManifest: z.string(),
-})
+});
 
 export const sendTransactionMethod = async (
   parameters: z.infer<typeof sendTransactionParametersSchema>,
@@ -21,8 +21,8 @@ export const sendTransactionMethod = async (
           transactionManifest: parameters.transactionManifest,
         },
       },
-    })
+    });
   } catch (error) {
-    throw new Error(`Failed to send transaction: ${error}`)
+    throw new Error(`Failed to send transaction: ${error}`);
   }
-}
+};
