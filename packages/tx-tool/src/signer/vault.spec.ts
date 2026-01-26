@@ -2,7 +2,7 @@ import { HttpClient, HttpClientResponse } from '@effect/platform';
 import { NodeFileSystem } from '@effect/platform-node';
 import { layer } from '@effect/vitest';
 import { Effect, Exit, Layer, Logger } from 'effect';
-import { HexString } from 'shared/brandedTypes';
+import { HexString } from '@radix-effects/shared';
 import { describe, expect, it } from 'vitest';
 import { Vault } from './vault';
 

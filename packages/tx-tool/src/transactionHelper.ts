@@ -21,8 +21,8 @@ import {
   NetworkId,
   type TransactionId,
   TransactionManifestString,
-} from 'shared/brandedTypes';
-import type { Account } from 'shared/schemas/account';
+  type Account,
+} from '@radix-effects/shared';
 
 import { CompileTransaction } from './compileTransaction';
 import { CreateTransactionIntent } from './createTransactionIntent';

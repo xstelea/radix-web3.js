@@ -1,5 +1,5 @@
-import { TransactionManifestString } from 'shared/brandedTypes';
-import type { Account } from 'shared/schemas/account';
+import { TransactionManifestString } from '@radix-effects/shared';
+import type { Account } from '@radix-effects/shared';
 
 export const createBadge = (account: Account, initialSupply = 1) =>
   TransactionManifestString.make(`      

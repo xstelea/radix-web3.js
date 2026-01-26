@@ -11,7 +11,7 @@ import {
   Redacted,
   TestClock,
 } from 'effect';
-import { AccountAddress, HexString } from 'shared/brandedTypes';
+import { AccountAddress, HexString } from '@radix-effects/shared';
 import { CompileTransaction } from './compileTransaction';
 import { CreateTransactionIntent } from './createTransactionIntent';
 import { IntentHashService } from './intentHash';

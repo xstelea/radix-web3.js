@@ -1,6 +1,6 @@
 import { Signature } from '@radixdlt/radix-engine-toolkit';
 import { Array as A, Effect, flow, Option } from 'effect';
-import type { HexString } from 'shared/brandedTypes';
+import type { HexString } from '@radix-effects/shared';
 import { Signer } from './signer/signer';
 
 export class NotaryKeyPair extends Effect.Service<NotaryKeyPair>()(

@@ -12,7 +12,6 @@ export class TransactionPreviewError extends Data.TaggedError(
 export class PreviewTransaction extends Effect.Service<PreviewTransaction>()(
   'PreviewTransaction',
   {
-    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayApiClient = yield* GatewayApiClient;
 

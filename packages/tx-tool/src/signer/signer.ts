@@ -1,6 +1,6 @@
 import { Convert, PublicKey } from '@radixdlt/radix-engine-toolkit';
 import { Context, Data, Effect, Layer, Redacted, Schema } from 'effect';
-import type { HexString } from 'shared/brandedTypes';
+import type { HexString } from '@radix-effects/shared';
 import {
   Ed25519PrivateKeySchema,
   type Ed25519SignatureWithPublicKey,
