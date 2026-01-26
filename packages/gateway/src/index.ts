@@ -4,7 +4,7 @@ export * from './state/entityNonFungiblesPage';
 export * from './state/getValidators';
 export * from './state/getEntityDetailsVaultAggregated';
 export * from './state/entityNonFungibleIdsPage';
-
+export * from './state/stateEntityDetails';
 export * from './gatewayApiClient';
 export * from './getAddressByNonFungible';
 export * from './getComponentState';
