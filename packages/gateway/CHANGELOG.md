@@ -1,5 +1,11 @@
 # @radix-effects/gateway
 
+## 0.4.2
+
+### Patch Changes
+
+- 332fb38: expose stateEntityDetails
+
 ## 0.4.1
 
 ### Patch Changes
