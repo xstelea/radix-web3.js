@@ -1,6 +1,6 @@
-import type { Amount } from 'shared/brandedTypes';
-import { TransactionManifestString } from 'shared/brandedTypes';
-import type { Account } from 'shared/schemas/account';
+import type { Amount } from '@radix-effects/shared';
+import { TransactionManifestString } from '@radix-effects/shared';
+import type { Account } from '@radix-effects/shared';
 
 export const addFeePayer = (input: { account: Account; amount: Amount }) => {
   if (input.account.type === 'unsecurifiedAccount') {

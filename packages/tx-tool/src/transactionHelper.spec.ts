@@ -9,7 +9,7 @@ import {
   Logger,
   Redacted,
 } from 'effect';
-import { HexString } from 'shared/brandedTypes';
+import { HexString } from '@radix-effects/shared';
 import { Signer } from './signer/signer';
 import { createAccount } from './test-helpers/createAccount';
 import {

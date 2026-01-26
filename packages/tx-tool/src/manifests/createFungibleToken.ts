@@ -1,5 +1,5 @@
-import { type Amount, TransactionManifestString } from 'shared/brandedTypes';
-import type { Account } from 'shared/schemas/account';
+import { type Amount, TransactionManifestString } from '@radix-effects/shared';
+import type { Account } from '@radix-effects/shared';
 
 export const createFungibleTokenManifest = (input: {
   name: string;

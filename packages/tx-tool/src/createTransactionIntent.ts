@@ -5,7 +5,7 @@ import {
   NetworkId,
   TransactionManifestString,
   TransactionMessageString,
-} from 'shared/brandedTypes';
+} from '@radix-effects/shared';
 import {
   ManifestSchema,
   TransactionIntentSchema,

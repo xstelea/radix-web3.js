@@ -1,16 +1,18 @@
 import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
 
 import { Data, Effect } from 'effect';
-import type { NetworkId } from 'shared/brandedTypes';
+import type { NetworkId } from '@radix-effects/shared';
 import type { Manifest } from './schemas';
 
-class FailedToStaticallyValidateManifestError extends Data.TaggedError(
+export class FailedToStaticallyValidateManifestError extends Data.TaggedError(
   'FailedToStaticallyValidateManifestError',
 )<{
   error: unknown;
 }> {}
 
-class InvalidManifestError extends Data.TaggedError('InvalidManifestError')<{
+export class InvalidManifestError extends Data.TaggedError(
+  'InvalidManifestError',
+)<{
   message: string;
 }> {}
 

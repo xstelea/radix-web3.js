@@ -14,7 +14,7 @@ import {
   Schedule,
   Schema,
 } from 'effect';
-import { Base64String, HexString } from 'shared/brandedTypes';
+import { Base64String, HexString } from '@radix-effects/shared';
 import {
   Base64FromHexSchema,
   Ed25519SignatureWithPublicKeySchema,

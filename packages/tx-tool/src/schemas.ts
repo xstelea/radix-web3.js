@@ -14,7 +14,7 @@ import {
   Nonce,
   TransactionManifestString,
   TransactionMessageString,
-} from 'shared/brandedTypes';
+} from '@radix-effects/shared';
 
 export const Base64FromHexSchema = Schema.asSchema(
   Schema.transformOrFail(HexString, Base64String, {

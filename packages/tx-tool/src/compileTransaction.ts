@@ -5,7 +5,7 @@ import {
   TransactionBuilder as RetTransactionBuilder,
 } from '@radixdlt/radix-engine-toolkit';
 import { Data, Effect, pipe, Schema } from 'effect';
-import { HexString } from 'shared/brandedTypes';
+import { HexString } from '@radix-effects/shared';
 import { NotaryKeyPair } from './notaryKeyPair';
 import {
   Ed25519SignatureWithPublicKeySchema,

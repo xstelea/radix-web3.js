@@ -22,7 +22,6 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
   'GetNftResourceManagersService',
   {
     dependencies: [
-      GatewayApiClient.Default,
       EntityNonFungiblesPage.Default,
       EntityNonFungibleIdsPage.Default,
     ],

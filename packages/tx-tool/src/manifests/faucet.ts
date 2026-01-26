@@ -1,7 +1,7 @@
 import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
 import { Effect } from 'effect';
-import type { AccountAddress } from 'shared/brandedTypes';
-import { TransactionManifestString } from 'shared/brandedTypes';
+import type { AccountAddress } from '@radix-effects/shared';
+import { TransactionManifestString } from '@radix-effects/shared';
 
 export const faucet = (accountAddress: AccountAddress) =>
   Effect.gen(function* () {
