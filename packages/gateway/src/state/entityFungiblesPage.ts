@@ -8,7 +8,7 @@ type EntityFungiblesPageInput = Omit<
   EntityFungiblesPageRequest['stateEntityFungiblesPageRequest'],
   'at_ledger_state'
 > & {
-  at_ledger_state: AtLedgerState;
+  at_ledger_state?: AtLedgerState;
 };
 
 export class EntityFungiblesPage extends Effect.Service<EntityFungiblesPage>()(
@@ -37,6 +37,9 @@ export class EntityFungiblesPage extends Effect.Service<EntityFungiblesPage>()(
         input: EntityFungiblesPageInput,
       ) {
         const result = yield* entityFungiblesPage(input);
+        const paginationState = {
+          state_version: result.ledger_state.state_version,
+        };
         let nextCursor = result?.next_cursor;
 
         const items = result?.items ?? [];
@@ -44,6 +47,7 @@ export class EntityFungiblesPage extends Effect.Service<EntityFungiblesPage>()(
         while (nextCursor) {
           const result = yield* entityFungiblesPage({
             ...input,
+            at_ledger_state: paginationState,
             cursor: nextCursor,
           });
           nextCursor = result.next_cursor;

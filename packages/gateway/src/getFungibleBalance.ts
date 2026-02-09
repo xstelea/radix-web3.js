@@ -6,7 +6,7 @@ import { BigNumber } from 'bignumber.js';
 import { Config, Effect } from 'effect';
 import { EntityFungiblesPage } from './state/entityFungiblesPage';
 
-import type { AtLedgerState, StateVersion } from './schemas';
+import type { AtLedgerState } from './schemas';
 import { StateEntityDetails } from './state/stateEntityDetails';
 
 export type GetFungibleBalanceOutput = Effect.Effect.Success<
@@ -17,7 +17,7 @@ type GetFungibleBalanceInput = Omit<
   StateEntityDetailsOperationRequest['stateEntityDetailsRequest'],
   'at_ledger_state'
 > & {
-  at_ledger_state: StateVersion;
+  at_ledger_state?: AtLedgerState;
   options?: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
 };
 
@@ -35,7 +35,7 @@ export class GetFungibleBalance extends Effect.Service<GetFungibleBalance>()(
 
       const getAggregatedFungibleBalance = Effect.fnUntraced(function* (
         item: StateEntityDetailsResponseItem,
-        at_ledger_state: AtLedgerState,
+        at_ledger_state?: AtLedgerState,
       ) {
         const address = item.address;
 
@@ -83,9 +83,13 @@ export class GetFungibleBalance extends Effect.Service<GetFungibleBalance>()(
           aggregation_level: 'Global',
         });
 
+        const paginationState = {
+          state_version: stateEntityDetailsResults.ledger_state.state_version,
+        };
+
         const fungibleBalanceResults = yield* Effect.forEach(
           stateEntityDetailsResults.items,
-          (item) => getAggregatedFungibleBalance(item, input.at_ledger_state),
+          (item) => getAggregatedFungibleBalance(item, paginationState),
           { concurrency },
         ).pipe(Effect.map((results) => results.flat()));
 

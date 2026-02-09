@@ -18,7 +18,7 @@ export class NonFungibleData extends Effect.Service<NonFungibleData>()(
           NonFungibleDataRequest['stateNonFungibleDataRequest'],
           'at_ledger_state'
         > & {
-          at_ledger_state: AtLedgerState;
+          at_ledger_state?: AtLedgerState;
         },
       ) {
         const chunks = chunker(input.non_fungible_ids, pageSize);

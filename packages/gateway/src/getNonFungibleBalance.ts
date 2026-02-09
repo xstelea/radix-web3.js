@@ -12,7 +12,7 @@ export class InvalidInputError {
 
 type GetNonFungibleBalanceInput = {
   addresses: string[];
-  at_ledger_state: AtLedgerState;
+  at_ledger_state?: AtLedgerState;
   resourceAddresses?: string[];
   options?: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
 };
@@ -43,7 +43,7 @@ export class GetNonFungibleBalanceService extends Effect.Service<GetNonFungibleB
           nftIds: string[];
         }[];
 
-        at_ledger_state: AtLedgerState;
+        at_ledger_state?: AtLedgerState;
       }) {
         return yield* Effect.forEach(
           input.items,

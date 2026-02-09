@@ -14,7 +14,7 @@ export class GetNonFungibleLocationService extends Effect.Service<GetNonFungible
       return Effect.fn(function* (input: {
         resourceAddress: string;
         nonFungibleIds: string[];
-        at_ledger_state: AtLedgerState;
+        at_ledger_state?: AtLedgerState;
       }) {
         const chunks = chunker(input.nonFungibleIds, pageSize);
         return yield* Effect.forEach(

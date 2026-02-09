@@ -16,12 +16,16 @@ export class GetKeyValueStoreService extends Effect.Service<GetKeyValueStoreServ
 
       return Effect.fn(function* (input: {
         address: string;
-        at_ledger_state: AtLedgerState;
+        at_ledger_state?: AtLedgerState;
       }) {
         const keyResults = yield* keyValueStoreKeysService({
           key_value_store_address: input.address,
           at_ledger_state: input.at_ledger_state,
         });
+
+        const paginationState = {
+          state_version: keyResults.ledger_state.state_version,
+        };
 
         const allKeys = [...keyResults.items];
 
@@ -30,7 +34,7 @@ export class GetKeyValueStoreService extends Effect.Service<GetKeyValueStoreServ
         while (nextCursor) {
           const nextKeyResults = yield* keyValueStoreKeysService({
             key_value_store_address: input.address,
-            at_ledger_state: input.at_ledger_state,
+            at_ledger_state: paginationState,
             cursor: nextCursor,
           });
 
@@ -44,7 +48,7 @@ export class GetKeyValueStoreService extends Effect.Service<GetKeyValueStoreServ
           keys: allKeys.map(({ key }) => ({
             key_json: key.programmatic_json,
           })),
-          at_ledger_state: input.at_ledger_state,
+          at_ledger_state: paginationState,
         }).pipe(
           Effect.map((res) => {
             const { key_value_store_address, ledger_state } = res[0]!;

@@ -13,7 +13,7 @@ import { EntityNonFungibleIdsPage } from './state/entityNonFungibleIdsPage';
 
 type GetNftResourceManagersInput = {
   addresses: string[];
-  at_ledger_state: AtLedgerState;
+  at_ledger_state?: AtLedgerState;
   resourceAddresses?: string[];
   options?: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
 };
@@ -59,7 +59,7 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
         cursor?: string;
         resourceAddress: string;
         optIns: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
-        at_ledger_state: AtLedgerState;
+        at_ledger_state?: AtLedgerState;
       }) =>
         gatewayClient.state.innerClient.entityNonFungibleResourceVaultPage({
           stateEntityNonFungibleResourceVaultsPageRequest: {
@@ -79,7 +79,7 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
       }: {
         resourceManager: NonFungibleResourcesCollectionItemVaultAggregated;
         optIns: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
-        at_ledger_state: AtLedgerState;
+        at_ledger_state?: AtLedgerState;
         address: string;
       }) {
         const vaults = [...resourceManager.vaults.items];
@@ -130,7 +130,7 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
         function* (input: {
           addresses: string[];
           optIns: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
-          at_ledger_state: AtLedgerState;
+          at_ledger_state?: AtLedgerState;
         }) {
           const { addresses, optIns, at_ledger_state } = input;
 
@@ -155,7 +155,7 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
 
       const getResourceManagers = Effect.fn(function* (input: {
         items: StateEntityDetailsResponseItem[];
-        at_ledger_state: AtLedgerState;
+        at_ledger_state?: AtLedgerState;
         aggregationLevel: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['aggregation_level'];
         optIns: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
         filterResourceAddresses?: string[];
@@ -221,12 +221,19 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
           at_ledger_state: input.at_ledger_state,
         });
 
+        const paginationState = stateEntityDetailsResults[0]
+          ? {
+              state_version:
+                stateEntityDetailsResults[0].ledger_state.state_version,
+            }
+          : input.at_ledger_state;
+
         const resourceManagerResults = yield* Effect.forEach(
           stateEntityDetailsResults,
           Effect.fnUntraced(function* (stateEntityDetails) {
             return yield* getResourceManagers({
               items: stateEntityDetails.items,
-              at_ledger_state: input.at_ledger_state,
+              at_ledger_state: paginationState,
               aggregationLevel: AGGREGATION_LEVEL,
               optIns,
               filterResourceAddresses,
@@ -244,7 +251,7 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
                 getNftIds({
                   resourceManager,
                   optIns,
-                  at_ledger_state: input.at_ledger_state,
+                  at_ledger_state: paginationState,
                   address: resourceManagerResult.address,
                 }),
             );
