@@ -4,7 +4,7 @@ import { GatewayApiClient } from './gatewayApiClient';
 import type { AtLedgerState } from './schemas';
 
 export type GetLedgerStateInput = {
-  at_ledger_state: AtLedgerState;
+  at_ledger_state?: AtLedgerState;
 };
 
 export class GetLedgerStateService extends Effect.Service<GetLedgerStateService>()(

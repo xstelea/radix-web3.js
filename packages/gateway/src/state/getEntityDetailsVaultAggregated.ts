@@ -26,7 +26,7 @@ export class GetEntityDetailsVaultAggregated extends Effect.Service<GetEntityDet
       return Effect.fnUntraced(function* (
         input: GetEntityDetailsInput,
         options: GetEntityDetailsOptions,
-        at_ledger_state: AtLedgerState,
+        at_ledger_state?: AtLedgerState,
       ) {
         const chunks = chunker(input, pageSize);
         return yield* Effect.forEach(

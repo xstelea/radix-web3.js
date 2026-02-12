@@ -15,7 +15,7 @@ export class KeyValueStoreKeysService extends Effect.Service<KeyValueStoreKeysSe
 
       return Effect.fn(function* (
         input: Omit<StateKeyValueStoreKeysRequest, 'at_ledger_state'> & {
-          at_ledger_state: AtLedgerState;
+          at_ledger_state?: AtLedgerState;
         },
       ) {
         return yield* gatewayClient.state.innerClient.keyValueStoreKeys({

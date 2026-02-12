@@ -17,7 +17,7 @@ export class EntityNonFungiblesPage extends Effect.Service<EntityNonFungiblesPag
           EntityNonFungiblesPageRequest['stateEntityNonFungiblesPageRequest'],
           'at_ledger_state'
         > & {
-          at_ledger_state: AtLedgerState;
+          at_ledger_state?: AtLedgerState;
         },
       ) {
         const result =

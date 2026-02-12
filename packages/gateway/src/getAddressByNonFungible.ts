@@ -9,7 +9,7 @@ class EntityNotFoundError extends Data.TaggedError('EntityNotFoundError')<{
 export type GetAddressByNonFungibleServiceInput = {
   resourceAddress: string;
   nonFungibleId: string;
-  at_ledger_state: AtLedgerState;
+  at_ledger_state?: AtLedgerState;
 };
 
 export class GetAddressByNonFungibleService extends Effect.Service<GetAddressByNonFungibleService>()(

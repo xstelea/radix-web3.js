@@ -16,7 +16,7 @@ export class KeyValueStoreDataService extends Effect.Service<KeyValueStoreDataSe
 
       return Effect.fn(function* (
         input: Omit<StateKeyValueStoreDataRequest, 'at_ledger_state'> & {
-          at_ledger_state: AtLedgerState;
+          at_ledger_state?: AtLedgerState;
         },
       ) {
         const chunks = chunker(input.keys, pageSize);
