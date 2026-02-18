@@ -1,5 +1,11 @@
 # @radix-effects/tx-tool
 
+## 0.0.6
+
+### Patch Changes
+
+- 70e91d3: dependency fix
+
 ## 0.0.5
 
 ### Patch Changes
