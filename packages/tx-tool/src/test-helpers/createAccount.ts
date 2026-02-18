@@ -2,7 +2,7 @@ import { ed25519 } from '@noble/curves/ed25519.js';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { PrivateKey, RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
 import { Effect } from 'effect';
-import { AccountAddress } from 'shared/brandedTypes';
+import { AccountAddress } from '@radix-effects/shared/brandedTypes';
 
 export const createAccount = (
   input?: Partial<{
