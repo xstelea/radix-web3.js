@@ -1,5 +1,11 @@
 # @radix-effects/tx-tool
 
+## 0.0.5
+
+### Patch Changes
+
+- 5ae56a5: update dependency import
+
 ## 0.0.4
 
 ### Patch Changes
