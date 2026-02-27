@@ -1,5 +1,24 @@
 # @radix-effects/tx-tool
 
+## 0.0.6
+
+### Patch Changes
+
+- 70e91d3: dependency fix
+
+## 0.0.5
+
+### Patch Changes
+
+- 5ae56a5: update dependency import
+
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [c6d94a4]
+  - @radix-effects/gateway@0.5.0
+
 ## 0.0.3
 
 ### Patch Changes

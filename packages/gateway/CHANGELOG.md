@@ -1,5 +1,11 @@
 # @radix-effects/gateway
 
+## 0.5.0
+
+### Minor Changes
+
+- c6d94a4: make at_ledger_state param optional
+
 ## 0.4.2
 
 ### Patch Changes
