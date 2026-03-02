@@ -1,7 +1,7 @@
 import {
   type Intent,
   RadixEngineToolkit,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 
 /**
  * Gets the hash of a transaction intent from a notarized transaction

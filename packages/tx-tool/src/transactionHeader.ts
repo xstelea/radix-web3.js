@@ -1,5 +1,5 @@
 import { GetLedgerStateService } from '@radix-effects/gateway';
-import { generateRandomNonce } from '@radixdlt/radix-engine-toolkit';
+import { generateRandomNonce } from '@steleaio/radix-engine-toolkit';
 import { Data, Effect, Option, pipe } from 'effect';
 import { Epoch, type NetworkId, Nonce } from '@radix-effects/shared';
 import { EpochService } from './epoch';
@@ -20,7 +20,7 @@ export type CreateTransactionHeaderInput = {
 };
 
 export class TransactionHeader extends Effect.Service<TransactionHeader>()(
-  'TransactionHeader',
+  '@radix-effects/tx-tool/TransactionHeader',
   {
     dependencies: [
       GetLedgerStateService.Default,

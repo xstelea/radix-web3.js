@@ -19,14 +19,12 @@
     "url": "git+https://github.com/xstelea/radix-web3.js.git"
   },
   "dependencies": {
-    "@effect/platform": "catalog:",
-    "@effect/platform-node": "catalog:",
     "@noble/curves": "catalog:",
     "@noble/hashes": "catalog:",
     "@radix-effects/gateway": "workspace:*",
     "@radixdlt/babylon-core-api-sdk": "catalog:",
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
-    "@radixdlt/radix-engine-toolkit": "catalog:",
+    "@steleaio/radix-engine-toolkit": "catalog:",
     "bignumber.js": "catalog:",
     "effect": "catalog:",
     "@radix-effects/shared": "workspace:*"
@@ -36,7 +34,5 @@
     "vitest": "catalog:",
     "tsdown": "catalog:"
   },
-  "files": [
-    "dist"
-  ]
+  "files": ["dist"]
 }

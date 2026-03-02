@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
-    "@radixdlt/radix-engine-toolkit": "catalog:"
+    "@steleaio/radix-engine-toolkit": "catalog:"
   },
   "files": ["dist"]
 }

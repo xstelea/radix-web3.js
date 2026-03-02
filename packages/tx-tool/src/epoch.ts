@@ -1,7 +1,7 @@
 import { GetLedgerStateService } from '@radix-effects/gateway';
-import { Data, Effect } from 'effect';
 import { Epoch, type TransactionId } from '@radix-effects/shared';
-import type { TransactionIntent } from './schemas';
+import { Data, Effect } from 'effect';
+import type { TransactionIntent, TransactionIntentV2 } from './schemas';
 
 export class InvalidEndEpochError extends Data.TaggedError(
   'InvalidEndEpochError',
@@ -18,7 +18,7 @@ export class InvalidStartEpochError extends Data.TaggedError(
 }> {}
 
 export class EpochService extends Effect.Service<EpochService>()(
-  'EpochService',
+  '@radix-effects/tx-tool/EpochService',
   {
     dependencies: [GetLedgerStateService.Default],
     effect: Effect.gen(function* () {
@@ -37,25 +37,26 @@ export class EpochService extends Effect.Service<EpochService>()(
         getCurrentEpoch,
         verifyEpochBounds: (input: {
           transactionId: TransactionId;
-          transactionIntent: TransactionIntent;
+          transactionIntent: TransactionIntent | TransactionIntentV2;
         }) =>
           Effect.gen(function* () {
             const currentEpoch = yield* getCurrentEpoch();
 
-            if (
-              currentEpoch < input.transactionIntent.header.startEpochInclusive
-            ) {
+            const header =
+              'transactionHeader' in input.transactionIntent
+                ? input.transactionIntent.rootIntentCore.header
+                : input.transactionIntent.header;
+
+            if (currentEpoch < header.startEpochInclusive) {
               return yield* new InvalidStartEpochError({
-                message: `Current epoch ${currentEpoch} is less than start epoch ${input.transactionIntent.header.startEpochInclusive}`,
+                message: `Current epoch ${currentEpoch} is less than start epoch ${header.startEpochInclusive}`,
                 transactionId: input.transactionId,
               });
             }
 
-            if (
-              currentEpoch >= input.transactionIntent.header.endEpochExclusive
-            ) {
+            if (currentEpoch >= header.endEpochExclusive) {
               return yield* new InvalidEndEpochError({
-                message: `Current epoch ${currentEpoch} is greater than or equal to end epoch ${input.transactionIntent.header.endEpochExclusive}`,
+                message: `Current epoch ${currentEpoch} is greater than or equal to end epoch ${header.endEpochExclusive}`,
                 transactionId: input.transactionId,
               });
             }

@@ -1,5 +1,5 @@
 import type { GatewayApiClient } from '@radixdlt/babylon-gateway-api-sdk';
-import { type Bytes, Convert } from '@radixdlt/radix-engine-toolkit';
+import { type Bytes, Convert } from '@steleaio/radix-engine-toolkit';
 
 /**
  * Submits a compiled transaction to the network

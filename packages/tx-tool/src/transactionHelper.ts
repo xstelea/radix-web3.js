@@ -3,36 +3,37 @@ import {
   GetFungibleBalance,
   GetLedgerStateService,
 } from '@radix-effects/gateway';
-import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
+import {
+  type Account,
+  Amount,
+  FungibleResourceAddress,
+  NetworkId,
+  type TransactionId,
+  TransactionManifestString,
+} from '@radix-effects/shared';
+import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import {
   Array as A,
   Cause,
   Context,
   Data,
   Effect,
-  flow,
   Option,
-  pipe,
   Record as R,
+  flow,
+  pipe,
 } from 'effect';
-import {
-  Amount,
-  FungibleResourceAddress,
-  NetworkId,
-  type TransactionId,
-  TransactionManifestString,
-  type Account,
-} from '@radix-effects/shared';
 
 import { CompileTransaction } from './compileTransaction';
 import { CreateTransactionIntent } from './createTransactionIntent';
+import { CreateTransactionIntentV2 } from './createTransactionIntentV2';
 import { EpochService } from './epoch';
 import { IntentHashService } from './intentHash';
 import { createBadge as createBadgeManifest } from './manifests/createBadge';
 import { createFungibleTokenManifest } from './manifests/createFungibleToken';
 import { faucet as faucetManifest } from './manifests/faucet';
 import { ManifestHelper } from './manifests/manifestHelper';
-import type { TransactionIntent } from './schemas';
+import type { TransactionIntent, TransactionIntentV2 } from './schemas';
 import { Signer } from './signer/signer';
 import { SubmitTransaction } from './submitTransaction';
 import { TransactionStatus } from './transactionStatus';
@@ -44,22 +45,22 @@ export class FaucetNotAvailableError extends Data.TaggedError(
 }> {}
 
 export class TransactionLifeCycleHook extends Context.Tag(
-  'TransactionLifeCycleHook',
+  '@radix-effects/tx-tool/TransactionLifeCycleHook',
 )<
   TransactionLifeCycleHook,
   {
     onSubmit?: (input: {
       id: TransactionId;
-      intent: TransactionIntent;
+      intent: TransactionIntent | TransactionIntentV2;
     }) => Effect.Effect<void, never, never>;
     onSubmitSuccess?: (input: {
       id: TransactionId;
-      intent: TransactionIntent;
+      intent: TransactionIntent | TransactionIntentV2;
     }) => Effect.Effect<void, never, never>;
     onStatusFailure?: (input: {
       id: TransactionId;
       permanent: boolean;
-      intent: TransactionIntent;
+      intent: TransactionIntent | TransactionIntentV2;
     }) => Effect.Effect<void, never, never>;
     onSuccess?: (input: {
       id: TransactionId;
@@ -74,10 +75,11 @@ export class InsufficientXrdBalanceError extends Data.TaggedError(
 }> {}
 
 export class TransactionHelper extends Effect.Service<TransactionHelper>()(
-  'TransactionHelper',
+  '@radix-effects/tx-tool/TransactionHelper',
   {
     dependencies: [
       CreateTransactionIntent.Default,
+      CreateTransactionIntentV2.Default,
       CompileTransaction.Default,
       SubmitTransaction.Default,
       TransactionStatus.Default,
@@ -89,6 +91,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
     ],
     effect: Effect.gen(function* () {
       const createTransactionIntent = yield* CreateTransactionIntent;
+      const createTransactionIntentV2 = yield* CreateTransactionIntentV2;
       const compileTransaction = yield* CompileTransaction;
       const submitTransactionToNetwork = yield* SubmitTransaction;
       const transactionStatus = yield* TransactionStatus;
@@ -151,7 +154,8 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
       const submitTransaction = (input: {
         manifest: TransactionManifestString;
         feePayer?: { account: Account; amount: Amount };
-        transactionIntent?: TransactionIntent;
+        transactionIntent?: TransactionIntent | TransactionIntentV2;
+        version?: 'v1' | 'v2';
       }) =>
         Effect.gen(function* () {
           yield* Option.fromNullable(input.feePayer).pipe(
@@ -197,6 +201,26 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
                     ${input.manifest}
                   `);
 
+                  if (input.version === 'v2') {
+                    return yield* createTransactionIntentV2({
+                      manifest: manifestWithFeePayer,
+                    }).pipe(
+                      Effect.flatMap((intent) =>
+                        intentHashService.create(intent).pipe(
+                          Effect.map(({ id, hash }) => ({
+                            id,
+                            hash,
+                            intent,
+                          })),
+                        ),
+                      ),
+                      Effect.catchTags({
+                        ParseError: Effect.die,
+                        InvalidEpochError: Effect.die,
+                      }),
+                    );
+                  }
+
                   return yield* createTransactionIntent({
                     manifest: manifestWithFeePayer,
                   }).pipe(
@@ -207,7 +231,6 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
                           Effect.map(({ id, hash }) => ({ id, hash, intent })),
                         ),
                     ),
-
                     Effect.catchTags({
                       ParseError: Effect.die,
                       InvalidEpochError: Effect.die,
@@ -389,8 +412,19 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
           });
         });
 
+      const submitTransactionV2 = (input: {
+        manifest: TransactionManifestString;
+        feePayer?: { account: Account; amount: Amount };
+        transactionIntent?: TransactionIntentV2;
+      }) =>
+        submitTransaction({
+          ...input,
+          version: 'v2',
+        });
+
       return {
         submitTransaction,
+        submitTransactionV2,
         getCommittedDetails,
         createBadge,
         createFungibleToken,

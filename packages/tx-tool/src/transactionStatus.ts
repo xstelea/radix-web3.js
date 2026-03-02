@@ -26,7 +26,7 @@ export class TimeoutError extends Data.TaggedError('TimeoutError')<{
 }> {}
 
 export class TransactionStatus extends Effect.Service<TransactionStatus>()(
-  'TransactionStatus',
+  '@radix-effects/tx-tool/TransactionStatus',
   {
     effect: Effect.gen(function* () {
       const pollTimeoutDuration = yield* Config.duration(

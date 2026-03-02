@@ -1,14 +1,13 @@
-import { Convert, PublicKey } from '@radixdlt/radix-engine-toolkit';
+import { Convert, type PublicKey } from '@steleaio/radix-engine-toolkit';
 import { Context, Data, Effect, Layer, Redacted, Schema } from 'effect';
 import type { HexString } from '@radix-effects/shared';
 import {
   Ed25519PrivateKeySchema,
   type Ed25519SignatureWithPublicKey,
 } from '../schemas';
-import { Vault } from './vault';
 
 export class FailedToSignTransactionError extends Data.TaggedError(
-  'FailedToSignTransactionError',
+  '@radix-effects/tx-tool/FailedToSignTransactionError',
 )<{
   error: unknown;
 }> {}
@@ -26,24 +25,6 @@ export class Signer extends Context.Tag('Signer')<
     publicKey: () => Effect.Effect<PublicKey, never, never>;
   }
 >() {
-  static VaultLive = Layer.effect(
-    Signer,
-    Effect.gen(function* () {
-      const vault = yield* Vault;
-
-      return {
-        signToSignatureWithPublicKey: (hash: HexString) =>
-          vault.toSignatureWithPublicKey(hash).pipe(
-            Effect.map((signatureWithPublicKey) => [signatureWithPublicKey]),
-            Effect.catchAll(Effect.die),
-          ),
-        publicKey: () =>
-          vault
-            .getPublicKey()
-            .pipe(Effect.map((publicKey) => new PublicKey.Ed25519(publicKey))),
-      };
-    }),
-  ).pipe(Layer.provide(Vault.Default));
   static makePrivateKeySigner = (privateKey: Redacted.Redacted<HexString>) =>
     Layer.effect(
       Signer,

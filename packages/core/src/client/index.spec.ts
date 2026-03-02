@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PrivateKey } from '@radixdlt/radix-engine-toolkit'
+import { PrivateKey } from '@steleaio/radix-engine-toolkit'
 
 import { deriveAccountAddressFromPublicKey } from '@/account'
 import { createRadixWeb3Client } from '@/client'

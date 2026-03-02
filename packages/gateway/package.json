@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
-    "@radixdlt/radix-engine-toolkit": "catalog:",
+    "@steleaio/radix-engine-toolkit": "catalog:",
     "@radixdlt/rola": "catalog:",
     "bignumber.js": "catalog:",
     "effect": "catalog:",

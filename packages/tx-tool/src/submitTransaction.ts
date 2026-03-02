@@ -1,10 +1,10 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
-import { Convert } from '@radixdlt/radix-engine-toolkit';
+import { Convert } from '@steleaio/radix-engine-toolkit';
 import { Effect, pipe } from 'effect';
 import { HexString } from '@radix-effects/shared';
 
 export class SubmitTransaction extends Effect.Service<SubmitTransaction>()(
-  'SubmitTransaction',
+  '@radix-effects/tx-tool/SubmitTransaction',
   {
     effect: Effect.gen(function* () {
       const gatewayApiClient = yield* GatewayApiClient;

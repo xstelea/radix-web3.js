@@ -1,6 +1,6 @@
-import { ed25519 } from '@noble/curves/ed25519.js';
-import { hexToBytes } from '@noble/hashes/utils.js';
-import { PrivateKey, RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
+import { ed25519 } from '@noble/curves/ed25519';
+import { hexToBytes } from '@noble/hashes/utils';
+import { PrivateKey, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect } from 'effect';
 import { AccountAddress } from '@radix-effects/shared';
 
@@ -13,7 +13,7 @@ export const createAccount = (
   Effect.gen(function* () {
     const privateKey = input?.privateKey
       ? input.privateKey
-      : ed25519.keygen().secretKey;
+      : ed25519.utils.randomPrivateKey();
 
     const publicKey = ed25519.getPublicKey(privateKey);
     const publicKeyHex = Buffer.from(publicKey).toString('hex');

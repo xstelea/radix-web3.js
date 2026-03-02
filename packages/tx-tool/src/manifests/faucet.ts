@@ -1,4 +1,4 @@
-import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
+import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect } from 'effect';
 import type { AccountAddress } from '@radix-effects/shared';
 import { TransactionManifestString } from '@radix-effects/shared';

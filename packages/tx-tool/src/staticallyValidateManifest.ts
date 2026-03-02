@@ -1,4 +1,4 @@
-import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
+import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 
 import { Data, Effect } from 'effect';
 import type { NetworkId } from '@radix-effects/shared';
@@ -17,7 +17,7 @@ export class InvalidManifestError extends Data.TaggedError(
 }> {}
 
 export class StaticallyValidateManifest extends Effect.Service<StaticallyValidateManifest>()(
-  'StaticallyValidateManifest',
+  '@radix-effects/tx-tool/StaticallyValidateManifest',
   {
     effect: Effect.gen(function* () {
       return (input: { manifest: Manifest; networkId: NetworkId }) =>
@@ -29,12 +29,12 @@ export class StaticallyValidateManifest extends Effect.Service<StaticallyValidat
                 input.networkId,
               ),
             catch: (error) => {
-              console.error(error);
               return new FailedToStaticallyValidateManifestError({
                 error,
               });
             },
           });
+
           if (result.kind === 'Invalid') {
             return yield* Effect.fail(
               new InvalidManifestError({

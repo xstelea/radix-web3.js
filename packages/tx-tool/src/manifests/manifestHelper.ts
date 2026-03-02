@@ -9,6 +9,7 @@ export class ManifestHelper extends Effect.Service<ManifestHelper>()(
     effect: Effect.gen(function* () {
       return {
         addFeePayer: (input: { account: Account; amount: Amount }) =>
+          // biome-ignore lint/correctness/useYield: <explanation>
           Effect.gen(function* () {
             if (input.account.type === 'unsecurifiedAccount') {
               return TransactionManifestString.make(`
