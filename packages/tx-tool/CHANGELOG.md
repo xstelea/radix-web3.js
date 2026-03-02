@@ -1,5 +1,16 @@
 # @radix-effects/tx-tool
 
+## 0.1.0-dev.0
+
+### Minor Changes
+
+- 37c64d3: subintent support
+
+### Patch Changes
+
+- Updated dependencies [37c64d3]
+  - @radix-effects/gateway@0.6.0-dev.0
+
 ## 0.0.6
 
 ### Patch Changes

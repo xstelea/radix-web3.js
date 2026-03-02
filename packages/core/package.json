@@ -1,6 +1,6 @@
 {
   "name": "radix-web3.js",
-  "version": "0.5.0",
+  "version": "0.6.0-dev.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -37,5 +37,7 @@
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
     "@steleaio/radix-engine-toolkit": "catalog:"
   },
-  "files": ["dist"]
+  "files": [
+    "dist"
+  ]
 }
