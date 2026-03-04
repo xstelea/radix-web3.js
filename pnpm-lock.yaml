@@ -28,8 +28,8 @@ catalogs:
       specifier: ^2.1.0
       version: 2.1.0
     '@steleaio/radix-engine-toolkit':
-      specifier: 2.0.0-dev.3
-      version: 2.0.0-dev.3
+      specifier: 2.0.0-dev.5
+      version: 2.0.0-dev.5
     '@types/node':
       specifier: ^22.10.2
       version: 22.10.2
@@ -205,7 +205,7 @@ importers:
         version: 1.10.1
       '@steleaio/radix-engine-toolkit':
         specifier: 'catalog:'
-        version: 2.0.0-dev.3
+        version: 2.0.0-dev.5
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -236,7 +236,7 @@ importers:
         version: 2.1.0
       '@steleaio/radix-engine-toolkit':
         specifier: 'catalog:'
-        version: 2.0.0-dev.3
+        version: 2.0.0-dev.5
       bignumber.js:
         specifier: 'catalog:'
         version: 9.3.0
@@ -354,7 +354,7 @@ importers:
         version: 1.10.1
       '@steleaio/radix-engine-toolkit':
         specifier: 'catalog:'
-        version: 2.0.0-dev.3
+        version: 2.0.0-dev.5
       bignumber.js:
         specifier: 'catalog:'
         version: 9.3.0
@@ -2546,8 +2546,8 @@ packages:
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
-  '@steleaio/radix-engine-toolkit@2.0.0-dev.3':
-    resolution: {integrity: sha512-GPFDgGITFQUXnycniN6LYS0Tswr+IWFqFgS9coOoFCC9FfTPNsjZ+I4ouHCDpSu6UnQ00Sosu2+DmlPkxdhOSg==}
+  '@steleaio/radix-engine-toolkit@2.0.0-dev.5':
+    resolution: {integrity: sha512-qYlPVy8dBe6FC96+jOyIIf04QWJJplkQiv3ACWAiOOIkk/i25Lv5lKrjqP/KP1BgDS01gVLZMk23LG9q2U3RwQ==}
 
   '@svgr/babel-plugin-add-jsx-attribute@8.0.0':
     resolution: {integrity: sha512-b9MIk7yhdS1pMCZM8VeNfUlSKVRhsHZNMl5O9SfaX0l0t5wjdgu4IDzGB8bpnGBBOjGST3rRFVsaaEtI4W6f7g==}
@@ -10024,7 +10024,7 @@ snapshots:
 
   '@standard-schema/spec@1.0.0': {}
 
-  '@steleaio/radix-engine-toolkit@2.0.0-dev.3':
+  '@steleaio/radix-engine-toolkit@2.0.0-dev.5':
     dependencies:
       '@noble/ed25519': 2.3.0
       '@noble/hashes': 1.7.1

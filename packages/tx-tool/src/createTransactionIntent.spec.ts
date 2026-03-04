@@ -1,6 +1,9 @@
 import { it } from "@effect/vitest";
-import { GatewayApiClient } from "@radix-effects/gateway";
-import { RadixEngineToolkit } from "@steleaio/radix-engine-toolkit";
+import { GatewayApiClient, PreviewTransactionV2 } from "@radix-effects/gateway";
+import {
+  RadixEngineToolkit,
+  TransactionV2Builder,
+} from "@steleaio/radix-engine-toolkit";
 import {
   ConfigProvider,
   Effect,
@@ -20,7 +23,6 @@ import { CreateTransactionIntent } from "./createTransactionIntent";
 import { CreateTransactionIntentV2 } from "./createTransactionIntentV2";
 import { IntentHashService } from "./intentHash";
 import { faucet } from "./manifests/faucet";
-import { PreviewTransaction } from "./previewTransaction";
 import { SubintentV2Schema, TransactionIntentV2Schema } from "./schemas";
 import { Signer } from "./signer/signer";
 import { StaticallyAnalyzeManifestV2 } from "./staticallyAnalyzeManifestV2";
@@ -43,8 +45,8 @@ const testLayer = Layer.mergeAll(
   CreateTransactionIntent.Default,
   CreateTransactionIntentV2.Default,
   CompileTransaction.Default,
-  PreviewTransaction.Default,
   StaticallyAnalyzeManifestV2.Default,
+  PreviewTransactionV2.Default,
   SubmitTransaction.Default,
   TransactionHeader.Default,
   TransactionHeaderV2.Default,
@@ -122,17 +124,17 @@ describe("CreateTransactionIntent", () => {
       Effect.gen(function* () {
         const createTransactionHeaderV2 = yield* TransactionHeaderV2;
         const compileTransaction = yield* CompileTransaction;
-        const createTransactionIntent = yield* CreateTransactionIntent;
-        const previewTransaction = yield* PreviewTransaction;
         const staticallyAnalyzeManifestV2 = yield* StaticallyAnalyzeManifestV2;
         const submitTransaction = yield* SubmitTransaction;
         const pollTransactionStatus = yield* TransactionStatus;
-        const createTransactionHeader = yield* TransactionHeader;
         const intentHashService = yield* IntentHashService;
         const networkId = NetworkId.make(2);
         const uniqueDiscriminator = Date.now();
-        const toGatewayKeyType = (curve: "Ed25519" | "Secp256k1") =>
-          curve === "Ed25519" ? "EddsaEd25519" : "EcdsaSecp256k1";
+
+        const knownAddresses = yield* Effect.tryPromise(() =>
+          RadixEngineToolkit.Utils.knownAddresses(2),
+        );
+        const faucetAddress = knownAddresses.componentAddresses.faucet;
 
         const signerControlledAccount = yield* createAccount({
           networkId: 2,
@@ -147,38 +149,8 @@ describe("CreateTransactionIntent", () => {
         const resourceAddress =
           "resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc";
 
-        const lockFeeAccountAddress = signerControlledAccount.address;
-        const withdrawFromAccountAddress = signerControlledAccount.address;
+        const signerAccountAddress = signerControlledAccount.address;
         const depositToAccountAddress = recipientAccount.address;
-
-        const fundSignerAccountIntent = yield* createTransactionIntent({
-          manifest: yield* faucet(signerControlledAccount.address),
-        });
-
-        const { id: fundSignerAccountId, hash: fundSignerAccountHash } =
-          yield* intentHashService.create(fundSignerAccountIntent);
-
-        const fundSignerAccountSignatures = [
-          {
-            curve: "Ed25519" as const,
-            signature: Buffer.from(
-              signerControlledAccount.sign(fundSignerAccountHash),
-              "hex",
-            ),
-            publicKey: Buffer.from(signerControlledAccount.publicKeyHex, "hex"),
-          },
-        ];
-
-        const fundSignerAccountCompiled = yield* compileTransaction({
-          intent: fundSignerAccountIntent,
-          signatures: fundSignerAccountSignatures,
-        });
-
-        yield* submitTransaction({
-          compiledTransaction: fundSignerAccountCompiled,
-        });
-
-        yield* pollTransactionStatus.poll({ id: fundSignerAccountId });
 
         const { transactionHeader, intentHeader } =
           yield* createTransactionHeaderV2({
@@ -189,7 +161,7 @@ describe("CreateTransactionIntent", () => {
 
         const subintentInstructions = TransactionManifestString.make(`
           CALL_METHOD
-            Address("${withdrawFromAccountAddress}")
+            Address("${signerAccountAddress}")
             "withdraw"
             Address("${resourceAddress}")
             Decimal("1000")
@@ -234,57 +206,27 @@ describe("CreateTransactionIntent", () => {
           ;
 
           CALL_METHOD
-            Address("${lockFeeAccountAddress}")
+            Address("${faucetAddress}")
             "lock_fee"
             Decimal("10")
+          ;
+
+          CALL_METHOD
+            Address("${faucetAddress}")
+            "free"
+          ;
+
+          CALL_METHOD
+            Address("${signerAccountAddress}")
+            "try_deposit_batch_or_abort"
+            Expression("ENTIRE_WORKTOP")
+            Enum<0u8>()
           ;
 
           YIELD_TO_CHILD
             NamedIntent("intent1")
           ;
         `);
-
-        const previewHeader = yield* createTransactionHeader({
-          networkId,
-          startEpochInclusive: Option.none(),
-          endEpochExclusive: Option.none(),
-        });
-
-        const signerPublicKey = {
-          curve: "Ed25519" as const,
-          hex: () => signerControlledAccount.publicKeyHex,
-        };
-
-        const previewTransactionResult = yield* previewTransaction({
-          payload: {
-            manifest: fundSignerAccountIntent.manifest.instructions.value,
-            blobs_hex: [],
-            start_epoch_inclusive: previewHeader.startEpochInclusive,
-            end_epoch_exclusive: previewHeader.endEpochExclusive,
-            notary_public_key: {
-              key_type: toGatewayKeyType(previewHeader.notaryPublicKey.curve),
-              key_hex: previewHeader.notaryPublicKey.hex(),
-            },
-            notary_is_signatory: previewHeader.notaryIsSignatory,
-            tip_percentage: previewHeader.tipPercentage,
-            nonce: previewHeader.nonce,
-            signer_public_keys: [
-              {
-                key_type: toGatewayKeyType(signerPublicKey.curve),
-                key_hex: signerPublicKey.hex(),
-              },
-            ],
-            flags: {
-              assume_all_signature_proofs: true,
-              skip_epoch_check: false,
-              use_free_credit: false,
-            },
-          },
-        });
-
-        yield* Effect.log("Preview transaction result", {
-          previewTransactionResult: JSON.stringify(previewTransactionResult, null, 2),
-        });
 
         const intent = TransactionIntentV2Schema.make({
           transactionHeader: {
@@ -294,6 +236,7 @@ describe("CreateTransactionIntent", () => {
             header: {
               ...intentHeader,
               intentDiscriminator: uniqueDiscriminator + 1,
+              
             },
             instructions: manifest,
             blobs: [],
@@ -345,6 +288,41 @@ describe("CreateTransactionIntent", () => {
           signatures,
           subintentSignatures: [childSubintentSignatures],
         });
+
+        const previewTransactionV2 = yield* PreviewTransactionV2;
+        const builder = yield* Effect.tryPromise(() =>
+          TransactionV2Builder.new(),
+        );
+        const previewTx = builder
+          .header(intent.transactionHeader)
+          .rootIntentCore(intent.rootIntentCore)
+          .addSignedSubintent(intent.nonRootSubintents[0], [])
+          .buildPreviewTransaction({
+            rootSignerPublicKeys: [],
+            nonRootSubintentSignerPublicKeys: [[]],
+          });
+          
+        const compiledPreview = yield* Effect.tryPromise(() =>
+          RadixEngineToolkit.PreviewTransactionV2.compile(previewTx),
+        );
+        const previewHex = Buffer.from(compiledPreview).toString("hex");
+        const previewResult = yield* previewTransactionV2({
+          payload: {
+            preview_transaction: {
+              type: "Compiled",
+              preview_transaction_hex: previewHex,
+            },
+            flags: {
+              assume_all_signature_proofs: true,
+              skip_epoch_check: true,
+              use_free_credit: true,
+            },
+            opt_ins: {
+              core_api_receipt: false,
+            },
+          },
+        });
+        yield* Effect.log("V2 preview result", previewResult.receipt?.status);
 
         yield* submitTransaction({
           compiledTransaction,
