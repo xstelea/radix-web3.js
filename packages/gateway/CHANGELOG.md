@@ -1,5 +1,11 @@
 # @radix-effects/gateway
 
+## 0.6.0-dev.1
+
+### Minor Changes
+
+- e62bfdb: preview tx v2
+
 ## 0.6.0-dev.0
 
 ### Minor Changes

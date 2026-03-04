@@ -1,5 +1,12 @@
 # @radix-effects/transaction-stream
 
+## 0.1.7-dev.1
+
+### Patch Changes
+
+- Updated dependencies [e62bfdb]
+  - @radix-effects/gateway@0.6.0-dev.1
+
 ## 0.1.7-dev.0
 
 ### Patch Changes
