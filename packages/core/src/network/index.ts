@@ -12,7 +12,7 @@ import {
   type Intent,
   type PublicKey,
   RadixEngineToolkit,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 import { pollTransactionStatusFactory } from './pollTransactionStatus';
 import { previewTransactionFactory } from './previewTransaction';
 import { submitTransactionFactory } from './submitTransaction';
@@ -208,17 +208,17 @@ export const createRadixNetworkClient = (input: {
 
     while (hasNextPage) {
       const stateEntityNonFungiblesPageRequest: StateEntityNonFungiblesPageRequest =
-        {
-          address: address,
-          limit_per_page: 5,
-          cursor: nextCursor,
-          at_ledger_state: {
-            state_version: stateVersion,
-          },
-          opt_ins: {
-            explicit_metadata: ['name', 'symbol'],
-          },
-        };
+      {
+        address: address,
+        limit_per_page: 5,
+        cursor: nextCursor,
+        at_ledger_state: {
+          state_version: stateVersion,
+        },
+        opt_ins: {
+          explicit_metadata: ['name', 'symbol'],
+        },
+      };
 
       const stateEntityNonFungiblesPageResponse: StateEntityNonFungiblesPageResponse =
         await gatewayApiClient.state.innerClient.entityNonFungiblesPage({

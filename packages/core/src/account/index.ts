@@ -1,7 +1,7 @@
 import {
   type PublicKey,
   RadixEngineToolkit,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 
 export const deriveAccountAddressFromPublicKey = (
   publicKey: PublicKey,

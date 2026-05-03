@@ -1,5 +1,5 @@
 import type { RadixNetworkClient } from '@/network';
-import type { TransactionManifest } from '@radixdlt/radix-engine-toolkit';
+import type { TransactionManifest } from '@steleaio/radix-engine-toolkit';
 
 export type ManifestHelper = {
   getKnownAddresses: RadixNetworkClient['getKnownAddresses'];

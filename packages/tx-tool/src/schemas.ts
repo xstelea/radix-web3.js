@@ -3,7 +3,7 @@ import {
   PrivateKey,
   PublicKey,
   SignatureWithPublicKey,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 import { Effect, Option, Schema } from 'effect';
 import {
   Base64String,
@@ -148,6 +148,100 @@ export const TransactionHeaderSchema = Schema.Struct({
 
 export type TransactionHeader = typeof TransactionHeaderSchema.Type;
 
+export const TransactionHeaderV2Schema = Schema.Struct({
+  notaryPublicKey: Ed25519PublicKeySchema,
+  notaryIsSignatory: Schema.Boolean,
+  tipBasisPoints: Schema.Number,
+});
+
+export type TransactionHeaderV2 = typeof TransactionHeaderV2Schema.Type;
+
+const TransactionMessageContentV2Schema = Schema.Union(
+  Schema.Struct({
+    kind: Schema.Literal('String'),
+    value: TransactionMessageString,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal('Bytes'),
+    value: Schema.Uint8Array,
+  }),
+);
+
+const PlainTextMessageV2Schema = Schema.Struct({
+  kind: Schema.Literal('PlainText'),
+  value: Schema.Struct({
+    mimeType: Schema.String,
+    message: TransactionMessageContentV2Schema,
+  }),
+});
+
+const DecryptorsByCurveV2Schema = Schema.Union(
+  Schema.Struct({
+    kind: Schema.Literal('Ed25519'),
+    value: Schema.Struct({
+      dhEphemeralPublicKey: Schema.Uint8Array,
+      decryptors: Schema.Record({
+        key: Schema.String,
+        value: Schema.String,
+      }),
+    }),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal('Secp256k1'),
+    value: Schema.Struct({
+      dhEphemeralPublicKey: Schema.Uint8Array,
+      decryptors: Schema.Record({
+        key: Schema.String,
+        value: Schema.String,
+      }),
+    }),
+  }),
+);
+
+const EncryptedMessageV2Schema = Schema.Struct({
+  kind: Schema.Literal('Encrypted'),
+  value: Schema.Struct({
+    encrypted: Schema.Uint8Array,
+    decryptorsByCurve: Schema.Struct({
+      Ed25519: DecryptorsByCurveV2Schema,
+      Secp256k1: DecryptorsByCurveV2Schema,
+    }),
+  }),
+});
+
+const EmptyMessageV2Schema = Schema.Struct({ kind: Schema.Literal('None') });
+
+export const TransactionMessageV2Schema = Schema.Union(
+  EmptyMessageV2Schema,
+  PlainTextMessageV2Schema,
+  EncryptedMessageV2Schema,
+);
+export type TransactionMessageV2 = typeof TransactionMessageV2Schema.Type;
+
+export const IntentHeaderV2Schema = Schema.Struct({
+  networkId: NetworkId,
+  startEpochInclusive: Epoch,
+  endEpochExclusive: Epoch,
+  minProposerTimestampInclusive: Schema.optional(Schema.Number),
+  maxProposerTimestampExclusive: Schema.optional(Schema.Number),
+  intentDiscriminator: Schema.Number,
+});
+export type IntentHeaderV2 = typeof IntentHeaderV2Schema.Type;
+
+export const IntentCoreV2Schema = Schema.Struct({
+  header: IntentHeaderV2Schema,
+  instructions: TransactionManifestString,
+  blobs: Schema.mutable(Schema.Array(Schema.Uint8Array)),
+  message: TransactionMessageV2Schema,
+  children: Schema.mutable(Schema.Array(Schema.Uint8Array)),
+});
+export type IntentCoreV2 = typeof IntentCoreV2Schema.Type;
+
+export const SubintentV2Schema = Schema.Struct({
+  intentCore: IntentCoreV2Schema,
+});
+export type SubintentV2 = typeof SubintentV2Schema.Type;
+
 export const TransactionIntentSchema = Schema.Struct({
   header: TransactionHeaderSchema,
   message: TransactionMessageSchema,
@@ -155,6 +249,15 @@ export const TransactionIntentSchema = Schema.Struct({
 });
 export type TransactionIntent = typeof TransactionIntentSchema.Type;
 export type TransactionIntentEncoded = typeof TransactionIntentSchema.Encoded;
+
+export const TransactionIntentV2Schema = Schema.Struct({
+  transactionHeader: TransactionHeaderV2Schema,
+  rootIntentCore: IntentCoreV2Schema,
+  nonRootSubintents: Schema.mutable(Schema.Array(SubintentV2Schema)),
+});
+export type TransactionIntentV2 = typeof TransactionIntentV2Schema.Type;
+export type TransactionIntentV2Encoded =
+  typeof TransactionIntentV2Schema.Encoded;
 
 export const Ed25519SignatureWithPublicKeySchema = Schema.asSchema(
   Schema.transformOrFail(

@@ -10,7 +10,7 @@ class TransactionPreviewError extends Data.TaggedError(
 }> {}
 
 export class PreviewTransaction extends Effect.Service<PreviewTransaction>()(
-  'PreviewTransaction',
+  '@radix-effects/tx-tool/PreviewTransaction',
   {
     effect: Effect.gen(function* () {
       const gatewayApiClient = yield* GatewayApiClient;

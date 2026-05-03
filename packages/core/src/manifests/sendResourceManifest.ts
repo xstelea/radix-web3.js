@@ -4,7 +4,7 @@ import {
   bucket,
   decimal,
   enumeration,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 
 export const sendResourceManifest = ({
   resourceAddress,

@@ -21,7 +21,7 @@ import type {
   Signature,
   TransactionHeader,
   TransactionManifest,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 
 export type Manifest = TransactionManifest | string | WithManifestHelper;
 export type TransactionStatusResponse = TransactionStatusResponseType;
@@ -82,8 +82,8 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     transactionHeader
       ? Promise.resolve(transactionHeader)
       : createTransactionHeader(notaryPublicKey ?? getDefaultNotaryPublicKey())(
-          radixNetworkClient,
-        );
+        radixNetworkClient,
+      );
 
   const createTransactionIntentMessage = (value?: Message | string) => {
     const defaultMessage: Message = { kind: 'None' };

@@ -1,7 +1,7 @@
 import {
   RadixEngineToolkit,
   type TransactionManifest,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 
 export const transformTransactionManifest = async ({
   networkId,

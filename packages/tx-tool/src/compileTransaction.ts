@@ -1,15 +1,20 @@
 import {
   Convert,
   type NotarizedTransaction,
+  type NotarizedTransactionV2,
   RadixEngineToolkit,
   TransactionBuilder as RetTransactionBuilder,
-} from '@radixdlt/radix-engine-toolkit';
+  TransactionV2Builder as RetTransactionV2Builder,
+} from '@steleaio/radix-engine-toolkit';
 import { Data, Effect, pipe, Schema } from 'effect';
 import { HexString } from '@radix-effects/shared';
 import { NotaryKeyPair } from './notaryKeyPair';
 import {
   Ed25519SignatureWithPublicKeySchema,
+  type TransactionIntent,
   TransactionIntentSchema,
+  type TransactionIntentV2,
+  TransactionIntentV2Schema,
 } from './schemas';
 
 export class FailedToCompileTransactionError extends Data.TaggedError(
@@ -25,14 +30,17 @@ export class FailedToNotarizeTransactionError extends Data.TaggedError(
 }> {}
 
 const CompileTransactionInputSchema = Schema.Struct({
-  intent: TransactionIntentSchema,
+  intent: Schema.Union(TransactionIntentSchema, TransactionIntentV2Schema),
   signatures: Schema.Array(Ed25519SignatureWithPublicKeySchema),
+  subintentSignatures: Schema.optional(
+    Schema.Array(Schema.Array(Ed25519SignatureWithPublicKeySchema)),
+  ),
 });
 
 type CompileTransactionInput = typeof CompileTransactionInputSchema.Type;
 
 export class CompileTransaction extends Effect.Service<CompileTransaction>()(
-  'CompileTransaction',
+  '@radix-effects/tx-tool/CompileTransaction',
   {
     dependencies: [NotaryKeyPair.Default],
     effect: Effect.gen(function* () {
@@ -42,6 +50,10 @@ export class CompileTransaction extends Effect.Service<CompileTransaction>()(
         RetTransactionBuilder.new(),
       ).pipe(Effect.catchAll(Effect.orDie));
 
+      const TransactionV2Builder = Effect.tryPromise(() =>
+        RetTransactionV2Builder.new(),
+      ).pipe(Effect.catchAll(Effect.orDie));
+
       const notarySignToSignature = (hash: Uint8Array<ArrayBufferLike>) =>
         pipe(
           Convert.Uint8Array.toHexString(hash),
@@ -49,31 +61,62 @@ export class CompileTransaction extends Effect.Service<CompileTransaction>()(
           notaryKeyPair.signToSignature,
         ).pipe(Effect.runPromise);
 
+      const isTransactionIntentV2 = (
+        intent: CompileTransactionInput['intent'],
+      ): intent is TransactionIntentV2 => 'transactionHeader' in intent;
+
       const notarizeTransaction = (input: CompileTransactionInput) =>
         Effect.gen(function* () {
+          const intent = input.intent;
+
+          if (isTransactionIntentV2(intent)) {
+            const builder = yield* TransactionV2Builder;
+            let builderStep = builder
+              .header(intent.transactionHeader)
+              .rootIntentCore(intent.rootIntentCore);
+
+            for (let i = 0; i < intent.nonRootSubintents.length; i++) {
+              builderStep = builderStep.addSignedSubintent(
+                intent.nonRootSubintents[i],
+                input.subintentSignatures?.[i] ?? [],
+              );
+            }
+
+            for (const signature of input.signatures) {
+              builderStep = builderStep.sign(signature);
+            }
+
+            return yield* Effect.tryPromise({
+              try: () => builderStep.notarizeAsync(notarySignToSignature),
+              catch: (error) => new FailedToNotarizeTransactionError({ error }),
+            });
+          }
+
+          const v1Intent: TransactionIntent = intent;
           const builder = yield* TransactionBuilder;
+          let builderStep = builder
+            .header(v1Intent.header)
+            .message(v1Intent.message)
+            .manifest(v1Intent.manifest);
+
+          for (const signature of input.signatures) {
+            builderStep = builderStep.sign(signature);
+          }
 
           return yield* Effect.tryPromise({
-            try: () =>
-              pipe(
-                builder,
-                (builder) => builder.header(input.intent.header),
-                (builder) => builder.message(input.intent.message),
-                (builder) => builder.manifest(input.intent.manifest),
-                (builder) =>
-                  input.signatures.reduce(
-                    (builder, signature) => builder.sign(signature),
-                    builder,
-                  ),
-                (builder) => builder.notarizeAsync(notarySignToSignature),
-              ),
+            try: () => builderStep.notarizeAsync(notarySignToSignature),
             catch: (error) => new FailedToNotarizeTransactionError({ error }),
           });
         });
 
-      const compileNotarizedTransaction = (input: NotarizedTransaction) =>
+      const compileNotarizedTransaction = (
+        input: NotarizedTransaction | NotarizedTransactionV2,
+      ) =>
         Effect.tryPromise({
-          try: () => RadixEngineToolkit.NotarizedTransaction.compile(input),
+          try: () =>
+            'signedTransactionIntent' in input
+              ? RadixEngineToolkit.NotarizedTransactionV2.compile(input)
+              : RadixEngineToolkit.NotarizedTransaction.compile(input),
           catch: (error) => new FailedToCompileTransactionError({ error }),
         });
 

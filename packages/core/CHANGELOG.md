@@ -1,5 +1,17 @@
 # radix-web3.js
 
+## 0.6.0
+
+### Minor Changes
+
+- 37c64d3: subintent support
+
+## 0.6.0-dev.0
+
+### Minor Changes
+
+- 37c64d3: subintent support
+
 ## 0.5.0
 
 ### Minor Changes

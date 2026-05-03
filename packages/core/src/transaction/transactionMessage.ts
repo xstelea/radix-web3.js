@@ -1,4 +1,4 @@
-import type { Message } from '@radixdlt/radix-engine-toolkit';
+import type { Message } from '@steleaio/radix-engine-toolkit';
 
 export const createStringMessage = (value: string): Message => ({
   kind: 'PlainText',

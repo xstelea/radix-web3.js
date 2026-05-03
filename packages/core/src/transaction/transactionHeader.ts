@@ -2,7 +2,7 @@ import {
   type PublicKey,
   type TransactionHeader as TransactionHeaderType,
   generateRandomNonce,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 import type { RadixNetworkClient } from '../network';
 
 export const createTransactionHeader = (

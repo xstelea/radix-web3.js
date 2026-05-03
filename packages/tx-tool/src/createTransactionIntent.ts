@@ -26,7 +26,7 @@ type CreateTransactionIntentInput =
   typeof CreateTransactionIntentInputSchema.Type;
 
 export class CreateTransactionIntent extends Effect.Service<CreateTransactionIntent>()(
-  'CreateTransactionIntent',
+  '@radix-effects/tx-tool/CreateTransactionIntent',
   {
     dependencies: [
       StaticallyValidateManifest.Default,

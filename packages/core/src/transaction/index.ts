@@ -5,7 +5,7 @@ import {
   TransactionBuilder,
   type TransactionBuilderIntentSignaturesStep,
   type TransactionHash,
-} from '@radixdlt/radix-engine-toolkit';
+} from '@steleaio/radix-engine-toolkit';
 import { compileTransaction } from './helpers/compileTransaction';
 import { getIntentHash } from './helpers/getIntentHash';
 

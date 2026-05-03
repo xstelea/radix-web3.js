@@ -1,5 +1,5 @@
-import { RadixEngineToolkit } from '@radixdlt/radix-engine-toolkit';
-import type { NotarizedTransaction } from '@radixdlt/radix-engine-toolkit';
+import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
+import type { NotarizedTransaction } from '@steleaio/radix-engine-toolkit';
 
 /**
  * Compiles a notarized transaction to a hexadecimal string
