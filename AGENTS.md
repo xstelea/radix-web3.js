@@ -4,6 +4,16 @@ Deep-analysis reference docs for AI agents building on Radix + Effect + TanStack
 
 ---
 
+## Vendored Repositories
+
+- Use vendored repositories as read-only reference material when working with related libraries.
+- Prefer examples, tests, and source patterns from vendored repositories over generated guesses or web search snippets.
+- Do not edit files under `repos/` unless explicitly asked.
+- Do not import from `repos/`; application code should keep importing from normal package dependencies.
+- When writing Effect code, inspect `repos/effect/` for idiomatic usage, tests, module structure, and API design before implementing.
+
+---
+
 ## What to Load
 
 Task-oriented reading lists. Numbers indicate suggested loading order (dependencies first).
