@@ -1,6 +1,9 @@
 # radix-cli
 
-[claw and yoshi](./assets/agent-mascot.png)
+
+<p align="center">
+  <img src="./assets/agent-mascot.png" alt="rdx mascot" width="220">
+</p>
 
 Agent-first Radix transaction workflow CLI. The package publishes the `rdx` executable for preparing, inspecting, signing-orchestrating, notarizing, submitting, and tracking Radix Transaction Manifest V2 workflows from files.
 
