@@ -16,6 +16,14 @@ _Avoid_: radix-agent-toolkit, radix-web3.js core
 The command-line binary exposed by the radix-cli package.
 _Avoid_: radix-wallet, radix-cli command
 
+**Radix Agent Protocol (RAP)**:
+The draft versioned state-machine protocol for coordinating agent-first Radix transaction workflows without taking key custody.
+_Avoid_: CLI internals, wallet protocol, generic command schema
+
+**RAP Transaction State Machine**:
+The ordered set of transaction phases and typed payloads that move a RAP workflow from draft inputs to prepared, signed, notarized, submitted, and observed states.
+_Avoid_: Command sequence, artifact checklist, help text mirror
+
 **Agent-first Interface**:
 A command interface that defaults to structured output, stable exit codes, explicit flags, and non-interactive execution.
 _Avoid_: Human-first CLI, prompt-driven CLI
