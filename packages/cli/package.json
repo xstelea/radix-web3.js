@@ -36,7 +36,9 @@
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
   "publishConfig": {
     "access": "public",
