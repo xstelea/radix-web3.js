@@ -5,6 +5,7 @@ import {
   gatewayAccountBalance,
   gatewayAccountDetails,
   gatewayAccountHistory,
+  deriveVirtualAccountAddress,
   getAccountBalance,
   getAccountDetails,
   getAccountTransactionHistory,
@@ -13,6 +14,7 @@ import {
   type AddSignaturesResult,
   addSignaturesToArtifact,
 } from './addSignatures';
+import type { VirtualAccountDerivation } from './accountReads';
 import {
   type TransactionArtifactSummary,
   findTransactionArtifact,
@@ -236,6 +238,20 @@ export const renderCommandResult = (format: OutputFormat, result: unknown) => {
   return renderJson(result);
 };
 
+export const renderAccountDerive = (
+  format: OutputFormat,
+  result: {
+    type: 'commandResult';
+    command: 'account derive';
+  } & VirtualAccountDerivation,
+) => {
+  if (format === 'text') {
+    return result.accountAddress;
+  }
+
+  return renderJson(result);
+};
+
 const rdxCommand = Command.make('rdx', { format: formatOption }).pipe(
   Command.withDescription('Agent-first Radix transaction workflow CLI'),
 );
@@ -263,6 +279,25 @@ const accountCommand = Command.make('account').pipe(
 const accountAddressArg = Args.text({ name: 'accountAddress' }).pipe(
   Args.withDescription('Radix account address'),
 );
+
+const publicKeyOption = Options.text('public-key').pipe(
+  Options.withDescription('Ed25519 public key hex'),
+);
+
+const accountDeriveCommand = Command.make(
+  'derive',
+  { publicKey: publicKeyOption },
+  ({ publicKey }) =>
+    Effect.gen(function* () {
+      const { format } = yield* rdxCommand;
+      const config = yield* resolveRdxConfig({ cwd: process.cwd() });
+      const result = yield* deriveVirtualAccountAddress({
+        network: config.network,
+        publicKeyHex: publicKey,
+      });
+      yield* Console.log(renderAccountDerive(format, result));
+    }),
+).pipe(Command.withDescription('Derive a virtual account address'));
 
 const accountBalanceCommand = Command.make(
   'balance',
@@ -570,7 +605,11 @@ const templatePrintCommand = Command.make(
 export const command = rdxCommand.pipe(
   Command.withSubcommands([
     accountCommand.pipe(
-      Command.withSubcommands([accountBalanceCommand, accountShowCommand]),
+      Command.withSubcommands([
+        accountBalanceCommand,
+        accountDeriveCommand,
+        accountShowCommand,
+      ]),
     ),
     configCommand.pipe(Command.withSubcommands([configShowCommand])),
     llmCommand,

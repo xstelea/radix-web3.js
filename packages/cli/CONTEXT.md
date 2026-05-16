@@ -84,6 +84,10 @@ _Avoid_: Public-key-gated prepare, skipped early preview
 A read-only rdx command that queries Gateway for account-scoped state such as balance or transaction history.
 _Avoid_: Portfolio indexer, full ledger explorer
 
+**Virtual Account Address Derivation**:
+A read-only rdx operation that derives the Radix virtual account address controlled by an Ed25519 public key on a selected network.
+_Avoid_: Generic public key hash command, account lookup, owner key verification
+
 **Default Network**:
 Mainnet is the network used by rdx when no network is specified.
 _Avoid_: Stokenet by default, implicit testnet
@@ -282,6 +286,10 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 - Failed **Prepare Preview** blocks transaction artifact creation.
 - v1 preview results are not stored in transaction artifacts.
 - An **Account Read Command** requires an account address and network, but does not require signing.
+- **Virtual Account Address Derivation** does not query Gateway and does not prove the account currently exists on-ledger.
+- **Virtual Account Address Derivation** is exposed as `rdx account derive --public-key <ed25519-public-key-hex>`.
+- **Virtual Account Address Derivation** returns `accountAddress` plus `derivation: "virtualAccount"` in the command result.
+- Invalid public keys for **Virtual Account Address Derivation** use an `INVALID_PUBLIC_KEY` structured error.
 - The **Default Network** for rdx is Mainnet; test networks must be requested explicitly.
 - A **Network-bound Transaction Workflow** starts at preparation; agents should verify the intended network before `tx prepare`.
 - A **Network-bound Transaction Workflow** must not switch networks between preparation, signing, notarization, and submission.
@@ -427,6 +435,9 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 
 > **Dev:** "Should `rdx tx prepare` require an account address?"
 > **Domain expert:** "No — account addresses are for **Account Read Commands**, while transaction preparation is driven by the RTM manifest and signer public key."
+
+> **Dev:** "Should deriving an account address from a public key be exposed as a generic hash command?"
+> **Domain expert:** "No — expose **Virtual Account Address Derivation** so the output is clearly a network-specific Radix account address."
 
 > **Dev:** "Should an agent sign a transaction before Gateway preview succeeds?"
 > **Domain expert:** "No — **Preview-before-Signing** is the default safety boundary for submit-ready requests."

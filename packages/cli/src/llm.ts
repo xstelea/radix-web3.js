@@ -10,6 +10,7 @@ Use \`rdx\` to prepare, inspect, sign-orchestrate, notarize, submit, and track R
 - \`rdx\` never stores, accepts, or derives private keys.
 - Participants sign only the requested \`hash.hex\` outside \`rdx\` and return a filled signature template or signature file.
 - v1 CLI workflow files support Ed25519 only. Secp256k1 and other curves are rejected.
+- Use \`rdx account derive --public-key <hex>\` to derive a virtual account address offline from an Ed25519 public key.
 - Do not edit signing request files. Fill signature templates or create signature files instead.
 - Do not rerun \`tx prepare\` expecting overwrite. Existing transaction artifact directories are protected.
 - Do not submit until intent, subintent, notary-signatory, and notary signatures required by the artifacts are complete.
@@ -90,6 +91,7 @@ Subintent IDs in \`subintents.json\` are also Radix \`NamedIntent\` values refer
 
 \`\`\`sh
 rdx config show
+rdx account derive --public-key 1111111111111111111111111111111111111111111111111111111111111111
 rdx account show account_rdx1...
 rdx account balance account_rdx1...
 rdx tx history account_rdx1... --limit 10
@@ -112,6 +114,8 @@ rdx template print signing-request
 rdx template print signature-template
 rdx template print signature-file
 \`\`\`
+
+\`account derive\` uses the resolved config network and does not query Gateway. It returns the derived virtual account address, not proof that the account exists on-ledger.
 
 ## Troubleshooting
 

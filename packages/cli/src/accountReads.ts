@@ -1,5 +1,6 @@
+import { PublicKey, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Data, Effect } from 'effect';
-import type { ResolvedRdxConfig } from './config';
+import type { Network, ResolvedRdxConfig } from './config';
 
 export type AccountFungibleBalance = {
   resourceAddress: string;
@@ -33,10 +34,27 @@ export type AccountTransactionHistory = {
   }[];
 };
 
+export type VirtualAccountDerivation = {
+  network: Network;
+  derivation: 'virtualAccount';
+  publicKey: { curve: 'Ed25519'; hex: string };
+  accountAddress: string;
+};
+
 export class AccountReadError extends Data.TaggedError('AccountReadError')<{
   accountAddress: string;
   reason: unknown;
 }> {}
+
+export class InvalidPublicKeyError extends Data.TaggedError(
+  'InvalidPublicKeyError',
+)<{
+  code: 'INVALID_PUBLIC_KEY';
+  publicKeyHex: string;
+}> {}
+
+const networkId = (network: Network) => (network === 'stokenet' ? 2 : 1);
+const isEd25519PublicKeyHex = (value: string) => /^[0-9a-fA-F]{64}$/.test(value);
 
 const gatewayBaseUrl = (network: ResolvedRdxConfig['network']) =>
   network === 'stokenet'
@@ -254,6 +272,43 @@ export const getAccountTransactionHistory = (input: {
     })),
   );
 
+export const deriveVirtualAccountAddress = (input: {
+  network: Network;
+  publicKeyHex: string;
+}): Effect.Effect<
+  {
+    type: 'commandResult';
+    command: 'account derive';
+  } & VirtualAccountDerivation,
+  unknown
+> =>
+  Effect.gen(function* () {
+    if (!isEd25519PublicKeyHex(input.publicKeyHex)) {
+      return yield* Effect.fail(
+        new InvalidPublicKeyError({
+          code: 'INVALID_PUBLIC_KEY',
+          publicKeyHex: input.publicKeyHex,
+        }),
+      );
+    }
+
+    return yield* Effect.tryPromise(async () =>
+      RadixEngineToolkit.Derive.virtualAccountAddressFromPublicKey(
+        new PublicKey.Ed25519(input.publicKeyHex),
+        networkId(input.network),
+      ),
+    );
+  }).pipe(
+    Effect.map((accountAddress) => ({
+      type: 'commandResult' as const,
+      command: 'account derive' as const,
+      network: input.network,
+      derivation: 'virtualAccount' as const,
+      publicKey: { curve: 'Ed25519' as const, hex: input.publicKeyHex },
+      accountAddress,
+    })),
+  );
+
 export class AccountReadService extends Effect.Service<AccountReadService>()(
   'AccountReadService',
   {
@@ -261,6 +316,7 @@ export class AccountReadService extends Effect.Service<AccountReadService>()(
       getAccountBalance,
       getAccountDetails,
       getAccountTransactionHistory,
+      deriveVirtualAccountAddress,
       gatewayAccountBalance,
       gatewayAccountDetails,
       gatewayAccountHistory,

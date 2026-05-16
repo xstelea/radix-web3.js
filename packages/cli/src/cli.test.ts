@@ -77,6 +77,75 @@ describe('rdx command interface', () => {
     });
   });
 
+  it('derives a virtual account address from an Ed25519 public key', async () => {
+    const publicKeyHex = '1'.repeat(64);
+    const result = await runRdx({
+      argv: ['account', 'derive', '--public-key', publicKeyHex],
+      cwd: '/',
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      type: 'commandResult',
+      command: 'account derive',
+      network: 'mainnet',
+      derivation: 'virtualAccount',
+      publicKey: { curve: 'Ed25519', hex: publicKeyHex },
+    });
+    expect(JSON.parse(result.stdout).accountAddress).toMatch(/^account_rdx1/);
+  });
+
+  it('prints only the derived account address in text mode', async () => {
+    const result = await runRdx({
+      argv: [
+        '--format',
+        'text',
+        'account',
+        'derive',
+        '--public-key',
+        '1'.repeat(64),
+      ],
+      cwd: '/',
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toMatch(/^account_rdx1/);
+    expect(result.stdout.trim()).not.toContain('{');
+  });
+
+  it('rejects invalid public keys for account derivation', async () => {
+    const result = await runRdx({
+      argv: ['account', 'derive', '--public-key', 'not-a-public-key'],
+      cwd: '/',
+    });
+
+    expect(result.exitCode).toBe(64);
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      type: 'error',
+      code: 'INVALID_PUBLIC_KEY',
+    });
+    expect(result.stdout).toBe('');
+  });
+
+  it('derives account addresses on the resolved config network', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'rdx-cli-account-derive-'));
+    await writeFile(
+      join(cwd, '.rdxconfig.json'),
+      JSON.stringify({ network: 'stokenet' }),
+      'utf8',
+    );
+
+    const result = await runRdx({
+      argv: ['account', 'derive', '--public-key', '1'.repeat(64)],
+      cwd,
+    });
+
+    const output = JSON.parse(result.stdout);
+    expect(result.exitCode).toBe(0);
+    expect(output.network).toBe('stokenet');
+    expect(output.accountAddress).toMatch(/^account_tdx_2_1/);
+  });
+
   it('prints transaction artifact paths', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'rdx-cli-path-'));
     await writePreparedArtifact({

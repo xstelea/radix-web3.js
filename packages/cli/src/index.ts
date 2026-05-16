@@ -4,6 +4,7 @@ import {
   gatewayAccountBalance,
   gatewayAccountDetails,
   gatewayAccountHistory,
+  deriveVirtualAccountAddress,
   getAccountBalance,
   getAccountDetails,
   getAccountTransactionHistory,
@@ -13,6 +14,7 @@ import { findTransactionArtifact, listTransactionArtifacts } from './artifacts';
 import {
   type OutputFormat,
   renderAddSignatures,
+  renderAccountDerive,
   renderCommandResult,
   renderConfigShow,
   renderLlmGuide,
@@ -161,6 +163,27 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
       return {
         exitCode: 0,
         stdout: `${renderCommandResult(format, result)}\n`,
+        stderr: '',
+      };
+    }
+
+    if (argv[0] === 'account' && argv[1] === 'derive') {
+      const publicKeyHex = takeOption(argv, '--public-key');
+      if (!publicKeyHex) {
+        return structuredError({
+          code: 'MISSING_ARGUMENT',
+          message: 'account derive requires --public-key',
+          exitCode: 64,
+        });
+      }
+      const config = yield* resolveRdxConfig({ cwd: input.cwd });
+      const result = yield* deriveVirtualAccountAddress({
+        network: config.network,
+        publicKeyHex,
+      });
+      return {
+        exitCode: 0,
+        stdout: `${renderAccountDerive(format, result)}\n`,
         stderr: '',
       };
     }
@@ -361,6 +384,21 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
     });
   }).pipe(
     Effect.catchAll((error) => {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        '_tag' in error &&
+        error._tag === 'InvalidPublicKeyError'
+      ) {
+        return Effect.succeed(
+          structuredError({
+            code: 'INVALID_PUBLIC_KEY',
+            message: 'Expected a 64-character Ed25519 public key hex value',
+            exitCode: 64,
+          }),
+        );
+      }
+
       if (
         typeof error === 'object' &&
         error !== null &&
