@@ -1,0 +1,128 @@
+---
+title: radix-connect
+sidebar_position: 3
+---
+
+# radix-connect
+
+`radix-connect` is a TypeScript client for sending Radix Wallet interaction
+requests through Radix Connect Relay. It builds the wallet deep link, signs the
+request metadata, polls the relay, decrypts the wallet response, and verifies
+the response interaction id.
+
+## Install
+
+```bash
+npm install radix-connect
+```
+
+## Main Exports
+
+| Export | Purpose |
+| --- | --- |
+| `createRadixConnectClient` | Wraps a transport and exposes `sendRequest`. |
+| `createRadixConnectRelayTransport` | Creates the default encrypted relay transport. |
+| `createRolaMessage` | Builds a ROLA challenge message. |
+| `createEd25519KeyPair` | Creates signing and X25519 key material for relay messages. |
+| `generateBIP39Mnemonic` | Generates a mnemonic for key derivation flows. |
+| `mnemonicToPrivateKey` | Derives a Radix private key from a mnemonic and derivation path options. |
+| Wallet interaction schemas | Zod schemas for request and response payloads. |
+
+## Basic Wallet Request
+
+```ts
+import {
+  createRadixConnectClient,
+  createRadixConnectRelayTransport,
+} from 'radix-connect';
+
+const transport = createRadixConnectRelayTransport({
+  handleRequest: async ({ deepLink }) => {
+    // Show this as a QR code or open it in a mobile wallet handoff.
+    console.log(deepLink);
+  },
+});
+
+const client = createRadixConnectClient({ transport });
+
+const response = await client.sendRequest({
+  interactionId: crypto.randomUUID(),
+  metadata: {
+    version: 2,
+    networkId: 1,
+    dAppDefinitionAddress: 'account_rdx...',
+    origin: 'https://your-dapp.example',
+  },
+  items: {
+    discriminator: 'unauthorizedRequest',
+    oneTimeAccounts: {
+      numberOfAccounts: {
+        quantifier: 'exactly',
+        quantity: 1,
+      },
+    },
+  },
+});
+```
+
+## Relay Transport Options
+
+`createRadixConnectRelayTransport` accepts:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `baseUrl` | `https://radix-connect-relay.radixdlt.com` | Relay service base URL. |
+| `walletUrl` | `radixWallet://connect` | Wallet deep link URL. |
+| `sessionId` | `crypto.randomUUID()` | Relay session identifier. |
+| `privateKey` | random key | Optional deterministic key material for the dApp side. |
+| `handleRequest` | required | Callback that receives the deep link, signed request body, and abort controller. |
+
+The transport times out after five minutes. It polls the relay once per second
+until a wallet response is available or the abort signal is triggered.
+
+## Transaction Request
+
+```ts
+const response = await client.sendRequest({
+  interactionId: crypto.randomUUID(),
+  metadata,
+  items: {
+    discriminator: 'transaction',
+    send: {
+      version: 1,
+      transactionManifest: `
+        CALL_METHOD
+          Address("account_rdx...")
+          "lock_fee"
+          Decimal("10")
+        ;
+      `,
+    },
+  },
+});
+```
+
+## ROLA Challenge Message
+
+Use `createRolaMessage` when you need the wallet to sign a challenge that will
+be verified server-side:
+
+```ts
+import { createRolaMessage } from 'radix-connect';
+
+const message = createRolaMessage({
+  dAppDefinitionAddress: 'account_rdx...',
+  origin: 'https://your-dapp.example',
+  challenge: 'server-generated-challenge',
+});
+```
+
+Pair this with `@radix-effects/gateway`'s `Rola` service for server-side
+verification.
+
+## Wallet Interaction Schemas
+
+The package exports Zod schemas for account requests, persona requests,
+transaction requests, pre-authorization requests, success responses, failure
+responses, and proofs. Use them when you accept wallet payloads from an
+untrusted boundary.

@@ -6,20 +6,25 @@ sidebar_position: 1
 
 # Radix Web3.js
 
-A lightweight, type-safe JavaScript/TypeScript library for interacting with the Radix Network. Built to make Web3 development on Radix simple and intuitive.
+JavaScript and TypeScript packages for building Radix applications, wallet
+connections, Gateway integrations, transaction workflows, and agent-friendly
+tooling.
 
-## Key Features
+## Packages
 
-- 🔑 **Simplified Key Management** - Create and manage Ed25519 keypairs
-- 💸 **Transaction Building** - Build, sign, and submit transactions with ease
-- 🔍 **Account Management** - Query balances and transaction history
-- 📝 **Manifest Generation** - Helper functions for common transaction manifests
-- 🌐 **Network Support** - Works with Mainnet, Stokenet, and other Radix networks
-- 🔒 **Type Safety** - Full TypeScript support with comprehensive types
+- [`radix-web3.js`](./packages/core) for promise-based Radix client utilities.
+- [`radix-connect`](./packages/connect) for Radix Wallet interaction requests.
+- [`@radix-effects/gateway`](./packages/gateway) for Effect-based Gateway reads.
+- [`@radix-effects/tx-tool`](./packages/tx-tool) for Effect transaction workflows.
+- [`@radix-effects/transaction-stream`](./packages/transaction-stream) for polling Gateway transaction streams.
+- [`rdx-cli`](./packages/cli) for agent-first manifest workflows.
+- [`radix-agent-toolkit`](./packages/agent-toolkit) for GOAT SDK Radix tools.
+- [`sbor-ez-mode`](./packages/sbor-ez-mode) for parsing programmatic SBOR values.
+- [`@radix-effects/shared`](./packages/shared) for shared branded types and schemas.
 
 ## Quick Start
 
-Install the package:
+Install the core client:
 
 ```shell
 npm install radix-web3.js
@@ -27,38 +32,40 @@ npm install radix-web3.js
 
 ## Example Usage
 
-Here's a simple example of creating a wallet and sending XRD tokens:
+Create a keypair, derive an account address, submit a manifest, and read
+balances:
 
 ```typescript
-import { createEd25519KeyPair, createRadixWeb3Client } from 'radix-web3.js'
-import { sendResourceManifest } from 'radix-web3.js/manifests'
-import { fromPublicKey } from 'radix-web3.js/account'
+import {
+  createEd25519KeyPair,
+  createRadixWeb3Client,
+  deriveAccountAddressFromPublicKey,
+  manifests,
+} from 'radix-web3.js';
 
-// Create a new keypair
-const keyPair = createEd25519KeyPair()
+const keyPair = createEd25519KeyPair();
 
-// Initialize the client
-const web3Client = createRadixWeb3Client({
+const client = createRadixWeb3Client({
   networkId: 'Stokenet',
   notaryPublicKey: keyPair.publicKey(),
   notarizer: (hash) => keyPair.signToSignature(hash),
-})
+});
 
-// Get your account address
-const accountAddress = await fromPublicKey(keyPair.publicKey(), 2) // 2 = Stokenet
+const accountAddress = await deriveAccountAddressFromPublicKey(
+  keyPair.publicKey(),
+  2,
+);
 
-// Send 1 XRD to another address
-const { transactionId } = await web3Client.submitTransaction(
-  sendResourceManifest({
+const { transactionId } = await client.submitTransaction(
+  manifests.sendResourceManifest({
+    fromAddress: accountAddress,
+    toAddress: 'account_tdx_2_12yf3qp4feqnw...',
     resourceAddress:
       'resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc',
     amount: '1',
-    fromAddress: accountAddress,
-    toAddress: 'account_tdx_2_12yf3qp4feqnw...',
   }),
-)
+);
 
-// Check your balances
-const { fungibleTokens } = await web3Client.getBalances(accountAddress)
-console.log('Balances:', fungibleTokens)
+const { fungibleTokens } = await client.getBalances(accountAddress);
+console.log(transactionId, fungibleTokens);
 ```

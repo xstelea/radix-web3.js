@@ -1,61 +1,34 @@
-# Radix Web3.js Monorepo
+# Radix Web3.js
 
-A collection of JavaScript/TypeScript packages for interacting with the Radix Network.
+JavaScript and TypeScript packages for building Radix applications, wallet
+connections, Gateway integrations, transaction workflows, and agent-friendly
+tooling.
 
-👉 [See docs](https://xstelea.github.io/radix-web3.js/)
+## Documentation
 
-## Getting Started
-
-```bash
-npm install radix-web3.js
-```
-
-## Quick Example
-
-```typescript
-import { createEd25519KeyPair, createRadixWeb3Client } from 'radix-web3.js'
-import { sendResourceManifest } from 'radix-web3.js/manifests'
-import { fromPublicKey } from 'radix-web3.js/account'
-
-// Create a new keypair
-const keyPair = createEd25519KeyPair()
-
-// Initialize the client
-const web3Client = createRadixWeb3Client({
-  networkId: 'Stokenet',
-  notaryPublicKey: keyPair.publicKey(),
-  notarizer: (hash) => keyPair.signToSignature(hash),
-})
-
-// Get your account address
-const accountAddress = await fromPublicKey(keyPair.publicKey(), 2) // 2 = Stokenet
-
-// Send 1 XRD to another address
-const { transactionId } = await web3Client.submitTransaction(
-  sendResourceManifest({
-    resourceAddress:
-      'resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc',
-    amount: '1',
-    fromAddress: accountAddress,
-    toAddress: 'account_tdx_2_12yf3qp4feqnw...',
-  }),
-)
-
-// Check your balances
-const { fungibleTokens } = await web3Client.getBalances(accountAddress)
-console.log('Balances:', fungibleTokens)
-```
+- [Docs site](https://xstelea.github.io/radix-web3.js/)
 
 ## Packages
 
-### Core [@radix-web3/core](./packages/core)
 
-Core functionality for building and submitting transactions, managing accounts and keypairs.
+| Package                             | Path                                                         | Description                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `radix-web3.js`                     | [packages/core](./packages/core)                             | Core Radix client utilities for accounts, keypairs, manifests, balances, and transaction submission.                     |
+| `radix-connect`                     | [packages/connect](./packages/connect)                       | TypeScript client for encrypted Radix Wallet interactions through Radix Connect Relay.                                   |
+| `@radix-effects/gateway`            | [packages/gateway](./packages/gateway)                       | Effect-based Radix Gateway API client for Node.js and browser runtimes.                                                  |
+| `@radix-effects/tx-tool`            | [packages/tx-tool](./packages/tx-tool)                       | Effect transaction helpers for building, analyzing, previewing, signing, submitting, and tracking Radix transactions.    |
+| `@radix-effects/transaction-stream` | [packages/transaction-stream](./packages/transaction-stream) | Effect stream utilities for polling and processing Radix Gateway transaction history.                                    |
+| `rdx-cli`                           | [packages/cli](./packages/cli)                               | Agent-first CLI for Transaction Manifest V2 workflows, subintents, out-of-band signing, and transaction status tracking. |
+| `radix-agent-toolkit`               | [packages/agent-toolkit](./packages/agent-toolkit)           | GOAT SDK wallet integration for exposing Radix account and transaction tools to agents.                                  |
+| `sbor-ez-mode`                      | [packages/sbor-ez-mode](./packages/sbor-ez-mode)             | Small schema builder for parsing and working with Radix SBOR-shaped values.                                              |
+| `@radix-effects/shared`             | [packages/shared](./packages/shared)                         | Shared Effect schemas and branded types used by the Radix Effects packages.                                              |
 
-### Account [@radix-web3/account](./packages/core/src/account)
 
-Account management and address derivation utilities.
+## Apps
 
-### Manifests [@radix-web3/manifests](./packages/core/src/manifests)
 
-Transaction manifest building and utilities.
+| App  | Path                     | Description                                       |
+| ---- | ------------------------ | ------------------------------------------------- |
+| Docs | [apps/docs](./apps/docs) | Docusaurus documentation site for the repository. |
+
+

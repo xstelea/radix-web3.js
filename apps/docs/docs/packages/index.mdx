@@ -1,0 +1,47 @@
+---
+title: Packages
+sidebar_position: 1
+---
+
+# Packages
+
+This repository is a workspace of TypeScript packages for Radix applications,
+wallet connections, Gateway access, transaction workflows, and agent tooling.
+
+Use this page to pick the package that matches the job you are doing.
+
+| Package | Use it for |
+| --- | --- |
+| [`radix-web3.js`](./core) | Building simple Radix clients, deriving addresses, creating manifests, submitting transactions, and reading balances. |
+| [`radix-connect`](./connect) | Sending Radix Wallet interaction requests through Radix Connect Relay. |
+| [`@radix-effects/gateway`](./gateway) | Querying the Radix Gateway with Effect services, typed errors, pagination helpers, and ROLA verification. |
+| [`@radix-effects/tx-tool`](./tx-tool) | Building Effect-based transaction pipelines for V1/V2 intents, signing, previewing, submitting, and polling. |
+| [`@radix-effects/transaction-stream`](./transaction-stream) | Streaming user transactions from Gateway with configurable polling state. |
+| [`rdx-cli`](./cli) | Running agent-friendly Transaction Manifest V2 workflows from the command line. |
+| [`radix-agent-toolkit`](./agent-toolkit) | Exposing Radix wallet and transaction actions as GOAT SDK tools for agents. |
+| [`sbor-ez-mode`](./sbor-ez-mode) | Parsing Gateway programmatic SBOR values with small composable schemas. |
+| [`@radix-effects/shared`](./shared) | Reusing branded Radix domain types and Effect schemas across packages. |
+
+## Package Families
+
+The packages fall into three groups:
+
+- **Core client packages**: `radix-web3.js` and `radix-connect` expose promise-based APIs for application code.
+- **Effect packages**: `@radix-effects/gateway`, `@radix-effects/tx-tool`,
+  `@radix-effects/transaction-stream`, and `@radix-effects/shared` compose with
+  Effect layers, services, schemas, and typed errors.
+- **Tooling packages**: `rdx-cli`, `radix-agent-toolkit`, and `sbor-ez-mode`
+  support operational workflows, agents, and typed parsing of on-ledger data.
+
+## Workspace Commands
+
+From the repository root:
+
+```bash
+pnpm install
+pnpm build
+pnpm test
+```
+
+Individual packages can also be built or tested from their package directory
+with their own `package.json` scripts.

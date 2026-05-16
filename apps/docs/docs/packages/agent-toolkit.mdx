@@ -1,0 +1,106 @@
+---
+title: radix-agent-toolkit
+sidebar_position: 8
+---
+
+# radix-agent-toolkit
+
+`radix-agent-toolkit` integrates Radix clients with the GOAT SDK. It provides a
+Radix wallet client wrapper and plugins that expose account, transfer,
+transaction, token price, and swap actions as agent tools.
+
+## Install
+
+```bash
+npm install radix-agent-toolkit radix-web3.js radix-connect @goat-sdk/core
+```
+
+## Main Exports
+
+| Export | Purpose |
+| --- | --- |
+| `RadixWalletClient` | GOAT wallet client wrapper around `radix-web3.js`. |
+| `RadixCorePlugin` | GOAT plugin exposing core Radix tools. |
+| `AstrolecentPlugin` | GOAT plugin exposing Astrolecent price and swap tools. |
+
+## Wallet Client
+
+```ts
+import {
+  createEd25519KeyPair,
+  createRadixWeb3Client,
+  deriveAccountAddressFromPublicKey,
+} from 'radix-web3.js';
+import { RadixWalletClient } from 'radix-agent-toolkit';
+
+const keyPair = createEd25519KeyPair();
+const accountAddress = await deriveAccountAddressFromPublicKey(
+  keyPair.publicKey(),
+  2,
+);
+
+const client = createRadixWeb3Client({
+  networkId: 'Stokenet',
+  notaryPublicKey: keyPair.publicKey(),
+  notarizer: (hash) => keyPair.signToSignature(hash),
+  messageSigner: (message) => keyPair.signToSignature(Buffer.from(message)),
+});
+
+const wallet = new RadixWalletClient({
+  accountAddress,
+  client,
+});
+```
+
+`RadixWalletClient` implements GOAT wallet methods:
+
+- `getChain()` returns a Radix chain descriptor using the underlying network id.
+- `getClient()` returns the wrapped `radix-web3.js` client.
+- `getAddress()` returns the configured account address.
+- `signMessage(message)` signs through `client.signMessage`.
+- `sendTransaction(manifest)` submits through `client.submitTransaction`.
+- `balanceOf(address)` reads XRD balance through `client.getBalances`.
+
+## Core Plugin
+
+`RadixCorePlugin` requires a `radix-connect` client and wallet interaction
+metadata. It exposes:
+
+| Tool | Purpose |
+| --- | --- |
+| `get_account` | Requests one account from the Radix Wallet. |
+| `send_xrd` | Sends XRD from the configured wallet client account. |
+| `send_transaction_manifest` | Sends a transaction manifest to the Radix Wallet. |
+
+```ts
+import { RadixCorePlugin } from 'radix-agent-toolkit';
+
+const plugin = new RadixCorePlugin({
+  radixConnectClient,
+  metadata: {
+    version: 2,
+    networkId: 2,
+    dAppDefinitionAddress: 'account_tdx_2_...',
+    origin: 'https://your-agent-app.example',
+  },
+});
+```
+
+## Astrolecent Plugin
+
+`AstrolecentPlugin` exposes:
+
+| Tool | Purpose |
+| --- | --- |
+| `get_token_prices` | Looks up token prices by symbol and prioritizes higher TVL matches. |
+| `swap_tokens` | Requests an Astrolecent swap quote/transaction payload. |
+
+The plugin uses the Astrolecent partner API and returns JSON strings from the
+tool handlers.
+
+## Agent Safety Notes
+
+Agents should treat generated manifests and swap payloads as proposals until a
+human or wallet policy approves them. `RadixWalletClient` delegates signing and
+submission to the underlying client or wallet flow; it does not add custody by
+itself.

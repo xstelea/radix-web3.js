@@ -1,0 +1,146 @@
+---
+title: radix-web3.js
+sidebar_position: 2
+---
+
+# radix-web3.js
+
+`radix-web3.js` is the core promise-based client package. It provides account
+and identity address derivation, Ed25519 keypair creation, transaction manifest
+helpers, transaction signing and notarization helpers, Gateway submission, and
+balance reads.
+
+## Install
+
+```bash
+npm install radix-web3.js
+```
+
+## Main Exports
+
+| Export | Purpose |
+| --- | --- |
+| `createRadixWeb3Client` | Creates a high-level client with transaction submission, balance reads, and message signing. |
+| `createRadixNetworkClient` | Creates a lower-level Gateway-backed network client. |
+| `createEd25519KeyPair` | Creates an Ed25519 private key wrapper, optionally from a 32-byte private key. |
+| `deriveAccountAddressFromPublicKey` | Derives a virtual account address for a public key and network id. |
+| `deriveIdentityAddressFromPublicKey` | Derives a virtual identity address for a public key and network id. |
+| `manifests.sendResourceManifest` | Builds a manifest for sending a fungible resource from one account to another. |
+| `manifests.getXrdFromFaucetManifest` | Builds a Stokenet-style faucet manifest using known network addresses. |
+| `createTransactionHelper` | Signs and notarizes an already constructed transaction intent. |
+
+## Create A Client
+
+```ts
+import {
+  createEd25519KeyPair,
+  createRadixWeb3Client,
+} from 'radix-web3.js';
+
+const keyPair = createEd25519KeyPair();
+
+const client = createRadixWeb3Client({
+  networkId: 'Stokenet',
+  notaryPublicKey: keyPair.publicKey(),
+  notarizer: (hash) => keyPair.signToSignature(hash),
+});
+```
+
+`networkId` defaults to `Mainnet`. The client accepts a custom Gateway SDK
+client through `gatewayApiClient` when you need custom transport behavior.
+
+## Derive Addresses
+
+```ts
+import {
+  createEd25519KeyPair,
+  deriveAccountAddressFromPublicKey,
+  deriveIdentityAddressFromPublicKey,
+} from 'radix-web3.js';
+
+const keyPair = createEd25519KeyPair();
+
+const accountAddress = await deriveAccountAddressFromPublicKey(
+  keyPair.publicKey(),
+  2,
+);
+
+const identityAddress = await deriveIdentityAddressFromPublicKey(
+  keyPair.publicKey(),
+  2,
+);
+```
+
+The numeric network id comes from Radix network configuration. Mainnet is `1`
+and Stokenet is `2`.
+
+## Submit A Resource Transfer
+
+```ts
+import {
+  createEd25519KeyPair,
+  createRadixWeb3Client,
+  deriveAccountAddressFromPublicKey,
+  manifests,
+} from 'radix-web3.js';
+
+const keyPair = createEd25519KeyPair();
+const accountAddress = await deriveAccountAddressFromPublicKey(
+  keyPair.publicKey(),
+  2,
+);
+
+const client = createRadixWeb3Client({
+  networkId: 'Stokenet',
+  notaryPublicKey: keyPair.publicKey(),
+  notarizer: (hash) => keyPair.signToSignature(hash),
+});
+
+const { transactionId, response } = await client.submitTransaction(
+  manifests.sendResourceManifest({
+    fromAddress: accountAddress,
+    toAddress: 'account_tdx_2_...',
+    resourceAddress:
+      'resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc',
+    amount: '1',
+  }),
+);
+```
+
+`submitTransaction` accepts a manifest object, a manifest string, or a manifest
+helper function. It creates a transaction intent, signs it with the optional
+`signer`, notarizes it, submits it, and polls for status.
+
+## Read Balances
+
+```ts
+const { fungibleTokens, nonFungibleTokens } =
+  await client.getBalances(accountAddress);
+```
+
+The client reads fungible and non-fungible resources through Gateway pagination.
+
+## Signing Options
+
+`createRadixWeb3Client` can be configured with defaults:
+
+- `notaryPublicKey`: public key used for transaction headers.
+- `notarizer`: function that signs the notarization hash.
+- `signer`: optional function that signs the transaction intent hash.
+- `messageSigner`: function used by `client.signMessage(message)`.
+
+Per-transaction options can override the default header, message, signer,
+notarizer, notary public key, and polling options.
+
+## Lower-Level Network Client
+
+Use `client.networkClient` when you need Gateway primitives:
+
+```ts
+const epoch = await client.networkClient.getCurrentEpoch();
+const known = await client.networkClient.getKnownAddresses();
+const status = await client.networkClient.getTransactionStatus(transactionId);
+```
+
+The network client also exposes transaction submission, previewing, fee
+estimation, and resource pagination helpers.

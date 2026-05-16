@@ -1,0 +1,98 @@
+---
+title: "@radix-effects/transaction-stream"
+sidebar_position: 6
+---
+
+# @radix-effects/transaction-stream
+
+`@radix-effects/transaction-stream` provides an Effect `Stream` that polls
+Gateway user transactions in ascending state-version order. It keeps the next
+state version in a configurable `Ref`, sleeps when no new transactions are
+available, and yields only non-empty pages.
+
+## Install
+
+```bash
+npm install @radix-effects/transaction-stream @radix-effects/gateway effect
+```
+
+## Main Exports
+
+| Export | Purpose |
+| --- | --- |
+| `TransactionStreamService` | Effect service that returns a stream of transaction pages. |
+| `ConfigService` | Context tag for a mutable `Ref<Config>`. |
+| `ConfigService.make` | Creates the default stream config ref. |
+| `TransactionDetailsOptInsSchema` | Effect schema for Gateway transaction opt-ins. |
+| `ConfigSchema` | Effect schema for stream configuration. |
+
+## Basic Usage
+
+```ts
+import {
+  ConfigService,
+  TransactionDetailsOptInsSchema,
+  TransactionStreamService,
+} from '@radix-effects/transaction-stream';
+import { Effect, Layer, Ref, Stream, Duration, Option } from 'effect';
+
+const program = Effect.gen(function* () {
+  const stream = yield* TransactionStreamService.pipe(
+    Effect.provide(TransactionStreamService.Default),
+  );
+
+  const configRef = yield* ConfigService.make;
+
+  yield* Ref.update(configRef, (config) => ({
+    ...config,
+    stateVersion: Option.some(1),
+    limitPerPage: 100,
+    waitTime: Duration.seconds(30),
+    optIns: TransactionDetailsOptInsSchema.make({
+      detailed_events: true,
+      balance_changes: true,
+    }),
+  }));
+
+  yield* Stream.runForEach(stream, (transactions) =>
+    Effect.log(`received ${transactions.length} transactions`),
+  ).pipe(
+    Effect.provide(Layer.effect(ConfigService, Effect.succeed(configRef))),
+  );
+});
+```
+
+## Configuration
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `stateVersion` | `Option<number>` | `Option.none()` | Starting state version. When absent, the current Gateway state version is used. |
+| `limitPerPage` | `number` | `100` | Gateway page size. |
+| `waitTime` | `Duration` | `60 seconds` | Sleep duration when the stream catches up. |
+| `optIns` | `TransactionDetailsOptIns` | schema defaults | Gateway transaction detail opt-ins. |
+
+## Transaction Opt-Ins
+
+`TransactionDetailsOptInsSchema` supports the same opt-ins used by Gateway
+stream responses:
+
+- `raw_hex`
+- `receipt_state_changes`
+- `receipt_fee_summary`
+- `receipt_fee_source`
+- `receipt_fee_destination`
+- `receipt_costing_parameters`
+- `receipt_events` (deprecated; use `detailed_events`)
+- `detailed_events`
+- `receipt_output`
+- `affected_global_entities`
+- `manifest_instructions`
+- `balance_changes`
+
+`receipt_output` defaults to `true`; the other opt-ins default to `false`.
+
+## Multiple Networks
+
+Run one stream per configured Gateway layer. Each stream should have its own
+`ConfigService` ref so state-version progress is isolated by network or
+consumer.

@@ -1,0 +1,119 @@
+---
+title: rdx-cli
+sidebar_position: 7
+---
+
+# rdx-cli
+
+`rdx-cli` publishes the `rdx` executable. It is an agent-first command-line
+tool for Radix Transaction Manifest V2 workflows: prepare, inspect, generate
+signing requests, import out-of-band signatures, notarize, submit, and track
+transaction artifacts.
+
+The CLI does not take key custody. It never stores, accepts, or derives private
+keys. Participants sign generated `hash.hex` values outside the CLI and return
+signature files.
+
+## Install
+
+```bash
+npm install -g rdx-cli
+```
+
+## First Commands
+
+```bash
+rdx llm
+rdx --help
+rdx config show
+```
+
+`rdx llm` prints the embedded operational guide intended for coding agents.
+`rdx config show` prints resolved network and artifact settings.
+
+## Transaction Lifecycle
+
+```bash
+rdx tx prepare --manifest ./tx/root.rtm --notary-file ./tx/notary.json
+rdx tx add-signatures txid_example --file ./tx/signatures/intent-signature.json
+rdx tx notarize txid_example
+rdx tx add-signatures txid_example --file ./tx/signatures/notary-signature.json
+rdx tx submit txid_example
+rdx tx status txid_example
+```
+
+For root transactions with direct child subintents:
+
+```bash
+rdx tx prepare \
+  --manifest ./tx/root.rtm \
+  --subintents ./tx/subintents.json \
+  --notary-file ./tx/notary.json
+```
+
+## Discovery Commands
+
+```bash
+rdx template print subintents
+rdx template print signing-request
+rdx template print signature-template
+rdx template print signature-file
+rdx tx path txid_example
+rdx tx list
+rdx tx list --pattern root.rtm
+```
+
+Use `rdx template print ...` as the canonical way to inspect current JSON file
+shapes. The templates come from the running package, so they stay aligned with
+the installed CLI version.
+
+## Account Reads
+
+```bash
+rdx account show account_rdx1...
+rdx account fungibles account_rdx1...
+rdx account nfts account_rdx1...
+rdx account derive --public-key 1111111111111111111111111111111111111111111111111111111111111111
+rdx tx history account_rdx1... --limit 10
+```
+
+Account read commands query Gateway state and do not require signing.
+`account derive` is offline and derives the virtual account address for the
+resolved network.
+
+## Global Flags And Output
+
+The command runner supports JSON and text rendering:
+
+```bash
+rdx --format json config show
+rdx --format text tx status txid_example
+```
+
+JSON is the default and is the recommended mode for agents and scripts.
+
+## Artifacts
+
+Prepared transactions are written as artifact directories. Common files include:
+
+- `prepared.json`
+- `transactionIntent.json`
+- `staticAnalysis.json`
+- copied manifests
+- signing request files
+- `signatures.json`
+- `notarizedTransaction.hex`
+- `submitResult.json`
+
+Use command JSON output or `rdx tx path` to locate the exact artifact directory.
+
+## Current Scope
+
+- Transaction Manifest V2 workflows.
+- Root transaction plus direct child subintents.
+- Ed25519 public key and signature workflow files.
+- Out-of-band signing only.
+- Gateway-backed status, history, and account reads.
+
+The CLI intentionally excludes consumer wallet UX, browser wallet pairing,
+hardware wallet integration, private-key flags, and keystore management.

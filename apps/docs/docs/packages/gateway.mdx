@@ -1,0 +1,168 @@
+---
+title: "@radix-effects/gateway"
+sidebar_position: 4
+---
+
+# @radix-effects/gateway
+
+`@radix-effects/gateway` wraps the Radix Babylon Gateway SDK in Effect services.
+It provides typed errors, retry behavior for rate limits, Gateway state helpers,
+transaction preview services, ROLA verification, and SBOR schemas.
+
+## Install
+
+```bash
+npm install @radix-effects/gateway effect
+```
+
+## Configuration
+
+`GatewayApiClient.Default` reads Effect config values:
+
+| Config | Default | Description |
+| --- | --- | --- |
+| `NETWORK_ID` | `1` | Radix network id. |
+| `GATEWAY_URL` | Gateway SDK default | Optional Gateway API base URL. |
+| `APPLICATION_NAME` | `@radix-effects/gateway` | Application name sent to Gateway. |
+| `GATEWAY_BASIC_AUTH` | unset | Optional Basic auth value. |
+
+Some higher-level services also read package-specific config, such as
+`GATEWAY_GET_FUNGIBLE_BALANCE_CONCURRENCY` for batched balance reads.
+
+## Basic Effect Usage
+
+```ts
+import { Effect } from 'effect';
+import {
+  GatewayApiClient,
+  StateEntityDetails,
+} from '@radix-effects/gateway';
+
+const program = Effect.gen(function* () {
+  const stateEntityDetails = yield* StateEntityDetails;
+
+  return yield* stateEntityDetails({
+    addresses: ['account_rdx...'],
+    aggregation_level: 'Global',
+  });
+});
+
+const result = await Effect.runPromise(
+  program.pipe(Effect.provide(StateEntityDetails.Default)),
+);
+```
+
+Services that depend on `GatewayApiClient` provide it through their default
+dependency list, or you can provide `GatewayApiClient.Default` yourself in a
+larger layer graph.
+
+## Gateway API Client
+
+`GatewayApiClient` exposes wrapped SDK areas:
+
+- `state` for state entity details, fungible pages, non-fungible pages,
+  validators, and key-value stores.
+- `transaction` for transaction status and preview calls.
+- `stream` for stream transaction calls.
+- `extensions` for resource holder endpoints.
+- `rawClient` when a downstream SDK expects the original Gateway client.
+
+Gateway SDK failures are converted into tagged Effect errors such as
+`EntityNotFoundError`, `InvalidRequestError`, `InvalidTransactionError`,
+`TransactionNotFoundError`, `RateLimitExceededError`, and
+`UnknownGatewayError`. Rate-limit responses are retried after the returned
+`retry-after` delay.
+
+## State Helpers
+
+| Service | Purpose |
+| --- | --- |
+| `StateEntityDetails` | Calls `stateEntityDetails` with typed ledger-state validation. |
+| `GetEntityDetailsVaultAggregated` | Reads entity details with vault aggregation. |
+| `EntityFungiblesPage` | Follows entity fungible pagination. |
+| `EntityNonFungiblesPage` | Follows entity non-fungible pagination. |
+| `EntityNonFungibleIdsPage` | Reads paginated non-fungible ids for a resource. |
+| `NonFungibleData` | Reads non-fungible data for ids. |
+| `GetValidators` | Reads current validator information. |
+| `GetLedgerStateService` | Reads a ledger state from the stream API. |
+
+## Balance And Resource Helpers
+
+| Service | Purpose |
+| --- | --- |
+| `GetFungibleBalance` | Returns positive fungible balances for one or more entities, using `BigNumber` amounts. |
+| `GetNonFungibleBalanceService` | Returns non-fungible balances for one or more entities. |
+| `GetResourceHoldersService` | Reads and deduplicates all holders for a resource. |
+| `GetNftResourceManagersService` | Locates NFT resource managers. |
+| `GetAddressByNonFungibleService` | Finds an address by non-fungible id. |
+| `GetNonFungibleLocationService` | Locates non-fungibles on ledger. |
+
+Example:
+
+```ts
+import { Effect } from 'effect';
+import { GetFungibleBalance } from '@radix-effects/gateway';
+
+const balances = await Effect.runPromise(
+  Effect.gen(function* () {
+    const getFungibleBalance = yield* GetFungibleBalance;
+
+    return yield* getFungibleBalance({
+      addresses: ['account_rdx...'],
+      options: {
+        explicit_metadata: ['name', 'symbol'],
+      },
+    });
+  }).pipe(Effect.provide(GetFungibleBalance.Default)),
+);
+```
+
+## Key-Value Store Helpers
+
+Use `KeyValueStoreKeysService`, `KeyValueStoreDataService`, and
+`GetKeyValueStoreService` for Gateway KVS pages and value reads. These helpers
+are useful when a component stores application state in Radix key-value stores.
+
+## Transaction Preview
+
+```ts
+import { Effect } from 'effect';
+import { PreviewTransactionV2 } from '@radix-effects/gateway';
+
+const result = await Effect.runPromise(
+  Effect.gen(function* () {
+    const preview = yield* PreviewTransactionV2;
+    return yield* preview({ payload: transactionPreviewV2Request });
+  }).pipe(Effect.provide(PreviewTransactionV2.Default)),
+);
+```
+
+`PreviewTransaction` handles V1 preview requests and `PreviewTransactionV2`
+handles V2 preview requests. Both fail with `TransactionPreviewError` when the
+receipt exists and is not successful.
+
+## ROLA Verification
+
+The `Rola` service verifies account or persona proofs:
+
+```ts
+import { Effect, ConfigProvider, Layer } from 'effect';
+import { Rola } from '@radix-effects/gateway';
+
+const config = Layer.setConfigProvider(
+  ConfigProvider.fromJson({
+    NETWORK_ID: '1',
+    DAPP_DEFINITION_ADDRESS: 'account_rdx...',
+    ROLA_EXPECTED_ORIGIN: 'https://your-dapp.example',
+  }),
+);
+
+await Effect.runPromise(
+  Effect.gen(function* () {
+    const rola = yield* Rola;
+    yield* rola.verifySignedChallenge(proof);
+  }).pipe(Effect.provide(Rola.Default), Effect.provide(config)),
+);
+```
+
+The proof must match either `AccountProofSchema` or `PersonaProofSchema`.

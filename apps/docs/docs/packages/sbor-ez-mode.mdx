@@ -1,0 +1,124 @@
+---
+title: sbor-ez-mode
+sidebar_position: 9
+---
+
+# sbor-ez-mode
+
+`sbor-ez-mode` is a small schema builder for parsing Gateway
+`ProgrammaticScryptoSborValue` objects. It is useful when Gateway returns
+programmatic SBOR for events, component state, key-value store values, or
+non-fungible data and you want a typed JavaScript value.
+
+## Install
+
+```bash
+npm install sbor-ez-mode
+```
+
+## Basic Usage
+
+```ts
+import s from 'sbor-ez-mode';
+
+const swapEventSchema = s.struct({
+  input_address: s.address(),
+  input_amount: s.decimal(),
+  output_address: s.address(),
+  output_amount: s.decimal(),
+  is_success: s.bool(),
+});
+
+const result = swapEventSchema.safeParse(programmaticSborValue);
+
+if (result.isOk()) {
+  console.log(result.value.input_amount);
+} else {
+  console.error(result.error.message, result.error.path);
+}
+```
+
+`safeParse` returns a `neverthrow` `Result`. Successful parses return the typed
+value; failures return `SborError` with a message and path.
+
+## Schema Factory
+
+| Factory | Parses |
+| --- | --- |
+| `s.value()` | Raw `ProgrammaticScryptoSborValue` as a fallback. |
+| `s.decimal()` | `Decimal` and `PreciseDecimal` as strings. |
+| `s.string()` | SBOR string values. |
+| `s.bool()` | Boolean values. |
+| `s.number()` | Integer and numeric SBOR values as numbers. |
+| `s.instant()` | Radix `Instant` values as `Date`. |
+| `s.address()` | Referenced addresses such as account, component, or resource addresses. |
+| `s.internalAddress()` | Owned addresses such as vault or key-value-store addresses. |
+| `s.nonFungibleLocalId()` | Non-fungible local ids. |
+| `s.struct(definition)` | Field-name based tuple/struct parsing. |
+| `s.structNullable(definition)` | Struct parsing where missing fields become `null`. |
+| `s.tuple([...schemas])` | Ordered tuple parsing. |
+| `s.array(schema)` | Homogeneous array parsing. |
+| `s.enum(variants)` | Rust-style enum parsing. |
+| `s.option(schema)` | Rust `Option` enum parsing. |
+| `s.map({ key, value })` | SBOR map parsing into a JavaScript `Map`. |
+
+## Type Inference
+
+```ts
+import type { SborSchema } from 'sbor-ez-mode';
+
+const schema = s.struct({
+  pair: s.string(),
+  amount: s.decimal(),
+  updated_at: s.number(),
+});
+
+type InferSbor<T> = T extends SborSchema<infer Parsed> ? Parsed : never;
+type Parsed = InferSbor<typeof schema>;
+```
+
+The inferred type follows the schema. For the example above, `Parsed` contains
+`pair: string`, `amount: string`, and `updated_at: number`.
+
+## Parsing Nested Values
+
+```ts
+const schema = s.struct({
+  updates: s.array(
+    s.tuple([
+      s.string(),
+      s.struct({
+        oi_long: s.decimal(),
+        oi_short: s.decimal(),
+        last_update: s.number(),
+      }),
+    ]),
+  ),
+});
+```
+
+Use `s.tuple` for ordered SBOR tuple fields and `s.struct` when the Gateway
+value carries field names.
+
+## Enums And Options
+
+```ts
+const balanceChange = s.enum([
+  {
+    variant: 'NonFungible',
+    schema: s.struct({
+      ids: s.array(s.nonFungibleLocalId()),
+      resource_address: s.address(),
+    }),
+  },
+  {
+    variant: 'Fungible',
+    schema: s.tuple([s.decimal()]),
+  },
+]);
+
+const maybeName = s.option(s.string());
+```
+
+Enum parses return `{ variant, value }`. Option parses return the parsed value
+or `null`, depending on the SBOR variant.

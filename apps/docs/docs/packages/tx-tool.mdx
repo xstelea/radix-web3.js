@@ -1,0 +1,153 @@
+---
+title: "@radix-effects/tx-tool"
+sidebar_position: 5
+---
+
+# @radix-effects/tx-tool
+
+`@radix-effects/tx-tool` is an Effect transaction toolkit. It builds V1 and V2
+transaction intents, creates transaction headers, analyzes manifests, previews
+transactions, signs with a swappable signer service, submits compiled
+transactions, and polls status.
+
+## Install
+
+```bash
+npm install @radix-effects/tx-tool @radix-effects/gateway effect
+```
+
+## Main Services
+
+| Service | Purpose |
+| --- | --- |
+| `TransactionHelper` | High-level lifecycle helper for common workflows such as faucet transactions. |
+| `CreateTransactionIntent` | Builds V1 transaction intents from manifests, headers, blobs, and messages. |
+| `CreateTransactionIntentV2` | Builds V2 transaction intents and subintent-aware structures. |
+| `TransactionHeader` | Creates V1 headers using current network and epoch data. |
+| `TransactionHeaderV2` | Creates V2 transaction and intent headers. |
+| `CompileTransaction` | Compiles and notarizes transaction payloads. |
+| `SubmitTransaction` | Submits compiled transactions through Gateway. |
+| `TransactionStatus` | Polls transaction status until resolved or timed out. |
+| `PreviewTransaction` | Previews transactions through Gateway. |
+| `StaticallyAnalyzeManifest` | Runs V1 static manifest analysis. |
+| `StaticallyAnalyzeManifestV2` | Runs V2 static manifest analysis. |
+| `StaticallyValidateManifest` | Validates a manifest before transaction construction. |
+| `IntentHashService` | Computes transaction intent hashes. |
+
+## Signer Service
+
+`Signer` is a context tag. Production code can provide a signer backed by a
+wallet, vault, HSM, or remote signer. Tests and simple scripts can use the
+private-key helper:
+
+```ts
+import { Redacted } from 'effect';
+import { HexString } from '@radix-effects/shared';
+import { Signer } from '@radix-effects/tx-tool';
+
+const signerLayer = Signer.makePrivateKeySigner(
+  Redacted.make(
+    HexString.make(
+      'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+    ),
+  ),
+);
+```
+
+## Faucet Example
+
+```ts
+import { ConfigProvider, Effect, Layer } from 'effect';
+import { GatewayApiClient } from '@radix-effects/gateway';
+import {
+  Signer,
+  TransactionHelper,
+} from '@radix-effects/tx-tool';
+
+const gatewayLayer = GatewayApiClient.Default.pipe(
+  Layer.provide(
+    Layer.setConfigProvider(ConfigProvider.fromJson({ NETWORK_ID: '2' })),
+  ),
+);
+
+const layer = TransactionHelper.Default.pipe(
+  Layer.provide(gatewayLayer),
+  Layer.provide(signerLayer),
+);
+
+const result = await Effect.runPromise(
+  Effect.gen(function* () {
+    const helper = yield* TransactionHelper;
+
+    return yield* helper.faucet({
+      account: {
+        type: 'unsecurifiedAccount',
+        address: 'account_tdx_2_...',
+      },
+    });
+  }).pipe(Effect.provide(layer)),
+);
+```
+
+## Building A Manual Transaction Pipeline
+
+```ts
+import { Effect, Layer } from 'effect';
+import {
+  CompileTransaction,
+  CreateTransactionIntent,
+  IntentHashService,
+  SubmitTransaction,
+  TransactionStatus,
+  faucet,
+} from '@radix-effects/tx-tool';
+import { AccountAddress } from '@radix-effects/shared';
+
+const program = Effect.gen(function* () {
+  const createIntent = yield* CreateTransactionIntent;
+  const compile = yield* CompileTransaction;
+  const submit = yield* SubmitTransaction;
+  const status = yield* TransactionStatus;
+  const intentHash = yield* IntentHashService;
+
+  const intent = yield* createIntent({
+    manifest: yield* faucet(AccountAddress.make('account_tdx_2_...')),
+  });
+
+  const { id } = yield* intentHash.create(intent);
+  const compiledTransaction = yield* compile({ intent, signatures: [] });
+
+  yield* submit({ compiledTransaction });
+
+  return yield* status.poll({ id });
+});
+```
+
+In real usage, provide signatures required by the manifest authorization
+analysis. The signer can be provided by a layer, and account signatures can be
+added before compilation.
+
+## Manifest Helpers
+
+The package exports small manifest builders:
+
+| Helper | Purpose |
+| --- | --- |
+| `faucet(accountAddress)` | Builds a faucet manifest. |
+| `createBadge(account, initialSupply)` | Creates a badge resource. |
+| `createFungibleTokenManifest(input)` | Creates a fungible token manifest. |
+| `addFeePayer({ account, amount })` | Adds fee-locking instructions for a fee payer. |
+| `ManifestHelper` | Service for composing manifest helpers with known addresses. |
+
+## Schemas And Branded Values
+
+`schemas` exports Effect schemas for transaction headers, messages, manifests,
+V2 intent cores, subintents, Ed25519 public/private keys, signatures, badges,
+and hex/base64 transformations. Use these schemas at file, API, and CLI
+boundaries before constructing transactions.
+
+## Lifecycle Hooks
+
+`TransactionLifeCycleHook` can be provided to observe or interrupt transaction
+lifecycle steps. This is useful for audit logging, policy checks, or tests that
+need to fail a specific phase.

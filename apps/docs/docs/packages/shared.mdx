@@ -1,0 +1,98 @@
+---
+title: "@radix-effects/shared"
+sidebar_position: 10
+---
+
+# @radix-effects/shared
+
+`@radix-effects/shared` contains Effect schemas and branded domain types reused
+by the Radix Effects packages. Use it to make service boundaries explicit and to
+avoid passing plain strings or numbers where a Radix-specific value is expected.
+
+## Install
+
+```bash
+npm install @radix-effects/shared effect
+```
+
+## Branded Types
+
+The package exports Effect branded schemas and their corresponding TypeScript
+types:
+
+| Schema | Represents |
+| --- | --- |
+| `AccountAddress` | Radix account address. |
+| `ValidatorAddress` | Validator component address. |
+| `ComponentAddress` | Component address. |
+| `AccountLockerAddress` | Account locker component address. |
+| `PoolAddress` | Pool component address. |
+| `PackageAddress` | Package address. |
+| `AccessControllerAddress` | Access controller address. |
+| `FungibleResourceAddress` | Fungible resource address. |
+| `NonFungibleResourceAddress` | Non-fungible resource address. |
+| `NonFungibleId` | Non-fungible local id. |
+| `TransactionId` | Transaction intent id. |
+| `TransactionManifestString` | Manifest text. |
+| `TransactionMessageString` | Transaction message text. |
+| `HexString` | Hex-encoded string. |
+| `Base64String` | Base64-encoded string. |
+| `Amount` | Decimal amount string. |
+| `AmountUsd` | USD amount string. |
+| `StateVersion` | Ledger state version. |
+| `Epoch` | Radix epoch number. |
+| `NetworkId` | Radix network id. |
+| `Nonce` | Nonce value. |
+| `UserId`, `SeasonId`, `PositionKey` | Application-level identifiers used by dependent packages. |
+
+## Usage
+
+```ts
+import {
+  AccountAddress,
+  Amount,
+  TransactionManifestString,
+} from '@radix-effects/shared';
+
+const account = AccountAddress.make('account_rdx1...');
+const amount = Amount.make('10');
+const manifest = TransactionManifestString.make(`
+  CALL_METHOD
+    Address("account_rdx1...")
+    "lock_fee"
+    Decimal("10")
+  ;
+`);
+```
+
+Branded values are still represented by their underlying primitive at runtime,
+but TypeScript tracks their domain-specific type after construction.
+
+## Account Schemas
+
+The package exports account schemas used by transaction tools:
+
+| Schema | Purpose |
+| --- | --- |
+| `UnsecurifiedAccountSchema` | Account controlled by a single public key. |
+| `SecurifiedAccountSchema` | Account controlled through securified access. |
+| `AccountSchema` | Union of unsecurified and securified accounts. |
+| `WalletAccountSchema` | Wallet account shape with address, label, and appearance id. |
+| `AccountProofSchema` | Account proof shape for wallet proof flows. |
+| `ProofSchema` | Generic public-key/signature proof shape. |
+| `BigNumberSchema` | Effect schema for `BigNumber` transformations. |
+
+## Boundary Validation
+
+Use the schemas with `Schema.decodeUnknown` when reading JSON files, API input,
+or CLI payloads:
+
+```ts
+import { Schema } from 'effect';
+import { AccountSchema } from '@radix-effects/shared';
+
+const account = await Schema.decodeUnknownPromise(AccountSchema)(input);
+```
+
+The branded schemas are intentionally small. They provide type separation, not
+full Radix address semantic validation.
