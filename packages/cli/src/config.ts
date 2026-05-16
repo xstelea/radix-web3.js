@@ -1,7 +1,7 @@
-import { access, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, parse, resolve } from 'node:path';
 import { Data, Effect, Schema } from 'effect';
+import { fileExists, readJsonFile } from './platformIo';
 import { PublicKeySchema } from './schemas';
 
 export type Network = 'mainnet' | 'stokenet';
@@ -49,13 +49,6 @@ const defaultConfig = {
   artifactScope: 'local',
 } satisfies Pick<ResolvedRdxConfig, 'network' | 'artifactScope'>;
 
-const pathExists = (path: string) =>
-  Effect.promise(() =>
-    access(path)
-      .then(() => true)
-      .catch(() => false),
-  );
-
 const findNearestProjectConfig = (
   cwd: string,
 ): Effect.Effect<string | undefined> =>
@@ -65,7 +58,7 @@ const findNearestProjectConfig = (
 
     while (true) {
       const candidate = join(directory, '.rdxconfig.json');
-      if (yield* pathExists(candidate)) {
+      if (yield* fileExists(candidate)) {
         return candidate;
       }
 
@@ -78,10 +71,10 @@ const findNearestProjectConfig = (
   });
 
 const readConfigFile = (path: string) =>
-  Effect.tryPromise({
-    try: () => readFile(path, 'utf8').then(JSON.parse),
-    catch: (reason) => new ConfigResolutionError({ path, reason }),
-  }).pipe(
+  readJsonFile(
+    path,
+    (reason) => new ConfigResolutionError({ path, reason }),
+  ).pipe(
     Effect.flatMap((value) =>
       Schema.decodeUnknown(RdxConfigFileSchema)(value).pipe(
         Effect.mapError(
@@ -125,7 +118,7 @@ export const resolveRdxConfig = (input: {
     const globalConfigPath = join(home, '.rdx', 'config.json');
 
     const [globalConfig, projectConfig] = yield* Effect.all([
-      pathExists(globalConfigPath).pipe(
+      fileExists(globalConfigPath).pipe(
         Effect.flatMap((exists) =>
           exists
             ? maybeReadConfigFile(globalConfigPath)

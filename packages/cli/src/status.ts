@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Data, Effect, Schema } from 'effect';
 import {
@@ -8,6 +7,7 @@ import {
   writeSubmitResult,
 } from './artifacts';
 import type { Network, ResolvedRdxConfig } from './config';
+import { readJsonFile } from './platformIo';
 import {
   type ArtifactStatus,
   type NetworkTransactionStatus,
@@ -36,8 +36,9 @@ const gatewayBaseUrl = (network: Network) =>
     : 'https://mainnet.radixdlt.com';
 
 const readExistingSubmitResult = (artifactPath: string) =>
-  Effect.tryPromise(() =>
-    readFile(join(artifactPath, 'submitResult.json'), 'utf8').then(JSON.parse),
+  readJsonFile(
+    join(artifactPath, 'submitResult.json'),
+    (reason) => reason,
   ).pipe(
     Effect.flatMap(Schema.decodeUnknown(SubmitResultSchema)),
     Effect.catchAll(() => Effect.succeed(undefined)),

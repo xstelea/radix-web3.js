@@ -1,4 +1,3 @@
-import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   Convert,
@@ -11,6 +10,7 @@ import {
 import { Data, Effect, Schema } from 'effect';
 import { findTransactionArtifact, writeSubmitResult } from './artifacts';
 import type { ResolvedRdxConfig } from './config';
+import { readJsonFile, writeFileString } from './platformIo';
 import {
   NetworkTransactionStatusSchema,
   PreparedTransactionSchema,
@@ -67,10 +67,10 @@ type StoredTransactionIntentFile = {
 };
 
 const readJson = (path: string) =>
-  Effect.tryPromise({
-    try: () => readFile(path, 'utf8').then(JSON.parse),
-    catch: (reason) => new SubmitError({ code: 'READ_FAILED', path, reason }),
-  });
+  readJsonFile(
+    path,
+    (reason) => new SubmitError({ code: 'READ_FAILED', path, reason }),
+  );
 
 const toTransactionIntent = (
   stored: StoredTransactionIntentV2,
@@ -287,20 +287,16 @@ export const submitTransactionArtifact = (input: {
       artifactPath,
       'notarizedTransaction.hex',
     );
-    yield* Effect.tryPromise({
-      try: () =>
-        writeFile(
-          notarizedTransactionPath,
-          `${notarizedTransactionHex}\n`,
-          'utf8',
-        ),
-      catch: (reason) =>
+    yield* writeFileString(
+      notarizedTransactionPath,
+      `${notarizedTransactionHex}\n`,
+      (reason) =>
         new SubmitError({
           code: 'WRITE_FAILED',
           path: notarizedTransactionPath,
           reason,
         }),
-    });
+    );
 
     const submittedStatus = yield* input.submitNotarizedTransaction(
       notarizedTransactionHex,

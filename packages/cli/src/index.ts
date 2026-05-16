@@ -1,10 +1,9 @@
-import { readFile } from 'node:fs/promises';
 import { Effect, Schema } from 'effect';
 import {
+  deriveVirtualAccountAddress,
   gatewayAccountBalance,
   gatewayAccountDetails,
   gatewayAccountHistory,
-  deriveVirtualAccountAddress,
   getAccountBalance,
   getAccountDetails,
   getAccountTransactionHistory,
@@ -13,8 +12,8 @@ import { addSignaturesToArtifact } from './addSignatures';
 import { findTransactionArtifact, listTransactionArtifacts } from './artifacts';
 import {
   type OutputFormat,
-  renderAddSignatures,
   renderAccountDerive,
+  renderAddSignatures,
   renderCommandResult,
   renderConfigShow,
   renderLlmGuide,
@@ -28,6 +27,7 @@ import {
 } from './cli';
 import { resolveRdxConfig } from './config';
 import { notarizeTransactionArtifact } from './notarize';
+import { readJsonFile } from './platformIo';
 import { prepareTransactionArtifacts } from './prepare';
 import {
   type ArtifactStatus,
@@ -232,9 +232,9 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
 
       const config = yield* resolveRdxConfig({ cwd: input.cwd });
       const notary = notaryFilePath
-        ? yield* Effect.tryPromise(() =>
-            readFile(notaryFilePath, 'utf8').then(JSON.parse),
-          ).pipe(Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)))
+        ? yield* readJsonFile(notaryFilePath, (reason) => reason).pipe(
+            Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)),
+          )
         : config.notary;
       if (!notary) {
         return structuredError({

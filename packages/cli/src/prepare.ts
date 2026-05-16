@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
   Convert,
@@ -12,6 +11,13 @@ import {
 import { Data, Effect, Schema } from 'effect';
 import { createTransactionArtifactDirectory } from './artifacts';
 import type { Network, ResolvedRdxConfig } from './config';
+import {
+  makeDirectory,
+  readFileString,
+  readJsonFile,
+  writeFileString,
+  writeJsonFile,
+} from './platformIo';
 import {
   type NotaryFile,
   type PreparedTransaction,
@@ -160,9 +166,7 @@ const fallbackHashManifest = (manifest: string) => {
 };
 
 const writeJson = (path: string, value: unknown) =>
-  Effect.tryPromise(() =>
-    writeFile(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8'),
-  );
+  writeJsonFile(path, value, (reason) => reason);
 
 const writeWorkflowFile = (
   artifactPath: string,
@@ -171,8 +175,10 @@ const writeWorkflowFile = (
 ) =>
   Effect.gen(function* () {
     const path = join(artifactPath, relativePath);
-    yield* Effect.tryPromise(() =>
-      mkdir(join(path, '..'), { recursive: true }),
+    yield* makeDirectory(
+      join(path, '..'),
+      { recursive: true },
+      (reason) => reason,
     );
     yield* writeJson(path, value);
     return path;
@@ -252,13 +258,14 @@ export const prepareTransactionArtifacts = (input: {
   ) => Effect.Effect<void, unknown>;
 }): Effect.Effect<PrepareTransactionResult, unknown> =>
   Effect.gen(function* () {
-    const manifest = yield* Effect.tryPromise(() =>
-      readFile(input.manifestPath, 'utf8'),
+    const manifest = yield* readFileString(
+      input.manifestPath,
+      (reason) => reason,
     );
     const subintentsFile = input.subintentsPath
-      ? yield* Effect.tryPromise(() =>
-          readFile(input.subintentsPath ?? '', 'utf8').then(JSON.parse),
-        ).pipe(Effect.flatMap(Schema.decodeUnknown(SubintentsFileSchema)))
+      ? yield* readJsonFile(input.subintentsPath, (reason) => reason).pipe(
+          Effect.flatMap(Schema.decodeUnknown(SubintentsFileSchema)),
+        )
       : undefined;
     const childSubintents = yield* Effect.all(
       Object.entries(subintentsFile?.subintents ?? {}).map(
@@ -335,12 +342,10 @@ export const prepareTransactionArtifacts = (input: {
       transactionId,
     });
 
-    yield* Effect.tryPromise(() =>
-      writeFile(
-        join(artifactPath, 'rootManifest.rtm'),
-        assembled.rootManifest,
-        'utf8',
-      ),
+    yield* writeFileString(
+      join(artifactPath, 'rootManifest.rtm'),
+      assembled.rootManifest,
+      (reason) => reason,
     );
     yield* Effect.all(
       orderedChildSubintents.map((subintent) =>
@@ -350,12 +355,12 @@ export const prepareTransactionArtifacts = (input: {
             'subintents',
             `${subintent.subintentId}.rtm`,
           );
-          yield* Effect.tryPromise(() =>
-            mkdir(join(path, '..'), { recursive: true }),
+          yield* makeDirectory(
+            join(path, '..'),
+            { recursive: true },
+            (reason) => reason,
           );
-          yield* Effect.tryPromise(() =>
-            writeFile(path, subintent.manifest, 'utf8'),
-          );
+          yield* writeFileString(path, subintent.manifest, (reason) => reason);
         }),
       ),
     );

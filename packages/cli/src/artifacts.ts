@@ -1,13 +1,13 @@
-import {
-  access,
-  mkdir,
-  readFile,
-  readdir,
-  stat,
-  writeFile,
-} from 'node:fs/promises';
 import { join } from 'node:path';
 import { Data, Effect, Schema } from 'effect';
+import {
+  fileExists,
+  isDirectory,
+  makeDirectory,
+  readDirectory,
+  readJsonFile,
+  writeJsonFile,
+} from './platformIo';
 import {
   type ArtifactStatus,
   type NetworkTransactionStatus,
@@ -110,17 +110,18 @@ export const createTransactionArtifactDirectory = (input: {
   transactionId: string;
 }): Effect.Effect<string, ArtifactStoreError> =>
   Effect.gen(function* () {
-    yield* Effect.tryPromise({
-      try: () => mkdir(input.artifactRoot, { recursive: true }),
-      catch: (reason) =>
-        new ArtifactStoreError({ path: input.artifactRoot, reason }),
-    });
+    yield* makeDirectory(
+      input.artifactRoot,
+      { recursive: true },
+      (reason) => new ArtifactStoreError({ path: input.artifactRoot, reason }),
+    );
 
     const artifactPath = join(input.artifactRoot, input.transactionId);
-    yield* Effect.tryPromise({
-      try: () => mkdir(artifactPath),
-      catch: (reason) => new ArtifactStoreError({ path: artifactPath, reason }),
-    });
+    yield* makeDirectory(
+      artifactPath,
+      undefined,
+      (reason) => new ArtifactStoreError({ path: artifactPath, reason }),
+    );
 
     return artifactPath;
   });
@@ -134,15 +135,11 @@ export const writeCanonicalSignatures = (input: {
   const result = normalizeSignatures(input);
   const path = join(input.artifactPath, 'signatures.json');
 
-  return Effect.tryPromise({
-    try: () =>
-      writeFile(
-        path,
-        `${JSON.stringify(result.signatureFile, null, 2)}\n`,
-        'utf8',
-      ),
-    catch: (reason) => new ArtifactStoreError({ path, reason }),
-  }).pipe(Effect.as(path));
+  return writeJsonFile(
+    path,
+    result.signatureFile,
+    (reason) => new ArtifactStoreError({ path, reason }),
+  ).pipe(Effect.as(path));
 };
 
 export const writeSubmitResult = (input: {
@@ -151,29 +148,15 @@ export const writeSubmitResult = (input: {
 }): Effect.Effect<string, ArtifactStoreError> => {
   const path = join(input.artifactPath, 'submitResult.json');
 
-  return Effect.tryPromise({
-    try: () =>
-      writeFile(
-        path,
-        `${JSON.stringify(input.submitResult, null, 2)}\n`,
-        'utf8',
-      ),
-    catch: (reason) => new ArtifactStoreError({ path, reason }),
-  }).pipe(Effect.as(path));
+  return writeJsonFile(
+    path,
+    input.submitResult,
+    (reason) => new ArtifactStoreError({ path, reason }),
+  ).pipe(Effect.as(path));
 };
 
-const pathExists = (path: string) =>
-  Effect.promise(() =>
-    access(path)
-      .then(() => true)
-      .catch(() => false),
-  );
-
 const readPreparedTransaction = (path: string) =>
-  Effect.tryPromise({
-    try: () => readFile(path, 'utf8').then(JSON.parse),
-    catch: (reason) => new ArtifactStoreError({ path, reason }),
-  }).pipe(
+  readJsonFile(path, (reason) => new ArtifactStoreError({ path, reason })).pipe(
     Effect.flatMap((value) =>
       Schema.decodeUnknown(PreparedTransactionSchema)(value).pipe(
         Effect.mapError((reason) => new ArtifactStoreError({ path, reason })),
@@ -183,11 +166,11 @@ const readPreparedTransaction = (path: string) =>
 
 const getArtifactStatus = (artifactPath: string) =>
   Effect.gen(function* () {
-    if (yield* pathExists(join(artifactPath, 'submitResult.json'))) {
+    if (yield* fileExists(join(artifactPath, 'submitResult.json'))) {
       return 'submitted' as const;
     }
 
-    if (yield* pathExists(join(artifactPath, 'notarizedTransaction.hex'))) {
+    if (yield* fileExists(join(artifactPath, 'notarizedTransaction.hex'))) {
       return 'notarized' as const;
     }
 
@@ -219,7 +202,7 @@ export const findTransactionArtifact = (input: {
 }): Effect.Effect<string, ArtifactStoreError> =>
   Effect.gen(function* () {
     const artifactPath = join(input.artifactRoot, input.transactionId);
-    const exists = yield* pathExists(join(artifactPath, 'prepared.json'));
+    const exists = yield* fileExists(join(artifactPath, 'prepared.json'));
 
     if (!exists) {
       return yield* new ArtifactStoreError({
@@ -237,7 +220,7 @@ export const findTransactionArtifactOption = (input: {
 }): Effect.Effect<string | undefined> =>
   Effect.gen(function* () {
     const artifactPath = join(input.artifactRoot, input.transactionId);
-    const exists = yield* pathExists(join(artifactPath, 'prepared.json'));
+    const exists = yield* fileExists(join(artifactPath, 'prepared.json'));
     return exists ? artifactPath : undefined;
   });
 
@@ -249,29 +232,28 @@ export const listTransactionArtifacts = (input: {
   status?: ArtifactStatus;
 }): Effect.Effect<TransactionArtifactSummary[], ArtifactStoreError> =>
   Effect.gen(function* () {
-    const rootExists = yield* pathExists(input.artifactRoot);
+    const rootExists = yield* fileExists(input.artifactRoot);
     if (!rootExists) {
       return [];
     }
 
-    const entries = yield* Effect.tryPromise({
-      try: () => readdir(input.artifactRoot),
-      catch: (reason) =>
-        new ArtifactStoreError({ path: input.artifactRoot, reason }),
-    });
+    const entries = yield* readDirectory(
+      input.artifactRoot,
+      (reason) => new ArtifactStoreError({ path: input.artifactRoot, reason }),
+    );
     const regex = input.regex ? new RegExp(input.regex) : undefined;
     const pattern = input.pattern?.toLowerCase();
     const summaries: TransactionArtifactSummary[] = [];
 
     for (const entry of entries) {
       const artifactPath = join(input.artifactRoot, entry);
-      const entryStat = yield* Effect.tryPromise({
-        try: () => stat(artifactPath),
-        catch: (reason) =>
-          new ArtifactStoreError({ path: artifactPath, reason }),
-      });
 
-      if (!entryStat.isDirectory()) {
+      if (
+        !(yield* isDirectory(
+          artifactPath,
+          (reason) => new ArtifactStoreError({ path: artifactPath, reason }),
+        ))
+      ) {
         continue;
       }
 

@@ -1,4 +1,3 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
   Convert,
@@ -11,6 +10,7 @@ import {
 import { Data, Effect, Schema } from 'effect';
 import { findTransactionArtifact } from './artifacts';
 import type { ResolvedRdxConfig } from './config';
+import { makeDirectory, readJsonFile, writeJsonFile } from './platformIo';
 import {
   PLACEHOLDER_SIGNATURE_HEX,
   PreparedTransactionSchema,
@@ -66,23 +66,23 @@ type StoredTransactionIntentFile = {
 };
 
 const readJson = (path: string) =>
-  Effect.tryPromise({
-    try: () => readFile(path, 'utf8').then(JSON.parse),
-    catch: (reason) => new NotarizeError({ code: 'READ_FAILED', path, reason }),
-  });
+  readJsonFile(
+    path,
+    (reason) => new NotarizeError({ code: 'READ_FAILED', path, reason }),
+  );
 
 const writeJson = (path: string, value: unknown) =>
   Effect.gen(function* () {
-    yield* Effect.tryPromise({
-      try: () => mkdir(dirname(path), { recursive: true }),
-      catch: (reason) =>
-        new NotarizeError({ code: 'WRITE_FAILED', path, reason }),
-    });
-    yield* Effect.tryPromise({
-      try: () => writeFile(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8'),
-      catch: (reason) =>
-        new NotarizeError({ code: 'WRITE_FAILED', path, reason }),
-    });
+    yield* makeDirectory(
+      dirname(path),
+      { recursive: true },
+      (reason) => new NotarizeError({ code: 'WRITE_FAILED', path, reason }),
+    );
+    yield* writeJsonFile(
+      path,
+      value,
+      (reason) => new NotarizeError({ code: 'WRITE_FAILED', path, reason }),
+    );
   });
 
 const requestComplete = (

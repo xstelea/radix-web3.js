@@ -1,32 +1,32 @@
-import { readFile } from 'node:fs/promises';
 import { Args, Command, Options } from '@effect/cli';
 import { Console, Effect, Option, Schema } from 'effect';
 import {
+  deriveVirtualAccountAddress,
   gatewayAccountBalance,
   gatewayAccountDetails,
   gatewayAccountHistory,
-  deriveVirtualAccountAddress,
   getAccountBalance,
   getAccountDetails,
   getAccountTransactionHistory,
 } from './accountReads';
+import type { VirtualAccountDerivation } from './accountReads';
 import {
   type AddSignaturesResult,
   addSignaturesToArtifact,
 } from './addSignatures';
-import type { VirtualAccountDerivation } from './accountReads';
 import {
   type TransactionArtifactSummary,
   findTransactionArtifact,
   listTransactionArtifacts,
 } from './artifacts';
 import { type ResolvedRdxConfig, resolveRdxConfig } from './config';
+import { llmGuide } from './llm';
 import {
   type NotarizeTransactionResult,
   gatewayNotarizePreview,
   notarizeTransactionArtifact,
 } from './notarize';
-import { llmGuide } from './llm';
+import { readJsonFile } from './platformIo';
 import {
   type PrepareTransactionResult,
   gatewayPreparePreview,
@@ -270,7 +270,9 @@ const configShowCommand = Command.make('show', {}, () =>
 
 const llmCommand = Command.make('llm', {}, () =>
   Console.log(renderLlmGuide()),
-).pipe(Command.withDescription('Print compact Markdown instructions for agents'));
+).pipe(
+  Command.withDescription('Print compact Markdown instructions for agents'),
+);
 
 const accountCommand = Command.make('account').pipe(
   Command.withDescription('Read account state'),
@@ -379,9 +381,9 @@ const txPrepareCommand = Command.make(
       const config = yield* resolveRdxConfig({ cwd: process.cwd() });
       const notaryFilePath = Option.getOrUndefined(notaryFile);
       const notary = notaryFilePath
-        ? yield* Effect.tryPromise(() =>
-            readFile(notaryFilePath, 'utf8').then(JSON.parse),
-          ).pipe(Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)))
+        ? yield* readJsonFile(notaryFilePath, (reason) => reason).pipe(
+            Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)),
+          )
         : config.notary;
       if (!notary) {
         return yield* Effect.fail(

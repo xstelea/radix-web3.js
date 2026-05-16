@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Effect, Schema } from 'effect';
 import {
@@ -6,6 +5,7 @@ import {
   findTransactionArtifact,
   writeCanonicalSignatures,
 } from './artifacts';
+import { readJsonFile } from './platformIo';
 import {
   PreparedTransactionSchema,
   type SignatureEntry,
@@ -20,11 +20,7 @@ export type AddSignaturesResult = SignatureImportResult & {
   complete: boolean;
 };
 
-const readJson = (path: string) =>
-  Effect.tryPromise({
-    try: () => readFile(path, 'utf8').then(JSON.parse),
-    catch: (reason) => reason,
-  });
+const readJson = (path: string) => readJsonFile(path, (reason) => reason);
 
 const readPrepared = (artifactPath: string) =>
   readJson(join(artifactPath, 'prepared.json')).pipe(
