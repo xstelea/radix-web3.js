@@ -1,0 +1,49 @@
+{
+  "name": "radix-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "rdx": "./dist/bin/rdx.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "test": "vitest",
+    "check-types": "tsc --noEmit",
+    "build": "tsdown"
+  },
+  "dependencies": {
+    "@effect/cli": "catalog:",
+    "@effect/platform": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "@effect/printer": "catalog:",
+    "@effect/printer-ansi": "catalog:",
+    "@noble/curves": "catalog:",
+    "@radix-effects/gateway": "workspace:*",
+    "@radix-effects/shared": "workspace:*",
+    "@steleaio/radix-engine-toolkit": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "files": ["dist"],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  }
+}
