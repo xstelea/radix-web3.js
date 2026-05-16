@@ -1,53 +1,78 @@
-# Radix Agent Protocol (RAP) V1
+# Radix Agent Protocol (RAP/1)
 
-Status: draft current implementation, not a final external protocol.
+Status: Draft  
+Version: 1  
+Stability: Current implementation draft, not a final external standard  
+Audience: Agent implementers, transaction coordinators, signer adapters, and CLI/API adapter authors
 
-Radix Agent Protocol V1 is a draft state-machine protocol for coordinating Radix Transaction Manifest V2 workflows between agents, signers, notaries, and a Radix network. The current CLI is an adapter over this protocol; its commands and file paths are implementation details.
+## Abstract
 
-This document captures the current data model and transaction state machine implemented by `packages/cli/src`.
+Radix Agent Protocol version 1 (RAP/1) specifies a finite-state protocol for coordinating Radix Transaction Manifest V2 workflows between agents, signers, notaries, and a Radix network.
 
-While this draft currently lives beside the CLI implementation, RAP is not a CLI protocol. Once the protocol stabilizes, its documentation should move to a protocol-level docs location or dedicated package, with the CLI documented as one adapter.
+RAP/1 defines the protocol states, JSON payload shapes, transition events, validation rules, and error shapes required to move a transaction workflow from draft transaction inputs to prepared transaction state, out-of-band signatures, notarization, submission, and network status observation.
 
-## Why RAP Exists
+RAP/1 is not a CLI command format. A CLI, HTTP API, filesystem workflow, queue worker, or in-process SDK MAY implement RAP/1 as an adapter.
 
-Autonomous agents need a deterministic way to move a Radix transaction from intent construction to signing, notarization, submission, and status observation without giving private keys to the transaction coordinator.
+## 1. Terminology And Normative Language
 
-RAP exists to:
+The key words `MUST`, `MUST NOT`, `REQUIRED`, `SHOULD`, `SHOULD NOT`, and `MAY` are to be interpreted as normative protocol language.
 
-- Define typed payloads for each transaction phase.
-- Make every required signature explicit by transaction, scope, account, and hash.
-- Keep private key custody outside the transaction coordinator.
-- Allow signatures to arrive asynchronously from one or more agents.
-- Preserve enough state to resume, audit, and submit a workflow without rebuilding it from the original RTM input.
-- Keep network, transaction, signature, notarization, and status data bound to one workflow.
+**Coordinator**: The system component that advances a RAP workflow through state transitions.
 
-RAP is for coding agents, scripts, and local automation that can inspect JSON, sign Ed25519 hashes out of band, and advance a transaction through a finite state machine.
+**Signer**: An external participant that receives a signing request and returns a signature produced outside the coordinator.
 
-RAP is not a consumer wallet protocol, key-management format, browser wallet pairing protocol, or CLI help schema.
+**Notary**: The signer responsible for producing the final notary signature over the signed transaction intent.
 
-## Draft Scope
+**Adapter**: An implementation-specific surface over RAP, such as a CLI, HTTP endpoint, local file store, queue consumer, or library API.
 
-RAP V1 currently covers:
+**Workflow**: One RAP transaction state machine instance identified by a `transactionId` after preparation.
 
-- Radix Transaction Manifest V2 only.
-- One root transaction intent plus direct child subintents only.
-- Ed25519 public keys and signatures only.
-- Out-of-band signing only.
-- JSON payloads with camelCase fields.
-- Transaction workflow state, not generic account indexing.
+**TransactionId**: RAP's workflow correlation ID after preparation. In RAP/1 this is the Radix intent hash identifier used for Gateway status.
 
-Every public RAP payload is typed and versioned:
+## 2. Scope
+
+RAP/1 covers:
+
+- Radix Transaction Manifest V2 workflows.
+- One root transaction intent.
+- Direct child subintents.
+- Ed25519 public keys and signatures.
+- Out-of-band signing.
+- JSON-compatible payloads with camelCase field names.
+- Network-bound transaction workflow state.
+
+RAP/1 does not cover:
+
+- Consumer wallet UX.
+- Private key custody.
+- Browser wallet pairing.
+- Hardware wallet protocols.
+- Arbitrary message signing.
+- General account indexing or portfolio APIs.
+- CLI command names, flags, or filesystem paths.
+
+## 3. Conformance
+
+A RAP/1 implementation MUST implement the state machine and transition validation rules in this document.
+
+An adapter MAY expose RAP/1 through any transport or storage model. Adapter-specific command names, file paths, config formats, logs, and help text are not RAP/1 protocol surface.
+
+Every public RAP/1 payload MUST include `type` and `version` when a concrete payload type defines those fields.
 
 ```ts
-type RapPayload = {
+type RapVersion = 1;
+
+type RapTypedPayload = {
   type: string;
-  version: 1;
+  version: RapVersion;
 };
 ```
 
-## State Machine Overview
+Diagrams in this document are informative. If a diagram conflicts with normative text, the normative text wins.
 
-RAP transaction workflows move through these phases:
+## 4. Protocol States
+
+The main RAP/1 transaction workflow is linear:
 
 ```text
 DraftInputs
@@ -60,51 +85,94 @@ DraftInputs
   -> Submitted
 ```
 
-Network status observation is an overlay result, not a mainline progression state. A status query may attach to any local workflow state or exist without a local transaction workflow.
+Network status observation is an overlay. Observation MUST NOT advance the main signing, notarization, or submission state.
 
-## Primitive Types
+| State | Meaning | May Be Derived |
+| --- | --- | --- |
+| `DraftInputs` | Transaction inputs exist, but no canonical transaction ID exists. | No |
+| `Prepared` | Transaction ID, intent, analysis, and signing requests exist. | No |
+| `IntentSigning` | Intent/subintent signatures are being collected. | Yes |
+| `IntentSignaturesComplete` | All pre-notary signing requests are satisfied. | Yes |
+| `NotaryRequested` | Signed intent has been built and notary signing request exists. | No |
+| `NotarySigning` | Notary signature is being collected. | Yes |
+| `NotarySignatureComplete` | All signing requests, including notary, are satisfied. | Yes |
+| `Submitted` | A notarized transaction payload has been submitted and recorded. | No |
+| `Observed` | Gateway status has been observed without advancing the main workflow. | Yes |
+
+Adapters MAY derive the derived states from canonical signature state rather than persisting separate state payloads.
+
+### 4.1 State Diagram
+
+```mermaid
+stateDiagram-v2
+  [*] --> DraftInputs
+  DraftInputs --> Prepared: PrepareTransaction
+  Prepared --> IntentSigning: ImportIntentSignatures
+  IntentSigning --> IntentSigning: ImportIntentSignatures / incomplete
+  IntentSigning --> IntentSignaturesComplete: ImportIntentSignatures / complete
+  IntentSignaturesComplete --> NotaryRequested: RequestNotarySignature
+  NotaryRequested --> NotarySigning: ImportNotarySignature
+  NotarySigning --> NotarySigning: ImportNotarySignature / incomplete
+  NotarySigning --> NotarySignatureComplete: ImportNotarySignature / complete
+  NotarySignatureComplete --> Submitted: SubmitTransaction
+  Submitted --> [*]
+
+  Prepared --> Observed: ObserveTransaction
+  IntentSigning --> Observed: ObserveTransaction
+  IntentSignaturesComplete --> Observed: ObserveTransaction
+  NotaryRequested --> Observed: ObserveTransaction
+  NotarySigning --> Observed: ObserveTransaction
+  NotarySignatureComplete --> Observed: ObserveTransaction
+  Submitted --> Observed: ObserveTransaction
+  Observed --> Prepared: no main-state advance
+  Observed --> IntentSigning: no main-state advance
+  Observed --> IntentSignaturesComplete: no main-state advance
+  Observed --> NotaryRequested: no main-state advance
+  Observed --> NotarySigning: no main-state advance
+  Observed --> NotarySignatureComplete: no main-state advance
+  Observed --> Submitted: no main-state advance
+```
+
+## 5. Common Types
 
 ```ts
 type Network = "mainnet" | "stokenet";
 
+type TransactionId = string;
+
+type HexString = string;
+
 type PublicKey = {
   curve: "Ed25519";
-  hex: string; // 64 hex characters
+  hex: HexString; // 64 hex characters
 };
 
 type SignatureValue = {
   curve: "Ed25519";
-  hex: string; // 128 hex characters
+  hex: HexString; // 128 hex characters
 };
 
 type Hash = {
   id: string;
-  hex: string;
+  hex: HexString;
 };
 
-type TransactionId = string; // RAP correlation ID; after preparation this is the Radix intent hash identifier
+type SubintentId = string; // ^[A-Za-z][A-Za-z0-9_-]{0,63}$
 
 type SigningScope =
   | { kind: "rootIntent" }
-  | { kind: "subintent"; subintentId: string }
+  | { kind: "subintent"; subintentId: SubintentId }
   | { kind: "notarySignatory" }
   | { kind: "notary" };
-
-type SubintentId = string; // ^[A-Za-z][A-Za-z0-9_-]{0,63}$
 ```
 
-Generated signature templates may use placeholders:
+`Hash.id` MUST be non-null in RAP/1. Adapter fallback behavior for missing hash IDs is outside valid protocol state.
 
-```text
-<replace-with-ed25519-public-key-hex>
-<replace-with-ed25519-signature-hex>
-```
+`SubintentId` values MUST match `^[A-Za-z][A-Za-z0-9_-]{0,63}$`.
 
-Placeholders are allowed only in templates. They are invalid in imported signatures.
+## 6. DraftInputs
 
-## Phase 1: DraftInputs
-
-`DraftInputs` is the pre-preparation state. It contains the data required to build and analyze a transaction, but it has no canonical transaction ID yet.
+`DraftInputs` is the only state without a `transactionId`.
 
 ```ts
 type DraftInputsState = {
@@ -127,7 +195,7 @@ type SubintentsInput = {
   subintents: Record<
     SubintentId,
     {
-      manifest: string; // inline RTM text
+      manifest: string;
     }
   >;
 };
@@ -140,21 +208,19 @@ type NotaryInput = {
 };
 ```
 
-Rules:
+Requirements:
 
-- `network` is selected before preparation and remains fixed for the workflow.
+- `network` MUST be selected before preparation and MUST NOT change after preparation.
 - `notaryIsSignatory` defaults to `true`.
-- `rootManifest.rtm` and each subintent `manifest` are inline RTM text in RAP; file paths are adapter inputs loaded before this state.
-- Each `SubintentId` must use the conservative identifier pattern.
-- The root manifest must contain `YIELD_TO_CHILD NamedIntent("<subintentId>")` for every provided subintent.
-- Provided but unreferenced subintents are invalid.
-- Referenced but missing subintents are invalid.
+- `rootManifest.rtm` and each subintent `manifest` MUST contain inline RTM text.
+- File paths are adapter inputs and MUST be resolved before creating `DraftInputs`.
+- A root manifest that yields to a child MUST use `YIELD_TO_CHILD NamedIntent("<subintentId>")`.
+- Every yielded subintent ID MUST be present in `subintents`.
+- Every provided subintent ID MUST be yielded by the root manifest.
 
-Transition output: `Prepared`.
+## 7. Prepared
 
-## Phase 2: Prepared
-
-`Prepared` is the first canonical transaction state. It has a transaction ID, a compiled transaction intent, static analysis, authorization requirements, and signing requests.
+`Prepared` is the first canonical workflow state. It creates the `transactionId` and binds the workflow to one Radix network.
 
 ```ts
 type PreparedState = {
@@ -178,11 +244,17 @@ type PreparedTransaction = {
   notaryIsSignatory: boolean;
 };
 
-type AuthorizationAnalysis = {
-  rootIntent: string[];
-  subintents: Record<SubintentId, string[]>;
+type CopiedManifestSet = {
+  rootManifest: string;
+  subintents: Record<SubintentId, string>;
 };
+```
 
+`PreparedTransaction.notaryPublicKey` and `PreparedTransaction.notaryIsSignatory` are REQUIRED workflow metadata even though equivalent notary data also exists in the encoded Radix transaction header.
+
+### 7.1 Transaction Intent Artifact
+
+```ts
 type TransactionIntentArtifact = {
   type: "transactionIntent";
   version: 1;
@@ -190,7 +262,7 @@ type TransactionIntentArtifact = {
   encoded: {
     kind: "transactionIntentV2";
     value: TransactionIntentV2Stored;
-    compiledHex: string;
+    compiledHex: HexString;
   };
 };
 
@@ -216,7 +288,18 @@ type IntentCoreV2Stored = {
   instructions: string;
   blobs: [];
   message: unknown;
-  children: string[];
+  children: HexString[];
+};
+```
+
+RAP/1 owns the `TransactionIntentV2Stored` shape for this draft.
+
+### 7.2 Static Analysis Artifact
+
+```ts
+type AuthorizationAnalysis = {
+  rootIntent: string[];
+  subintents: Record<SubintentId, string[]>;
 };
 
 type StaticAnalysisArtifact = {
@@ -226,14 +309,11 @@ type StaticAnalysisArtifact = {
   authorization: AuthorizationAnalysis;
   rawAnalysis?: unknown;
 };
-
-type CopiedManifestSet = {
-  rootManifest: string;
-  subintents: Record<SubintentId, string>;
-};
 ```
 
-Prepared signing request shapes:
+`StaticAnalysisArtifact.authorization` is the RAP source of truth for accounts requiring authorization. Adapters MAY store raw toolkit analysis in `rawAnalysis`.
+
+### 7.3 Signing Requests And Templates
 
 ```ts
 type SigningRequest = {
@@ -241,7 +321,7 @@ type SigningRequest = {
   version: 1;
   transactionId: TransactionId;
   scope: SigningScope;
-  account: string | null; // constrained by SigningScope invariants
+  account: string | null;
   hash: Hash;
 };
 
@@ -250,30 +330,38 @@ type SignatureTemplate = {
   version: 1;
   transactionId: TransactionId;
   scope: SigningScope;
-  account: string | null; // constrained by SigningScope invariants
+  account: string | null;
   hash: Hash;
   publicKey: PublicKey;
   signature: SignatureValue;
 };
 ```
 
-`SignatureTemplate` is a RAP handoff payload for out-of-band signers. It is not merely an adapter convenience: it carries the request context forward while giving the signer explicit public key and signature fields to fill.
+`SignatureTemplate` is a protocol handoff payload for out-of-band signers. It carries the request context and provides explicit fields for the signer public key and signature.
 
-Prepared state includes these request scopes:
+Generated templates MAY use these placeholder values:
 
-- `rootIntent` for each root account requiring authorization.
-- `subintent` for each direct child subintent account requiring authorization.
-- `notarySignatory` if the notary also signs the root intent.
+```text
+<replace-with-ed25519-public-key-hex>
+<replace-with-ed25519-signature-hex>
+```
 
-Prepared state does not yet include a `notary` signing request. That request can only be derived after intent and subintent signatures are attached.
+Placeholders MUST NOT appear in imported signatures.
 
-Transition input: zero or more signature payloads.
+Prepared signing requests MUST include:
 
-Transition output: `IntentSigning`.
+- `rootIntent` requests for each root account requiring authorization.
+- `subintent` requests for each direct child subintent account requiring authorization.
+- `notarySignatory` request if the notary is also a transaction intent signer.
 
-## Phase 3: IntentSigning
+Prepared signing requests MUST NOT include `notary`. A `notary` request can only be created after intent and subintent signatures are attached.
 
-`IntentSigning` is a prepared workflow with a canonical signature file that may be incomplete.
+Account invariants:
+
+- `rootIntent` and `subintent` requests MUST have `account`.
+- `notarySignatory` and `notary` requests MUST use `account: null`.
+
+## 8. IntentSigning
 
 ```ts
 type IntentSigningState = {
@@ -294,7 +382,7 @@ type SignatureFile = {
 
 type SignatureEntry = {
   scope: SigningScope;
-  account: string | null; // constrained by SigningScope invariants
+  account: string | null;
   hash: Hash;
   publicKey: PublicKey;
   signature: SignatureValue;
@@ -307,38 +395,28 @@ type SignatureCompleteness = {
 };
 ```
 
-`SignatureFile` is used both as an import payload and as the canonical signature state shape. As a transition input, it is a patch: valid entries are merged into the workflow's canonical `signatures` state rather than replacing all existing signatures.
+`SignatureFile` is both the canonical signature-state shape and an import payload. As transition input, `SignatureFile` is a patch: valid entries are merged into canonical signature state.
 
-Accepted transition inputs:
+`SignatureEntry.publicKey` is the signer identity in RAP/1. Signer labels and roles are coordination metadata outside the core protocol.
 
-- Filled `SignatureTemplate`.
-- `SignatureFile`.
+Signature import requirements:
 
-Signature import rules:
+- The payload `transactionId` MUST match the workflow `transactionId`.
+- Each `SignatureEntry` MUST match an existing `SigningRequest` by `transactionId`, `scope`, `account`, `hash.id`, and `hash.hex`.
+- The `publicKey` and `signature` values MUST NOT contain placeholders.
+- The Ed25519 signature MUST verify against `hash.hex` and `publicKey.hex`.
+- Multiple signatures MAY target the same signing request identity if they use different public keys.
+- Deduplication MUST use signing request identity plus public key.
+- Differing duplicate signatures for the same request identity and public key MUST be ignored or rejected; adapters SHOULD surface a warning.
 
-- The payload transaction ID must match the prepared transaction.
-- The signature must match a known signing request by transaction ID, scope, account, `hash.id`, and `hash.hex`.
-- Placeholder public keys or signatures are rejected.
-- The Ed25519 signature must verify against `hash.hex` and `publicKey.hex`.
-- Duplicate signatures are normalized into one canonical `SignatureFile`.
-- Differing duplicate signatures for the same identity are ignored with a warning.
-- Multiple signatures may target the same signing request identity when they use different public keys.
-- Deduplication is by signing request identity plus public key, not by signing request identity alone.
+Multisig:
 
-Multisig note:
+- RAP/1 supports multiple signing requests per workflow.
+- RAP/1 supports multiple signatures per workflow and per signing scope.
+- RAP/1 does not compute Radix authorization thresholds or exact signer sets.
+- Radix manifests, static analysis, and on-ledger access rules determine authorization requirements.
 
-- RAP supports multiple `SigningRequest`s and multiple `SignatureEntry`s for one transaction workflow.
-- RAP supports multiple signatures across root intent, direct child subintent, notary-signatory, and notary scopes.
-- RAP does not compute Radix authorization thresholds or exact signer sets in this draft; Radix manifests, static analysis, and on-ledger access rules determine what authorization is required.
-
-Transition output:
-
-- Stay in `IntentSigning` while any prepared signing request is missing.
-- Move to `IntentSignaturesComplete` when all prepared signing requests are satisfied.
-
-## Phase 4: IntentSignaturesComplete
-
-`IntentSignaturesComplete` means the root intent, direct child subintents, and any notary-signatory authorization have all been signed.
+## 9. IntentSignaturesComplete
 
 ```ts
 type IntentSignaturesCompleteState = {
@@ -349,18 +427,11 @@ type IntentSignaturesCompleteState = {
 };
 ```
 
-Rules:
+This state is reached when every prepared signing request has at least one matching signature. It is the protocol boundary that permits notary request generation.
 
-- Every prepared `SigningRequest` has at least one matching `SignatureEntry`.
-- No notary request exists yet unless the workflow has already advanced and returned to signature import.
-- This state is required before a notary signing request can be generated.
-- Adapters may derive this state from signature completeness instead of persisting a separate payload, but RAP treats it as a named state-machine boundary.
+Adapters MAY derive this state from signature completeness.
 
-Transition output: `NotaryRequested`.
-
-## Phase 5: NotaryRequested
-
-`NotaryRequested` is created by attaching intent and subintent signatures to the Transaction Intent V2, previewing the signed intent, and deriving the notary hash.
+## 10. NotaryRequested
 
 ```ts
 type NotaryRequestedState = {
@@ -385,24 +456,14 @@ type SignedTransactionIntentArtifact = {
   transactionId: TransactionId;
   encoded: {
     kind: "signedTransactionIntentV2";
-    compiledHex: string;
+    compiledHex: HexString;
   };
 };
 ```
 
-Rules:
+The notary signing request signs the signed transaction intent hash. It MUST NOT reuse the original transaction intent hash unless those hashes are equal by Radix transaction semantics.
 
-- The notary signing request signs the signed transaction intent hash, not the original transaction intent hash.
-- The notary template contains the expected notary public key.
-- The notary request uses the same `SigningRequest` shape as other signing requests, with `scope.kind = "notary"`.
-
-Transition input: notary signature payload.
-
-Transition output: `NotarySigning`.
-
-## Phase 6: NotarySigning
-
-`NotarySigning` is a notary-requested workflow whose canonical signature file may or may not contain the notary signature.
+## 11. NotarySigning
 
 ```ts
 type NotarySigningState = {
@@ -419,16 +480,9 @@ type NotarySigningState = {
 };
 ```
 
-The same signature import rules from `IntentSigning` apply. The required request set now includes the notary request.
+The signature import rules from `IntentSigning` apply. The required request set includes the `notary` request.
 
-Transition output:
-
-- Stay in `NotarySigning` while the notary request is missing.
-- Move to `NotarySignatureComplete` when all requests, including notary, are satisfied.
-
-## Phase 7: NotarySignatureComplete
-
-`NotarySignatureComplete` is the submit-ready local state.
+## 12. NotarySignatureComplete
 
 ```ts
 type NotarySignatureCompleteState = {
@@ -440,18 +494,11 @@ type NotarySignatureCompleteState = {
 };
 ```
 
-Rules:
+This state is reached when every generated signing request, including the notary request, has a matching signature. It is the submit-ready protocol boundary.
 
-- Every generated signing request has a matching signature.
-- A `scope.kind = "notary"` signature exists.
-- The workflow can be compiled into a Notarized Transaction V2 without the original draft inputs.
-- Adapters may derive this state from signature completeness instead of persisting a separate payload, but RAP treats it as the submit-ready state-machine boundary.
+Adapters MAY derive this state from signature completeness.
 
-Transition output: `Submitted`.
-
-## Phase 8: Submitted
-
-`Submitted` records the exact notarized transaction payload and the network submission result.
+## 13. Submitted
 
 ```ts
 type SubmittedState = {
@@ -465,7 +512,7 @@ type NotarizedTransactionArtifact = {
   type: "notarizedTransaction";
   version: 1;
   transactionId: TransactionId;
-  compiledHex: string;
+  compiledHex: HexString;
 };
 
 type SubmitResult = {
@@ -492,19 +539,15 @@ type NetworkStatusAttempt = {
 };
 ```
 
-Rules:
+`Submitted` is the terminal local transaction workflow state in RAP/1. Network status can continue to change through observation overlays.
 
-- A workflow with a previous `CommittedSuccess` submit result must not be submitted again.
-- The submitted payload is the compiled Notarized Transaction V2.
-- RAP treats the submitted payload as a typed `NotarizedTransactionArtifact`; adapters may persist that payload as raw hex when the transaction ID is already provided by surrounding state.
-- Submission status is recorded as attempts, not overwritten as a single value.
-- `Submitted` includes `submitResult` because the current submission transition produces a durable network response; later observations may append additional attempts through the observation overlay.
+The submitted payload MUST be the compiled Notarized Transaction V2.
 
-`Submitted` is the terminal local transaction workflow state in RAP V1. Network status can continue to change and is captured through observation overlays.
+If a workflow has a prior `CommittedSuccess` submit result, an implementation MUST NOT submit it again.
 
-## Observation Overlay
+`submitResult` is part of `Submitted` because submission produces a durable network response in the current RAP/1 flow. Later observations MAY append additional status attempts.
 
-`Observed` captures Gateway status observations without advancing the main transaction state machine.
+## 14. Observation Overlay
 
 ```ts
 type ObservedState = {
@@ -523,33 +566,16 @@ type ObservedState = {
 };
 ```
 
-Rules:
+Observation requirements:
 
-- Status is keyed by transaction ID / intent hash.
-- A status observation may exist without local workflow artifacts.
-- If local workflow state exists and observation is not read-only, the observation is appended to `SubmitResult.attempts`.
-- Observation does not imply that a workflow is submitted, complete, or safe to advance.
+- Observation MUST be keyed by `transactionId`.
+- Observation MAY occur without local workflow state.
+- Observation MUST NOT advance the main workflow state.
+- If local workflow state exists and the observation is not read-only, the implementation MAY append the observation to `SubmitResult.attempts`.
 
-## Cross-phase Invariants
+## 15. Transition Events
 
-- `transactionId` is the RAP workflow correlation ID after preparation; in the current Radix transaction flow it is the Radix intent hash identifier used for Gateway status.
-- `network` is selected before preparation and must not change.
-- Every signature is scoped.
-- Every imported signature must match an existing signing request.
-- Every RAP hash used for prepared state, signing requests, signatures, notarization, and status has a non-null `id`.
-- `rootIntent` and `subintent` signing requests require `account`; `notarySignatory` and `notary` signing requests use `account: null`.
-- `SignatureEntry.publicKey` is the signer identity in RAP; signer labels and roles are adapter or coordination metadata outside the core protocol.
-- `notarySignatory` and `notary` are distinct scopes.
-- `notarySignatory` signs the root intent hash.
-- `notary` signs the signed transaction intent hash.
-- Subintent ordering is explicit through `subintentOrder`.
-- Prepared workflows are resumable without the original RTM input.
-- `PreparedTransaction.notaryPublicKey` and `notaryIsSignatory` are protocol-level workflow metadata even though the encoded transaction header also contains notary data.
-- `TransactionIntentArtifact.encoded.value` is RAP-owned Transaction Intent V2 stored data for this draft.
-
-## Transition Events
-
-RAP defines transition events separately from adapter commands. An adapter may expose these as commands, API calls, queue messages, or local function calls, but the protocol event names and state transitions remain the same.
+RAP/1 transition events are protocol operations. Adapters MAY expose them through commands, functions, endpoints, messages, or any other transport.
 
 ```ts
 type RapTransitionEvent =
@@ -600,14 +626,111 @@ type ObserveTransactionEvent = {
   event: "ObserveTransaction";
   input: {
     transactionId: TransactionId;
-    localWorkflow?: PreparedState | IntentSigningState | IntentSignaturesCompleteState | NotaryRequestedState | NotarySigningState | NotarySignatureCompleteState | SubmittedState;
+    localWorkflow?:
+      | PreparedState
+      | IntentSigningState
+      | IntentSignaturesCompleteState
+      | NotaryRequestedState
+      | NotarySigningState
+      | NotarySignatureCompleteState
+      | SubmittedState;
     readOnly?: boolean;
   };
   output: ObservedState;
 };
 ```
 
-Failed transitions return RAP errors at the protocol boundary:
+Transition requirements:
+
+- `PrepareTransaction` MUST be the only transition that creates a canonical `transactionId`.
+- `PrepareTransaction` MUST run the prepare preview gate before producing `PreparedState`.
+- `ImportIntentSignatures` MUST NOT accept `notary` signatures before `RequestNotarySignature` has produced a `notary` signing request.
+- `RequestNotarySignature` MUST fail unless the input state is `IntentSignaturesComplete`.
+- `RequestNotarySignature` MUST run the notarize preview gate before producing `NotaryRequestedState`.
+- `ImportNotarySignature` MUST apply the same signature validation rules as `ImportIntentSignatures`, with the `notary` request included in the required request set.
+- `SubmitTransaction` MUST fail unless the input state is `NotarySignatureComplete`.
+- `ObserveTransaction` MUST NOT advance the main transaction state.
+
+`ImportIntentSignatures` and `ImportNotarySignature` are separate protocol events. They MUST NOT be collapsed by a conforming protocol surface because they represent different signing phases and different allowed request scopes.
+
+### 15.1 Transition Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Adapter
+  participant Coordinator
+  participant Signer
+  participant Notary
+  participant Gateway
+
+  Adapter->>Coordinator: PrepareTransaction(DraftInputs)
+  Coordinator->>Gateway: prepare preview
+  Gateway-->>Coordinator: preview accepted
+  Coordinator-->>Adapter: PreparedState + SigningRequests + SignatureTemplates
+
+  Adapter->>Signer: SignatureTemplate(root/subintent/notarySignatory)
+  Signer-->>Adapter: SignatureTemplate or SignatureFile
+  Adapter->>Coordinator: ImportIntentSignatures
+  Coordinator-->>Adapter: IntentSigningState or IntentSignaturesCompleteState
+
+  Adapter->>Coordinator: RequestNotarySignature
+  Coordinator->>Gateway: notarize preview
+  Gateway-->>Coordinator: preview accepted
+  Coordinator-->>Adapter: NotaryRequestedState
+
+  Adapter->>Notary: notary SignatureTemplate
+  Notary-->>Adapter: SignatureTemplate or SignatureFile
+  Adapter->>Coordinator: ImportNotarySignature
+  Coordinator-->>Adapter: NotarySigningState or NotarySignatureCompleteState
+
+  Adapter->>Coordinator: SubmitTransaction
+  Coordinator->>Gateway: submit NotarizedTransactionArtifact.compiledHex
+  Gateway-->>Coordinator: network status
+  Coordinator-->>Adapter: SubmittedState
+
+  Adapter->>Coordinator: ObserveTransaction
+  Coordinator->>Gateway: status by transactionId
+  Gateway-->>Coordinator: network status
+  Coordinator-->>Adapter: ObservedState
+```
+
+### 15.2 Signature Import Decision
+
+```mermaid
+flowchart TD
+  Start([Signature import payload]) --> Decode{Valid RAP payload?}
+  Decode -- No --> InvalidPayload[InvalidPayload]
+  Decode -- Yes --> Tx{transactionId matches workflow?}
+  Tx -- No --> InvalidPayload
+  Tx -- Yes --> Request{Matches known signing request?}
+  Request -- No --> InvalidPayload
+  Request -- Yes --> Placeholder{Contains placeholder?}
+  Placeholder -- Yes --> InvalidPayload
+  Placeholder -- No --> Verify{Ed25519 signature verifies hash.hex?}
+  Verify -- No --> InvalidSignature[InvalidSignature]
+  Verify -- Yes --> Merge[Merge by request identity + publicKey]
+  Merge --> Complete{All required requests complete?}
+  Complete -- No --> Partial[IntentSigning or NotarySigning]
+  Complete -- Yes --> CompleteState[IntentSignaturesComplete or NotarySignatureComplete]
+```
+
+## 16. Preview Gates
+
+RAP/1 has two preview gates:
+
+| Transition | Preview Input | Signature Proof Assumption | Effect |
+| --- | --- | --- | --- |
+| `PrepareTransaction` | Unsigned Transaction Intent V2 preview | Assume all signature proofs | Reject invalid draft transaction state before signing requests are emitted. |
+| `RequestNotarySignature` | Signed Transaction Intent V2 preview | Use real signer public keys | Reject invalid signed intent state before the notary signs. |
+
+Preview success allows the transition to continue. Preview failure rejects the transition.
+
+Preview receipts are not RAP/1 state artifacts and MUST NOT be required to reconstruct workflow state.
+
+## 17. Error Model
+
+Failed transitions return protocol errors at the RAP boundary:
 
 ```ts
 type RapTransitionError =
@@ -658,34 +781,13 @@ type RapTransitionError =
     };
 ```
 
-Adapter errors such as missing files, invalid config, permission failures, or command-line parsing failures are outside RAP unless they are translated into one of these protocol errors.
+Adapter errors such as missing files, invalid local config, permission failures, transport failures, or command-line parsing failures are outside RAP/1 unless translated into a `RapTransitionError`.
 
-Transition event rules:
+## 18. Adapter Boundary
 
-- `PrepareTransaction` is the only event that creates a canonical `transactionId`.
-- `ImportIntentSignatures` must not accept `notary` signatures before `RequestNotarySignature` has produced a notary request.
-- `RequestNotarySignature` must fail unless intent signature completeness is satisfied.
-- `ImportNotarySignature` uses the same signature validation rules as intent signature import, but the required request set includes the notary request.
-- Intent signature import and notary signature import remain separate protocol events so the two-step signing boundary stays explicit.
-- `SubmitTransaction` must fail unless every generated signing request, including the notary request, is complete.
-- `ObserveTransaction` is an overlay event; it does not advance signing, notarization, or submission state.
+The current `rdx` CLI is a RAP/1 adapter. Its commands, flags, default output rendering, and artifact paths are implementation details.
 
-## Preview Gates
-
-RAP has two safety gates in the current implementation:
-
-| Phase | Preview input | Signature proof assumption | Purpose |
-| --- | --- | --- | --- |
-| DraftInputs -> Prepared | Unsigned Transaction Intent V2 preview | Assume all signature proofs | Catch manifest and execution failures before signing requests are emitted. |
-| IntentSignaturesComplete -> NotaryRequested | Signed Transaction Intent V2 preview | Use real signer public keys | Catch signed-intent failures before the notary signs. |
-
-Both previews skip epoch checks and use free credit in the current implementation.
-
-Preview results are transition gates, not RAP state artifacts. A successful preview allows the transition to continue; a failed preview rejects the transition. RAP V1 does not store preview receipts in state payloads.
-
-## Current Adapter Notes
-
-The current `rdx` CLI adapter persists RAP state as JSON files under a transaction artifact directory. These paths are implementation details, but the major persisted shapes map as follows:
+Current adapter persistence mapping:
 
 | RAP shape | Current persisted representation |
 | --- | --- |
@@ -699,18 +801,72 @@ The current `rdx` CLI adapter persists RAP state as JSON files under a transacti
 | `NotarizedTransactionArtifact` | `notarizedTransaction.hex` raw adapter encoding |
 | `SubmitResult` | `submitResult.json` |
 
-The CLI command names, flags, default output rendering, and artifact paths should not be treated as the RAP model itself.
+Current adapter-only fields include:
 
-Current adapter-only fields include `manifestSourceFile`, `transactionIntentPath`, `staticAnalysisPath`, `signingRequests`, `signatureTemplates`, and `signingRequestPath`. They exist to locate JSON files on disk, not to define RAP state.
+- `manifestSourceFile`
+- `transactionIntentPath`
+- `staticAnalysisPath`
+- `signingRequests`
+- `signatureTemplates`
+- `signingRequestPath`
 
-The current adapter also duplicates authorization data into `prepared.json`; RAP treats `StaticAnalysisArtifact.authorization` as the protocol source of truth.
+These fields locate JSON files on disk. They are not RAP/1 state.
 
-The current adapter contains defensive fallback paths for missing hash IDs; RAP treats missing hash IDs as invalid protocol state.
+The current adapter accepts a `batchSignatureFile` wrapper and expands it into repeated `SignatureFile` imports. RAP/1 core treats batching as transport ergonomics rather than a state-machine payload.
 
-The current adapter accepts a `batchSignatureFile` wrapper and expands it into repeated `SignatureFile` imports. RAP core treats batching as transport ergonomics rather than a distinct state-machine payload.
+### 18.1 Adapter Boundary Diagram
 
-The current adapter stores `TransactionIntentArtifact.encoded.value` in the same shape RAP documents for this draft.
+```mermaid
+flowchart LR
+  subgraph Protocol["RAP/1 Protocol Surface"]
+    States["State payloads"]
+    Events["Transition events"]
+    Errors["RapTransitionError"]
+    Validation["Validation rules"]
+  end
 
-## Open Questions For Draft Hardening
+  subgraph Adapter["Adapter Surface"]
+    CLI["CLI commands / flags"]
+    Files["Filesystem artifacts"]
+    Config["Local config"]
+    Transport["HTTP / queue / SDK"]
+  end
 
-- None currently captured.
+  subgraph Network["Radix Network"]
+    Preview["Preview"]
+    Submit["Submit"]
+    Status["Status"]
+  end
+
+  Adapter --> Events
+  Events --> States
+  Events --> Errors
+  Events --> Validation
+  Events --> Preview
+  Events --> Submit
+  Events --> Status
+  States --> Adapter
+  Errors --> Adapter
+
+  CLI -. adapter-only .- Files
+  Config -. adapter-only .- CLI
+  Transport -. adapter-only .- Adapter
+```
+
+## 19. Security Considerations
+
+RAP/1 coordinators MUST NOT require or accept private keys as part of protocol state.
+
+Signers MUST sign only the `hash.hex` value in a `SigningRequest` or `SignatureTemplate` after validating the surrounding context.
+
+Coordinators MUST verify imported signatures locally before merging them into canonical signature state.
+
+Coordinators MUST keep `notarySignatory` and `notary` scopes distinct. The former signs the root intent hash; the latter signs the signed transaction intent hash.
+
+Coordinators MUST NOT submit a workflow unless all generated signing requests are complete.
+
+Adapters SHOULD make network selection visible before preparation. A prepared workflow is network-bound and MUST NOT be reused on another network.
+
+## 20. Document Location
+
+This draft currently lives beside the CLI adapter because that is the only implementation. RAP/1 itself is not a CLI protocol. Once stabilized, this document SHOULD move to protocol-level documentation or a dedicated protocol package, and the CLI SHOULD be documented as one adapter.
