@@ -1,6 +1,7 @@
 import { FileSystem } from '@effect/platform';
 import { NodeFileSystem } from '@effect/platform-node';
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
+import { renderJson } from './json';
 
 type FileErrorMapper<E> = (reason: unknown) => E;
 
@@ -80,10 +81,9 @@ export const readJsonFile = <E>(
 ): Effect.Effect<unknown, E> =>
   readFileString(path, mapError).pipe(
     Effect.flatMap((content) =>
-      Effect.try({
-        try: () => JSON.parse(content),
-        catch: mapError,
-      }),
+      Schema.decodeUnknown(Schema.parseJson())(content).pipe(
+        Effect.mapError(mapError),
+      ),
     ),
   );
 
@@ -92,4 +92,4 @@ export const writeJsonFile = <E>(
   value: unknown,
   mapError: FileErrorMapper<E>,
 ): Effect.Effect<void, E> =>
-  writeFileString(path, `${JSON.stringify(value, null, 2)}\n`, mapError);
+  writeFileString(path, `${renderJson(value)}\n`, mapError);

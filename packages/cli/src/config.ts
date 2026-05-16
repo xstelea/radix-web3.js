@@ -12,31 +12,33 @@ import {
 
 export type { ArtifactScope, Network };
 
-const RdxConfigFileSchema = Schema.Struct({
+const RdxConfigNotarySchema = Schema.Struct({
+  publicKey: PublicKeySchema,
+  notaryIsSignatory: Schema.optional(Schema.Boolean),
+});
+
+export const RdxConfigFileSchema = Schema.Struct({
   network: Schema.optional(NetworkSchema),
   gatewayBaseUrl: Schema.optional(Schema.String),
   artifactScope: Schema.optional(ArtifactScopeSchema),
   artifactDirectory: Schema.optional(Schema.String),
-  notary: Schema.optional(
-    Schema.Struct({
-      publicKey: PublicKeySchema,
-      notaryIsSignatory: Schema.optional(Schema.Boolean),
-    }),
-  ),
+  notary: Schema.optional(RdxConfigNotarySchema),
 });
 
-type RdxConfigFile = typeof RdxConfigFileSchema.Type;
+export type RdxConfigFile = typeof RdxConfigFileSchema.Type;
 
-export type ResolvedRdxConfig = {
-  network: Network;
-  gatewayBaseUrl?: string;
-  artifactScope: ArtifactScope;
-  artifactDirectory?: string;
-  artifactRoot: string;
-  notary?: RdxConfigFile['notary'];
-  projectConfigPath?: string;
-  globalConfigPath?: string;
-};
+export const ResolvedRdxConfigSchema = Schema.Struct({
+  network: NetworkSchema,
+  gatewayBaseUrl: Schema.optional(Schema.String),
+  artifactScope: ArtifactScopeSchema,
+  artifactDirectory: Schema.optional(Schema.String),
+  artifactRoot: Schema.String,
+  notary: Schema.optional(RdxConfigNotarySchema),
+  projectConfigPath: Schema.optional(Schema.String),
+  globalConfigPath: Schema.optional(Schema.String),
+});
+
+export type ResolvedRdxConfig = typeof ResolvedRdxConfigSchema.Type;
 
 export class ConfigResolutionError extends Data.TaggedError(
   'ConfigResolutionError',

@@ -19,35 +19,41 @@ export const OutputFormatSchema = Schema.Literal('json', 'text').pipe(
 );
 export type OutputFormat = typeof OutputFormatSchema.Type;
 
-const HexString = Schema.String.pipe(Schema.pattern(/^[0-9a-fA-F]+$/));
-const Ed25519PublicKeyHex = HexString.pipe(Schema.length(64));
-const Ed25519SignatureHex = HexString.pipe(Schema.length(128));
-const SubintentId = Schema.String.pipe(
+export const HexStringSchema = Schema.String.pipe(
+  Schema.pattern(/^[0-9a-fA-F]+$/),
+);
+export const Ed25519PublicKeyHexSchema = HexStringSchema.pipe(
+  Schema.length(64),
+);
+export const Ed25519SignatureHexSchema = HexStringSchema.pipe(
+  Schema.length(128),
+);
+export const SubintentIdSchema = Schema.String.pipe(
   Schema.pattern(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/),
 );
 
 export const PublicKeySchema = Schema.Struct({
   curve: Schema.Literal('Ed25519'),
-  hex: Ed25519PublicKeyHex,
+  hex: Ed25519PublicKeyHexSchema,
 });
 
 const PublicKeyOrPlaceholderSchema = Schema.Struct({
   curve: Schema.Literal('Ed25519'),
   hex: Schema.Union(
-    Ed25519PublicKeyHex,
+    Ed25519PublicKeyHexSchema,
     Schema.Literal(PLACEHOLDER_PUBLIC_KEY_HEX),
   ),
 });
 
 const SignatureValueSchema = Schema.Struct({
   curve: Schema.Literal('Ed25519'),
-  hex: Ed25519SignatureHex,
+  hex: Ed25519SignatureHexSchema,
 });
 
 const SignatureValueOrPlaceholderSchema = Schema.Struct({
   curve: Schema.Literal('Ed25519'),
   hex: Schema.Union(
-    Ed25519SignatureHex,
+    Ed25519SignatureHexSchema,
     Schema.Literal(PLACEHOLDER_SIGNATURE_HEX),
   ),
 });
@@ -56,7 +62,7 @@ export const SigningScopeSchema = Schema.Union(
   Schema.Struct({ kind: Schema.Literal('rootIntent') }),
   Schema.Struct({
     kind: Schema.Literal('subintent'),
-    subintentId: SubintentId,
+    subintentId: SubintentIdSchema,
   }),
   Schema.Struct({ kind: Schema.Literal('notarySignatory') }),
   Schema.Struct({ kind: Schema.Literal('notary') }),
@@ -64,7 +70,7 @@ export const SigningScopeSchema = Schema.Union(
 
 const HashSchema = Schema.Struct({
   id: Schema.NullOr(Schema.String),
-  hex: HexString,
+  hex: HexStringSchema,
 });
 
 export const SigningRequestSchema = Schema.Struct({
@@ -225,6 +231,13 @@ export const TransactionHistoryResultSchema = Schema.Struct({
   result: Schema.Unknown,
 });
 
+export const VirtualAccountDerivationSchema = Schema.Struct({
+  network: NetworkSchema,
+  derivation: Schema.Literal('virtualAccount'),
+  publicKey: PublicKeySchema,
+  accountAddress: Schema.String,
+});
+
 export type SigningScope = typeof SigningScopeSchema.Type;
 export type SigningRequest = typeof SigningRequestSchema.Type;
 export type SignatureTemplate = typeof SignatureTemplateSchema.Type;
@@ -243,3 +256,5 @@ export type AccountNftsResult = typeof AccountNftsResultSchema.Type;
 export type AccountShowResult = typeof AccountShowResultSchema.Type;
 export type TransactionHistoryResult =
   typeof TransactionHistoryResultSchema.Type;
+export type VirtualAccountDerivation =
+  typeof VirtualAccountDerivationSchema.Type;

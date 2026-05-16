@@ -1,22 +1,24 @@
 #!/usr/bin/env node
+import { ValidationError } from '@effect/cli';
 import { NodeContext, NodeRuntime } from '@effect/platform-node';
 import { FileSystem, Path } from '@effect/platform';
 import {
   Terminal,
   type Terminal as TerminalService,
 } from '@effect/platform/Terminal';
-import { Effect, Option, Schema } from 'effect';
+import { Console, Data, Effect, Option, Schema } from 'effect';
 import { cli } from '../cli';
+import { renderJson } from '../json';
 
+const CliBuiltInRenderFlagSchema = Schema.Literal(
+  '--help',
+  '-h',
+  '--version',
+  '--wizard',
+  '--completions',
+);
 const shouldRenderCliTerminal = (argv: ReadonlyArray<string>) =>
-  argv.some(
-    (arg) =>
-      arg === '--help' ||
-      arg === '-h' ||
-      arg === '--version' ||
-      arg === '--wizard' ||
-      arg === '--completions',
-  );
+  argv.some(Schema.is(CliBuiltInRenderFlagSchema));
 
 const quietTerminal = {
   columns: Effect.succeed(80),
@@ -83,6 +85,11 @@ const TaggedErrorSchema = Schema.Struct({
 const decodeUnknownOption = <A>(schema: Schema.Schema<A>, value: unknown) =>
   Option.getOrUndefined(Schema.decodeUnknownOption(schema)(value));
 
+class CliFailure extends Data.TaggedError('CliFailure')<{
+  code: string;
+  message: string;
+}> {}
+
 const validationMessage = (error: unknown) => {
   const cliValidationText = decodeUnknownOption(CliValidationTextSchema, error);
   if (cliValidationText) {
@@ -114,7 +121,11 @@ const validationMessage = (error: unknown) => {
 };
 
 const validationCode = (error: unknown, message: string) => {
-  if (message.startsWith('Invalid subcommand')) {
+  if (
+    (ValidationError.isValidationError(error) &&
+      ValidationError.isMissingSubcommand(error)) ||
+    message.startsWith('Invalid subcommand')
+  ) {
     return 'UNKNOWN_COMMAND';
   }
 
@@ -130,6 +141,30 @@ const validationCode = (error: unknown, message: string) => {
 
   return 'CLI_VALIDATION_ERROR';
 };
+
+const normalizeCliFailure = (error: unknown) => {
+  const message = validationMessage(error);
+
+  return new CliFailure({
+    code: validationCode(error, message),
+    message,
+  });
+};
+
+const reportCliFailure = (failure: CliFailure) =>
+  Console.error(
+    renderJson({
+      type: 'error',
+      code: failure.code,
+      message: failure.message,
+    }),
+  ).pipe(
+    Effect.zipRight(
+      Effect.sync(() => {
+        process.exitCode = 64;
+      }),
+    ),
+  );
 
 class RdxCliRuntime extends Effect.Service<RdxCliRuntime>()('RdxCliRuntime', {
   accessors: true,
@@ -152,18 +187,7 @@ class RdxCliRuntime extends Effect.Service<RdxCliRuntime>()('RdxCliRuntime', {
             ),
           ),
           Effect.catchAll((error) =>
-            Effect.sync(() => {
-              const message = validationMessage(error);
-              const code = validationCode(error, message);
-              console.error(
-                JSON.stringify({
-                  type: 'error',
-                  code,
-                  message,
-                }),
-              );
-              process.exitCode = 64;
-            }),
+            reportCliFailure(normalizeCliFailure(error)),
           ),
         ),
     };

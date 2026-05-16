@@ -22,6 +22,7 @@ import {
   listTransactionArtifacts,
 } from './artifacts';
 import { type ResolvedRdxConfig, resolveRdxConfig } from './config';
+import { renderJson } from './json';
 import { llmGuide } from './llm';
 import {
   type NotarizeTransactionResult,
@@ -54,12 +55,12 @@ import { type TemplateKind, workflowTemplate } from './templates';
 
 export type OutputFormat = 'json' | 'text';
 
+export { renderJson } from './json';
+
 const formatOption = Options.choice('format', ['json', 'text'] as const).pipe(
   Options.withDefault('json' as const),
   Options.withDescription('Output format'),
 );
-
-export const renderJson = (value: unknown) => JSON.stringify(value, null, 2);
 
 export const renderConfigShow = (
   format: OutputFormat,

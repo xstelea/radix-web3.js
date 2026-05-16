@@ -4,21 +4,19 @@ import {
   GetNonFungibleBalanceService,
 } from '@radix-effects/gateway';
 import { PublicKey, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { ConfigProvider, Data, Effect, Layer } from 'effect';
+import { ConfigProvider, Data, Effect, Layer, Schema } from 'effect';
 import type { Network, ResolvedRdxConfig } from './config';
+import { toJsonValue } from './json';
 import type {
   AccountFungiblesResult,
   AccountNftsResult,
   AccountShowResult,
   TransactionHistoryResult,
+  VirtualAccountDerivation,
 } from './schemas';
+import { PublicKeySchema } from './schemas';
 
-export type VirtualAccountDerivation = {
-  network: Network;
-  derivation: 'virtualAccount';
-  publicKey: { curve: 'Ed25519'; hex: string };
-  accountAddress: string;
-};
+export type { VirtualAccountDerivation };
 
 export class AccountReadError extends Data.TaggedError('AccountReadError')<{
   accountAddress: string;
@@ -33,8 +31,6 @@ export class InvalidPublicKeyError extends Data.TaggedError(
 }> {}
 
 const networkId = (network: Network) => (network === 'stokenet' ? 2 : 1);
-const isEd25519PublicKeyHex = (value: string) =>
-  /^[0-9a-fA-F]{64}$/.test(value);
 
 const gatewayConfigLayer = (
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>,
@@ -50,36 +46,6 @@ const gatewayApiClientLayer = (
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>,
 ) => GatewayApiClient.Default.pipe(Layer.provide(gatewayConfigLayer(config)));
 
-const isBigNumberLike = (
-  value: unknown,
-): value is { toString: () => string; isBigNumber?: boolean } =>
-  typeof value === 'object' &&
-  value !== null &&
-  'isBigNumber' in value &&
-  typeof (value as { toString?: unknown }).toString === 'function';
-
-const toJsonSafe = (value: unknown): unknown => {
-  if (isBigNumberLike(value)) {
-    return value.toString();
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(toJsonSafe);
-  }
-
-  if (typeof value === 'object' && value !== null) {
-    if (typeof (value as { toJSON?: unknown }).toJSON === 'function') {
-      return (value as { toJSON: () => unknown }).toJSON();
-    }
-
-    return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, toJsonSafe(entry)]),
-    );
-  }
-
-  return value;
-};
-
 export const getAccountFungibles = (input: {
   accountAddress: string;
   readFungibles: (accountAddress: string) => Effect.Effect<unknown, unknown>;
@@ -88,7 +54,7 @@ export const getAccountFungibles = (input: {
     Effect.map((result) => ({
       type: 'commandResult' as const,
       command: 'account fungibles' as const,
-      result: toJsonSafe(result),
+      result: toJsonValue(result),
     })),
   );
 
@@ -100,7 +66,7 @@ export const getAccountNfts = (input: {
     Effect.map((result) => ({
       type: 'commandResult' as const,
       command: 'account nfts' as const,
-      result: toJsonSafe(result),
+      result: toJsonValue(result),
     })),
   );
 
@@ -218,7 +184,7 @@ export const getAccountDetails = (input: {
     Effect.map((result) => ({
       type: 'commandResult' as const,
       command: 'account show' as const,
-      result: toJsonSafe(result),
+      result: toJsonValue(result),
     })),
   );
 
@@ -234,7 +200,7 @@ export const getAccountTransactionHistory = (input: {
     Effect.map((result) => ({
       type: 'commandResult' as const,
       command: 'tx history' as const,
-      result: toJsonSafe(result),
+      result: toJsonValue(result),
     })),
   );
 
@@ -249,31 +215,35 @@ export const deriveVirtualAccountAddress = (input: {
   unknown
 > =>
   Effect.gen(function* () {
-    if (!isEd25519PublicKeyHex(input.publicKeyHex)) {
-      return yield* Effect.fail(
-        new InvalidPublicKeyError({
-          code: 'INVALID_PUBLIC_KEY',
-          publicKeyHex: input.publicKeyHex,
-        }),
-      );
-    }
+    const publicKey = yield* Schema.decodeUnknown(PublicKeySchema)({
+      curve: 'Ed25519',
+      hex: input.publicKeyHex,
+    }).pipe(
+      Effect.mapError(
+        () =>
+          new InvalidPublicKeyError({
+            code: 'INVALID_PUBLIC_KEY',
+            publicKeyHex: input.publicKeyHex,
+          }),
+      ),
+    );
 
-    return yield* Effect.tryPromise(async () =>
+    const accountAddress = yield* Effect.tryPromise(async () =>
       RadixEngineToolkit.Derive.virtualAccountAddressFromPublicKey(
-        new PublicKey.Ed25519(input.publicKeyHex),
+        new PublicKey.Ed25519(publicKey.hex),
         networkId(input.network),
       ),
     );
-  }).pipe(
-    Effect.map((accountAddress) => ({
+
+    return {
       type: 'commandResult' as const,
       command: 'account derive' as const,
       network: input.network,
       derivation: 'virtualAccount' as const,
-      publicKey: { curve: 'Ed25519' as const, hex: input.publicKeyHex },
+      publicKey,
       accountAddress,
-    })),
-  );
+    };
+  });
 
 export class AccountReadService extends Effect.Service<AccountReadService>()(
   'AccountReadService',

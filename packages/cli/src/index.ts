@@ -29,6 +29,7 @@ import {
   renderTxStatus,
 } from './cli';
 import { resolveRdxConfig } from './config';
+import { renderJson } from './json';
 import { notarizeTransactionArtifact } from './notarize';
 import { readJsonFile } from './platformIo';
 import { prepareTransactionArtifacts } from './prepare';
@@ -55,6 +56,7 @@ export * from './accountReads';
 export * from './artifacts';
 export * from './addSignatures';
 export * from './config';
+export * from './json';
 export * from './llm';
 export * from './notarize';
 export * from './prepare';
@@ -77,7 +79,7 @@ export type RunRdxInput = {
   cwd: string;
 };
 
-const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
+const json = (value: unknown) => `${renderJson(value)}\n`;
 
 const structuredError = (input: {
   code: string;
