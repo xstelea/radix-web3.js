@@ -24,6 +24,7 @@ import {
   gatewayNotarizePreview,
   notarizeTransactionArtifact,
 } from './notarize';
+import { llmGuide } from './llm';
 import {
   type PrepareTransactionResult,
   gatewayPreparePreview,
@@ -117,6 +118,8 @@ export const renderTxList = (
 
 export const renderTemplate = (kind: TemplateKind) =>
   renderJson(workflowTemplate(kind));
+
+export const renderLlmGuide = () => llmGuide;
 
 export const renderAddSignatures = (
   format: OutputFormat,
@@ -248,6 +251,10 @@ const configShowCommand = Command.make('show', {}, () =>
     yield* Console.log(renderConfigShow(format, config));
   }),
 ).pipe(Command.withDescription('Print resolved configuration'));
+
+const llmCommand = Command.make('llm', {}, () =>
+  Console.log(renderLlmGuide()),
+).pipe(Command.withDescription('Print compact Markdown instructions for agents'));
 
 const accountCommand = Command.make('account').pipe(
   Command.withDescription('Read account state'),
@@ -566,6 +573,7 @@ export const command = rdxCommand.pipe(
       Command.withSubcommands([accountBalanceCommand, accountShowCommand]),
     ),
     configCommand.pipe(Command.withSubcommands([configShowCommand])),
+    llmCommand,
     templateCommand.pipe(Command.withSubcommands([templatePrintCommand])),
     txCommand.pipe(
       Command.withSubcommands([

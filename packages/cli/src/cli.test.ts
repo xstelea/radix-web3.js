@@ -34,6 +34,20 @@ describe('rdx command interface', () => {
     expect(() => JSON.parse(result.stdout)).toThrow();
   });
 
+  it('prints compact Markdown instructions for agents', async () => {
+    const result = await runRdx({ argv: ['llm'], cwd: '/' });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toContain('# rdx Agent Guide');
+    expect(result.stdout).toContain('rdx tx prepare --manifest');
+    expect(result.stdout).toContain('v1 CLI workflow files support Ed25519 only');
+    expect(result.stdout).toContain(
+      '`rdx` never stores, accepts, or derives private keys',
+    );
+    expect(() => JSON.parse(result.stdout)).toThrow();
+  });
+
   it('prints structured JSON errors by default', async () => {
     const result = await runRdx({ argv: ['unknown'], cwd: '/' });
 

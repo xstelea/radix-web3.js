@@ -404,6 +404,13 @@ export const notarizeTransactionArtifact = (input: {
     });
     yield* writeJson(notarySigningRequestPath, request);
     yield* writeJson(notarySignatureTemplatePath, template);
+    yield* writeJson(preparedPath, {
+      ...prepared,
+      signingRequests: [...new Set([...prepared.signingRequests, requestPath])],
+      signatureTemplates: [
+        ...new Set([...prepared.signatureTemplates, templatePath]),
+      ],
+    });
 
     return {
       transactionId: prepared.transactionId,

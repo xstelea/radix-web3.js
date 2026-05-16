@@ -15,6 +15,7 @@ import {
   renderAddSignatures,
   renderCommandResult,
   renderConfigShow,
+  renderLlmGuide,
   renderNotarize,
   renderPrepare,
   renderSubmit,
@@ -47,6 +48,7 @@ export * from './accountReads';
 export * from './artifacts';
 export * from './addSignatures';
 export * from './config';
+export * from './llm';
 export * from './notarize';
 export * from './prepare';
 export * from './schemas';
@@ -137,6 +139,14 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
       return {
         exitCode: 0,
         stdout: `${renderConfigShow(format, config)}\n`,
+        stderr: '',
+      };
+    }
+
+    if (command === 'llm') {
+      return {
+        exitCode: 0,
+        stdout: `${renderLlmGuide()}\n`,
         stderr: '',
       };
     }

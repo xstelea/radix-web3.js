@@ -88,6 +88,10 @@ _Avoid_: Portfolio indexer, full ledger explorer
 Mainnet is the network used by rdx when no network is specified.
 _Avoid_: Stokenet by default, implicit testnet
 
+**Network-bound Transaction Workflow**:
+A transaction lifecycle whose manifests, previews, transaction ID, artifacts, signatures, notarization, and submission all belong to one selected Radix network.
+_Avoid_: Switching networks after preparation, reusing Stokenet artifacts on Mainnet
+
 **Submit Command**:
 The rdx command that broadcasts a signed transaction to the selected Radix network.
 _Avoid_: Extra mainnet guard, separate risk-acceptance flag
@@ -127,6 +131,14 @@ _Avoid_: Signer public key flags, notary public key flags
 **Template Command**:
 An rdx command that writes skeleton JSON files for file-driven workflows.
 _Avoid_: Documentation-only schema discovery, handwritten boilerplate
+
+**LLM Instructions Command**:
+An rdx command that prints compact Markdown instructions and command examples for coding agents using the CLI.
+_Avoid_: JSON workflow result, human-only manual, external-only documentation
+
+**Embedded Agent Guide**:
+A static Markdown guide bundled into rdx that explains transaction lifecycle, key custody, out-of-band signing, multi-party signing, and command usage.
+_Avoid_: Generated help mirror, external-only README, dynamic command schema dump
 
 **CLI File Schema**:
 The JSON shape used by rdx workflow files, using camelCase field names.
@@ -271,6 +283,10 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 - v1 preview results are not stored in transaction artifacts.
 - An **Account Read Command** requires an account address and network, but does not require signing.
 - The **Default Network** for rdx is Mainnet; test networks must be requested explicitly.
+- A **Network-bound Transaction Workflow** starts at preparation; agents should verify the intended network before `tx prepare`.
+- A **Network-bound Transaction Workflow** must not switch networks between preparation, signing, notarization, and submission.
+- The **Embedded Agent Guide** tells agents to use `rdx config show` for resolved configuration instead of embedding config file schemas.
+- The **Embedded Agent Guide** tells agents to use **Template Command** output for workflow file shapes instead of duplicating schemas.
 - Invoking the **Submit Command** is the explicit acknowledgement to broadcast on the selected network.
 - A **Prepared Transaction File** is the durable base artifact for **Two-step Signing** and submission.
 - A **Prepared Transaction File** is the canonical source of truth for prepared transaction metadata and signing request paths.
@@ -305,6 +321,10 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 - Transaction preparation reads signing roles from a **Signers File** instead of signer or notary public key flags.
 - A **Signers File** owns notary public key and signatory-notary settings; a **Tx Header File** owns non-role header overrides.
 - A **Template Command** helps agents create valid file skeletons for rdx workflows.
+- The **LLM Instructions Command** is embedded in rdx as `rdx llm` and prints Markdown by default.
+- The **LLM Instructions Command** prints the static **Embedded Agent Guide**.
+- The **Embedded Agent Guide** includes lifecycle and custody context, not only command syntax.
+- The **Embedded Agent Guide** states that v1 supports Ed25519 only and rejects Secp256k1 or other curves in CLI workflow files.
 - Signature templates can be generated from prepared transaction analysis to prefill transaction ID, signing scope, account, and hash.
 - Signature template generation validates that root/subintent accounts are required by the selected signing scope, and rejects accounts for notary scope.
 - A **CLI File Schema** uses camelCase fields, while command flags use kebab-case.
@@ -423,6 +443,9 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 > **Dev:** "Can `rdx` default to Stokenet to be safer?"
 > **Domain expert:** "No — the **Default Network** is Mainnet, and test networks are explicit."
 
+> **Dev:** "Can an agent prepare on Stokenet and submit the artifact on Mainnet?"
+> **Domain expert:** "No — each transaction is a **Network-bound Transaction Workflow**; prepare again for the intended network."
+
 > **Dev:** "Should mainnet submit require an additional `--yes` or `--accept-risk` flag?"
 > **Domain expert:** "No — the **Submit Command** itself is enough acknowledgement."
 
@@ -467,6 +490,12 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 
 > **Dev:** "Should agents handwrite every JSON workflow file from docs?"
 > **Domain expert:** "No — use a **Template Command** to generate skeleton files."
+
+> **Dev:** "Should `rdx llm` follow the default JSON output rule?"
+> **Domain expert:** "No — the **LLM Instructions Command** is embedded documentation and prints compact Markdown instructions by default."
+
+> **Dev:** "Should `rdx llm` be generated from command metadata?"
+> **Domain expert:** "No — v1 uses a static **Embedded Agent Guide** so domain-specific workflow rules are explicit."
 
 > **Dev:** "Should rdx JSON files use snake_case because Radix payloads sometimes do?"
 > **Domain expert:** "No — **CLI File Schema** fields use camelCase to match the TypeScript package."
@@ -559,3 +588,4 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 
 - "Wallet" can mean a consumer wallet or the local-key CLI signer in this project — resolved: use **Agent-first CLI Wallet** for the CLI product.
 - Message signing was considered for v1 — resolved: v1 focuses on transaction workflows and account read commands, not arbitrary message signing.
+- "LLM" means coding-agent-oriented embedded CLI instructions in this project — resolved: use **LLM Instructions Command** for the `rdx llm` command.

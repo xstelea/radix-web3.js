@@ -82,6 +82,18 @@ describe('tx notarize workflow', () => {
           scope: { kind: 'notary' },
           publicKey: { curve: 'Ed25519', hex: notaryPublicKeyHex },
         });
+
+        const prepared = JSON.parse(
+          yield* Effect.promise(() =>
+            readFile(join(artifactPath, 'prepared.json'), 'utf8'),
+          ),
+        );
+        expect(prepared.signingRequests).toContain(
+          'signing-requests/notary.json',
+        );
+        expect(prepared.signatureTemplates).toContain(
+          'signature-templates/notary.json',
+        );
       }),
   );
 

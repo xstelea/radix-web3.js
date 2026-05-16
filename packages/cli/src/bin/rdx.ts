@@ -66,7 +66,54 @@ const validationMessage = (error: unknown) => {
     return error.error.value.value;
   }
 
+  if (typeof error === 'object' && error !== null && '_tag' in error) {
+    const tag = String(error._tag);
+    const code =
+      'code' in error && typeof error.code === 'string'
+        ? error.code
+        : undefined;
+    const path =
+      'path' in error && typeof error.path === 'string'
+        ? ` at ${error.path}`
+        : '';
+    const subintentId =
+      'subintentId' in error && typeof error.subintentId === 'string'
+        ? ` for ${error.subintentId}`
+        : '';
+    const reason =
+      'reason' in error
+        ? error.reason instanceof Error
+          ? `: ${error.reason.message}`
+          : `: ${String(error.reason)}`
+        : '';
+
+    return [tag, code].filter(Boolean).join(' ') + subintentId + path + reason;
+  }
+
   return error instanceof Error ? error.message : String(error);
+};
+
+const validationCode = (error: unknown, message: string) => {
+  if (message.startsWith('Invalid subcommand')) {
+    return 'UNKNOWN_COMMAND';
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string'
+  ) {
+    return error.code;
+  }
+
+  if (typeof error === 'object' && error !== null && '_tag' in error) {
+    return String(error._tag)
+      .replace(/([a-z])([A-Z])/g, '$1_$2')
+      .toUpperCase();
+  }
+
+  return 'CLI_VALIDATION_ERROR';
 };
 
 const cliEffect = Effect.suspend(() => cli(process.argv)).pipe(
@@ -76,9 +123,7 @@ const cliEffect = Effect.suspend(() => cli(process.argv)).pipe(
   Effect.catchAll((error) =>
     Effect.sync(() => {
       const message = validationMessage(error);
-      const code = message.startsWith('Invalid subcommand')
-        ? 'UNKNOWN_COMMAND'
-        : 'CLI_VALIDATION_ERROR';
+      const code = validationCode(error, message);
       console.error(
         JSON.stringify({
           type: 'error',
