@@ -41,7 +41,9 @@ describe('rdx command interface', () => {
     expect(result.stderr).toBe('');
     expect(result.stdout).toContain('# rdx Agent Guide');
     expect(result.stdout).toContain('rdx tx prepare --manifest');
-    expect(result.stdout).toContain('v1 CLI workflow files support Ed25519 only');
+    expect(result.stdout).toContain(
+      'v1 CLI workflow files support Ed25519 only',
+    );
     expect(result.stdout).toContain(
       '`rdx` never stores, accepts, or derives private keys',
     );
@@ -144,6 +146,20 @@ describe('rdx command interface', () => {
     expect(result.exitCode).toBe(0);
     expect(output.network).toBe('stokenet');
     expect(output.accountAddress).toMatch(/^account_tdx_2_1/);
+  });
+
+  it('does not keep the unreleased account balance command alias', async () => {
+    const result = await runRdx({
+      argv: ['account', 'balance', 'account_rdx1...'],
+      cwd: '/',
+    });
+
+    expect(result.exitCode).toBe(64);
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      type: 'error',
+      code: 'UNKNOWN_COMMAND',
+    });
+    expect(result.stdout).toBe('');
   });
 
   it('prints transaction artifact paths', async () => {

@@ -23,6 +23,7 @@
     "@effect/printer": "catalog:",
     "@effect/printer-ansi": "catalog:",
     "@noble/curves": "catalog:",
+    "@radix-effects/gateway": "workspace:*",
     "@radix-effects/shared": "workspace:*",
     "@steleaio/radix-engine-toolkit": "catalog:",
     "effect": "catalog:"

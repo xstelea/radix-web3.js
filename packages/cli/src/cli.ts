@@ -2,11 +2,13 @@ import { Args, Command, Options } from '@effect/cli';
 import { Console, Effect, Option, Schema } from 'effect';
 import {
   deriveVirtualAccountAddress,
-  gatewayAccountBalance,
   gatewayAccountDetails,
+  gatewayAccountFungibles,
   gatewayAccountHistory,
-  getAccountBalance,
+  gatewayAccountNfts,
   getAccountDetails,
+  getAccountFungibles,
+  getAccountNfts,
   getAccountTransactionHistory,
 } from './accountReads';
 import type { VirtualAccountDerivation } from './accountReads';
@@ -301,21 +303,37 @@ const accountDeriveCommand = Command.make(
     }),
 ).pipe(Command.withDescription('Derive a virtual account address'));
 
-const accountBalanceCommand = Command.make(
-  'balance',
+const accountFungiblesCommand = Command.make(
+  'fungibles',
   { accountAddress: accountAddressArg },
   ({ accountAddress }) =>
     Effect.gen(function* () {
       const { format } = yield* rdxCommand;
       const config = yield* resolveRdxConfig({ cwd: process.cwd() });
-      const result = yield* getAccountBalance({
+      const result = yield* getAccountFungibles({
         accountAddress,
-        readBalance: (address) =>
-          gatewayAccountBalance({ config, accountAddress: address }),
+        readFungibles: (address) =>
+          gatewayAccountFungibles({ config, accountAddress: address }),
       });
       yield* Console.log(renderCommandResult(format, result));
     }),
-).pipe(Command.withDescription('Read account balances'));
+).pipe(Command.withDescription('Read account fungible tokens'));
+
+const accountNftsCommand = Command.make(
+  'nfts',
+  { accountAddress: accountAddressArg },
+  ({ accountAddress }) =>
+    Effect.gen(function* () {
+      const { format } = yield* rdxCommand;
+      const config = yield* resolveRdxConfig({ cwd: process.cwd() });
+      const result = yield* getAccountNfts({
+        accountAddress,
+        readNfts: (address) =>
+          gatewayAccountNfts({ config, accountAddress: address }),
+      });
+      yield* Console.log(renderCommandResult(format, result));
+    }),
+).pipe(Command.withDescription('Read account NFTs'));
 
 const accountShowCommand = Command.make(
   'show',
@@ -608,8 +626,9 @@ export const command = rdxCommand.pipe(
   Command.withSubcommands([
     accountCommand.pipe(
       Command.withSubcommands([
-        accountBalanceCommand,
         accountDeriveCommand,
+        accountFungiblesCommand,
+        accountNftsCommand,
         accountShowCommand,
       ]),
     ),

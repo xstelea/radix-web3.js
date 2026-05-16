@@ -2,11 +2,13 @@ import { AccountAddress, TransactionId } from '@radix-effects/shared';
 import { Data, Effect, Schema } from 'effect';
 import {
   deriveVirtualAccountAddress,
-  gatewayAccountBalance,
   gatewayAccountDetails,
+  gatewayAccountFungibles,
   gatewayAccountHistory,
-  getAccountBalance,
+  gatewayAccountNfts,
   getAccountDetails,
+  getAccountFungibles,
+  getAccountNfts,
   getAccountTransactionHistory,
 } from './accountReads';
 import { addSignaturesToArtifact } from './addSignatures';
@@ -137,7 +139,8 @@ type ParsedRdxCommand = Data.TaggedEnum<{
   ConfigShow: {};
   // biome-ignore lint/complexity/noBannedTypes: Effect's taggedEnum uses `{}` for nullary variants.
   Llm: {};
-  AccountBalance: { accountAddress: AccountAddress };
+  AccountFungibles: { accountAddress: AccountAddress };
+  AccountNfts: { accountAddress: AccountAddress };
   AccountDerive: { publicKeyHex?: string };
   AccountShow: { accountAddress: AccountAddress };
   TxPath: { transactionId: TransactionId };
@@ -190,8 +193,14 @@ const parseRdxCommand = (
       return RdxCommand.Llm();
     }
 
-    if (argv[0] === 'account' && argv[1] === 'balance' && argv[2]) {
-      return RdxCommand.AccountBalance({
+    if (argv[0] === 'account' && argv[1] === 'fungibles' && argv[2]) {
+      return RdxCommand.AccountFungibles({
+        accountAddress: AccountAddress.make(argv[2]),
+      });
+    }
+
+    if (argv[0] === 'account' && argv[1] === 'nfts' && argv[2]) {
+      return RdxCommand.AccountNfts({
         accountAddress: AccountAddress.make(argv[2]),
       });
     }
@@ -305,13 +314,27 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
           stdout: `${renderLlmGuide()}\n`,
           stderr: '',
         }),
-      AccountBalance: ({ accountAddress }) =>
+      AccountFungibles: ({ accountAddress }) =>
         Effect.gen(function* () {
           const config = yield* resolveRdxConfig({ cwd: input.cwd });
-          const result = yield* getAccountBalance({
+          const result = yield* getAccountFungibles({
             accountAddress,
-            readBalance: (accountAddress) =>
-              gatewayAccountBalance({ config, accountAddress }),
+            readFungibles: (accountAddress) =>
+              gatewayAccountFungibles({ config, accountAddress }),
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderCommandResult(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      AccountNfts: ({ accountAddress }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* getAccountNfts({
+            accountAddress,
+            readNfts: (accountAddress) =>
+              gatewayAccountNfts({ config, accountAddress }),
           });
           return {
             exitCode: 0,

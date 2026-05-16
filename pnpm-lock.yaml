@@ -190,6 +190,9 @@ importers:
       '@noble/curves':
         specifier: 'catalog:'
         version: 1.8.1
+      '@radix-effects/gateway':
+        specifier: workspace:*
+        version: link:../gateway
       '@radix-effects/shared':
         specifier: workspace:*
         version: link:../shared

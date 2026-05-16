@@ -201,6 +201,30 @@ export const SubmitResultSchema = Schema.Struct({
   ),
 });
 
+export const AccountFungiblesResultSchema = Schema.Struct({
+  type: Schema.Literal('commandResult'),
+  command: Schema.Literal('account fungibles'),
+  result: Schema.Unknown,
+});
+
+export const AccountNftsResultSchema = Schema.Struct({
+  type: Schema.Literal('commandResult'),
+  command: Schema.Literal('account nfts'),
+  result: Schema.Unknown,
+});
+
+export const AccountShowResultSchema = Schema.Struct({
+  type: Schema.Literal('commandResult'),
+  command: Schema.Literal('account show'),
+  result: Schema.Unknown,
+});
+
+export const TransactionHistoryResultSchema = Schema.Struct({
+  type: Schema.Literal('commandResult'),
+  command: Schema.Literal('tx history'),
+  result: Schema.Unknown,
+});
+
 export type SigningScope = typeof SigningScopeSchema.Type;
 export type SigningRequest = typeof SigningRequestSchema.Type;
 export type SignatureTemplate = typeof SignatureTemplateSchema.Type;
@@ -214,3 +238,8 @@ export type PreparedTransaction = typeof PreparedTransactionSchema.Type;
 export type NetworkTransactionStatus =
   typeof NetworkTransactionStatusSchema.Type;
 export type SubmitResult = typeof SubmitResultSchema.Type;
+export type AccountFungiblesResult = typeof AccountFungiblesResultSchema.Type;
+export type AccountNftsResult = typeof AccountNftsResultSchema.Type;
+export type AccountShowResult = typeof AccountShowResultSchema.Type;
+export type TransactionHistoryResult =
+  typeof TransactionHistoryResultSchema.Type;

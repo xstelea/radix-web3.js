@@ -84,6 +84,18 @@ _Avoid_: Public-key-gated prepare, skipped early preview
 A read-only rdx command that queries Gateway for account-scoped state such as balance or transaction history.
 _Avoid_: Portfolio indexer, full ledger explorer
 
+**Fungible Token Read Command**:
+An Account Read Command that returns Gateway-shaped fungible resource balances for one account.
+_Avoid_: Combined balance command, portfolio command, token command
+
+**NFT Read Command**:
+An Account Read Command that returns Gateway-shaped non-fungible resources for one account.
+_Avoid_: Combined balance command, non-fungible balance command, NFT portfolio indexer
+
+**Account Read Result**:
+A Gateway-shaped command result returned by an Account Read Command through rdx, with only JSON-safety normalization such as BigNumber-to-string conversion.
+_Avoid_: Hand-normalized CLI DTO, portfolio model
+
 **Virtual Account Address Derivation**:
 A read-only rdx operation that derives the Radix virtual account address controlled by an Ed25519 public key on a selected network.
 _Avoid_: Generic public key hash command, account lookup, owner key verification
@@ -286,6 +298,12 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 - Failed **Prepare Preview** blocks transaction artifact creation.
 - v1 preview results are not stored in transaction artifacts.
 - An **Account Read Command** requires an account address and network, but does not require signing.
+- An **Account Read Command** exposes Gateway-shaped data as an **Account Read Result** instead of hand-normalizing Gateway data into separate CLI DTOs.
+- Account read schemas validate the CLI-owned command result envelope and keep Gateway-owned payload internals permissive.
+- Fungible and non-fungible account balances are exposed through separate **Fungible Token Read Command** and **NFT Read Command** flows rather than one combined balance command.
+- Because radix-cli has not been released, `rdx account balance` is replaced rather than kept as a compatibility alias.
+- `rdx account show` exposes the Gateway state entity details response shape under the command result rather than a CLI-specific details wrapper.
+- `rdx tx history` exposes the Gateway stream transactions response shape under the command result rather than a CLI-specific transaction list.
 - **Virtual Account Address Derivation** does not query Gateway and does not prove the account currently exists on-ledger.
 - **Virtual Account Address Derivation** is exposed as `rdx account derive --public-key <ed25519-public-key-hex>`.
 - **Virtual Account Address Derivation** returns `accountAddress` plus `derivation: "virtualAccount"` in the command result.

@@ -1,38 +1,17 @@
+import {
+  GatewayApiClient,
+  GetFungibleBalance,
+  GetNonFungibleBalanceService,
+} from '@radix-effects/gateway';
 import { PublicKey, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect } from 'effect';
+import { ConfigProvider, Data, Effect, Layer } from 'effect';
 import type { Network, ResolvedRdxConfig } from './config';
-
-export type AccountFungibleBalance = {
-  resourceAddress: string;
-  amount: string;
-  symbol?: string;
-  name?: string;
-};
-
-export type AccountNonFungibleBalance = {
-  resourceAddress: string;
-  count: number;
-};
-
-export type AccountBalance = {
-  accountAddress: string;
-  fungibleResources: AccountFungibleBalance[];
-  nonFungibleResources: AccountNonFungibleBalance[];
-};
-
-export type AccountDetails = {
-  accountAddress: string;
-  details: unknown;
-};
-
-export type AccountTransactionHistory = {
-  accountAddress: string;
-  transactions: {
-    transactionId: string;
-    status: string;
-    confirmedAt: string | null;
-  }[];
-};
+import type {
+  AccountFungiblesResult,
+  AccountNftsResult,
+  AccountShowResult,
+  TransactionHistoryResult,
+} from './schemas';
 
 export type VirtualAccountDerivation = {
   network: Network;
@@ -54,205 +33,192 @@ export class InvalidPublicKeyError extends Data.TaggedError(
 }> {}
 
 const networkId = (network: Network) => (network === 'stokenet' ? 2 : 1);
-const isEd25519PublicKeyHex = (value: string) => /^[0-9a-fA-F]{64}$/.test(value);
+const isEd25519PublicKeyHex = (value: string) =>
+  /^[0-9a-fA-F]{64}$/.test(value);
 
-const gatewayBaseUrl = (network: ResolvedRdxConfig['network']) =>
-  network === 'stokenet'
-    ? 'https://stokenet.radixdlt.com'
-    : 'https://mainnet.radixdlt.com';
+const gatewayConfigLayer = (
+  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>,
+) =>
+  Layer.setConfigProvider(
+    ConfigProvider.fromJson({
+      NETWORK_ID: networkId(config.network),
+      ...(config.gatewayBaseUrl ? { GATEWAY_URL: config.gatewayBaseUrl } : {}),
+    }),
+  );
 
-export const gatewayAccountBalance = (input: {
+const gatewayApiClientLayer = (
+  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>,
+) => GatewayApiClient.Default.pipe(Layer.provide(gatewayConfigLayer(config)));
+
+const isBigNumberLike = (
+  value: unknown,
+): value is { toString: () => string; isBigNumber?: boolean } =>
+  typeof value === 'object' &&
+  value !== null &&
+  'isBigNumber' in value &&
+  typeof (value as { toString?: unknown }).toString === 'function';
+
+const toJsonSafe = (value: unknown): unknown => {
+  if (isBigNumberLike(value)) {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(toJsonSafe);
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    if (typeof (value as { toJSON?: unknown }).toJSON === 'function') {
+      return (value as { toJSON: () => unknown }).toJSON();
+    }
+
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, toJsonSafe(entry)]),
+    );
+  }
+
+  return value;
+};
+
+export const getAccountFungibles = (input: {
+  accountAddress: string;
+  readFungibles: (accountAddress: string) => Effect.Effect<unknown, unknown>;
+}): Effect.Effect<AccountFungiblesResult, unknown> =>
+  input.readFungibles(input.accountAddress).pipe(
+    Effect.map((result) => ({
+      type: 'commandResult' as const,
+      command: 'account fungibles' as const,
+      result: toJsonSafe(result),
+    })),
+  );
+
+export const getAccountNfts = (input: {
+  accountAddress: string;
+  readNfts: (accountAddress: string) => Effect.Effect<unknown, unknown>;
+}): Effect.Effect<AccountNftsResult, unknown> =>
+  input.readNfts(input.accountAddress).pipe(
+    Effect.map((result) => ({
+      type: 'commandResult' as const,
+      command: 'account nfts' as const,
+      result: toJsonSafe(result),
+    })),
+  );
+
+export const gatewayAccountFungibles = (input: {
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   accountAddress: string;
-}): Effect.Effect<AccountBalance, AccountReadError> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/state/entity/details`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            addresses: [input.accountAddress],
-            aggregation_level: 'Global',
-            opt_ins: {
-              explicit_metadata: ['name', 'symbol'],
-              non_fungible_include_nfids: true,
-            },
-          }),
-        },
-      );
+}): Effect.Effect<unknown, AccountReadError> => {
+  const gatewayLayer = gatewayApiClientLayer(input.config);
+  const accountFungiblesLayer = Layer.merge(
+    gatewayLayer,
+    GetFungibleBalance.Default.pipe(Layer.provide(gatewayLayer)),
+  );
 
-      if (!response.ok) {
-        throw new Error(`Gateway returned ${response.status}`);
-      }
+  return Effect.gen(function* () {
+    const gatewayApiClient = yield* GatewayApiClient;
+    const status = yield* gatewayApiClient.status.getCurrent();
+    const getFungibleBalance = yield* GetFungibleBalance;
+    return yield* getFungibleBalance({
+      addresses: [input.accountAddress],
+      at_ledger_state: {
+        state_version: status.ledger_state.state_version,
+      },
+      options: { explicit_metadata: ['name', 'symbol'] },
+    });
+  }).pipe(
+    Effect.provide(accountFungiblesLayer),
+    Effect.mapError(
+      (reason) =>
+        new AccountReadError({ accountAddress: input.accountAddress, reason }),
+    ),
+  );
+};
 
-      const body = (await response.json()) as {
-        items?: Array<{
-          fungible_resources?: {
-            items?: Array<{
-              resource_address: string;
-              amount?: string;
-              explicit_metadata?: {
-                items?: Array<{
-                  key: string;
-                  value?: { typed?: { type?: string; value?: string } };
-                }>;
-              };
-            }>;
-          };
-          non_fungible_resources?: {
-            items?: Array<{
-              resource_address: string;
-              amount?: string | number;
-            }>;
-          };
-        }>;
-      };
-      const item = body.items?.[0];
-      const metadataString = (
-        metadata:
-          | {
-              items?: Array<{
-                key: string;
-                value?: { typed?: { type?: string; value?: string } };
-              }>;
-            }
-          | undefined,
-        key: string,
-      ) =>
-        metadata?.items?.find((entry) => entry.key === key)?.value?.typed
-          ?.value;
+export const gatewayAccountNfts = (input: {
+  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
+  accountAddress: string;
+}): Effect.Effect<unknown, AccountReadError> => {
+  const gatewayLayer = gatewayApiClientLayer(input.config);
+  const accountNftsLayer = Layer.merge(
+    gatewayLayer,
+    GetNonFungibleBalanceService.Default.pipe(Layer.provide(gatewayLayer)),
+  );
 
-      return {
-        accountAddress: input.accountAddress,
-        fungibleResources:
-          item?.fungible_resources?.items?.map((resource) => ({
-            resourceAddress: resource.resource_address,
-            amount: resource.amount ?? '0',
-            symbol: metadataString(resource.explicit_metadata, 'symbol'),
-            name: metadataString(resource.explicit_metadata, 'name'),
-          })) ?? [],
-        nonFungibleResources:
-          item?.non_fungible_resources?.items?.map((resource) => ({
-            resourceAddress: resource.resource_address,
-            count: Number(resource.amount ?? 0),
-          })) ?? [],
-      };
-    },
-    catch: (reason) =>
-      new AccountReadError({ accountAddress: input.accountAddress, reason }),
-  });
+  return Effect.gen(function* () {
+    const gatewayApiClient = yield* GatewayApiClient;
+    const status = yield* gatewayApiClient.status.getCurrent();
+    const getNonFungibleBalance = yield* GetNonFungibleBalanceService;
+    return yield* getNonFungibleBalance({
+      addresses: [input.accountAddress],
+      at_ledger_state: {
+        state_version: status.ledger_state.state_version,
+      },
+    });
+  }).pipe(
+    Effect.provide(accountNftsLayer),
+    Effect.mapError(
+      (reason) =>
+        new AccountReadError({ accountAddress: input.accountAddress, reason }),
+    ),
+  );
+};
 
 export const gatewayAccountDetails = (input: {
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   accountAddress: string;
-}): Effect.Effect<AccountDetails, AccountReadError> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/state/entity/details`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            addresses: [input.accountAddress],
-            aggregation_level: 'Vault',
-            opt_ins: {
-              explicit_metadata: ['name', 'description'],
-              ancestor_identities: true,
-              component_royalty_config: true,
-              package_royalty_vault_balance: true,
-            },
-          }),
+}): Effect.Effect<unknown, AccountReadError> =>
+  Effect.gen(function* () {
+    const gatewayApiClient = yield* GatewayApiClient;
+    return yield* gatewayApiClient.state.innerClient.stateEntityDetails({
+      stateEntityDetailsRequest: {
+        addresses: [input.accountAddress],
+        aggregation_level: 'Vault',
+        opt_ins: {
+          explicit_metadata: ['name', 'description'],
+          ancestor_identities: true,
+          component_royalty_config: true,
+          package_royalty_vault_balance: true,
         },
-      );
-
-      if (!response.ok) {
-        throw new Error(`Gateway returned ${response.status}`);
-      }
-
-      const body = (await response.json()) as { items?: unknown[] };
-
-      return {
-        accountAddress: input.accountAddress,
-        details: body.items?.[0] ?? null,
-      };
-    },
-    catch: (reason) =>
-      new AccountReadError({ accountAddress: input.accountAddress, reason }),
-  });
+      },
+    });
+  }).pipe(
+    Effect.provide(gatewayApiClientLayer(input.config)),
+    Effect.mapError(
+      (reason) =>
+        new AccountReadError({ accountAddress: input.accountAddress, reason }),
+    ),
+  );
 
 export const gatewayAccountHistory = (input: {
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   accountAddress: string;
   limit: number;
-}): Effect.Effect<AccountTransactionHistory, AccountReadError> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/stream/transactions`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            limit_per_page: input.limit,
-            affected_global_entities_filter: [input.accountAddress],
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`Gateway returned ${response.status}`);
-      }
-
-      const body = (await response.json()) as {
-        items?: Array<{
-          intent_hash?: string;
-          transaction_status?: string;
-          confirmed_at?: string;
-        }>;
-      };
-
-      return {
-        accountAddress: input.accountAddress,
-        transactions:
-          body.items?.map((transaction) => ({
-            transactionId: transaction.intent_hash ?? '',
-            status: transaction.transaction_status ?? 'Unknown',
-            confirmedAt: transaction.confirmed_at ?? null,
-          })) ?? [],
-      };
-    },
-    catch: (reason) =>
-      new AccountReadError({ accountAddress: input.accountAddress, reason }),
-  });
-
-export const getAccountBalance = (input: {
-  accountAddress: string;
-  readBalance: (
-    accountAddress: string,
-  ) => Effect.Effect<AccountBalance, unknown>;
-}) =>
-  input.readBalance(input.accountAddress).pipe(
-    Effect.map((balance) => ({
-      type: 'commandResult' as const,
-      command: 'account balance' as const,
-      ...balance,
-    })),
+}): Effect.Effect<unknown, AccountReadError> =>
+  Effect.gen(function* () {
+    const gatewayApiClient = yield* GatewayApiClient;
+    return yield* gatewayApiClient.stream.innerClient.streamTransactions({
+      streamTransactionsRequest: {
+        limit_per_page: input.limit,
+        affected_global_entities_filter: [input.accountAddress],
+      },
+    });
+  }).pipe(
+    Effect.provide(gatewayApiClientLayer(input.config)),
+    Effect.mapError(
+      (reason) =>
+        new AccountReadError({ accountAddress: input.accountAddress, reason }),
+    ),
   );
 
 export const getAccountDetails = (input: {
   accountAddress: string;
-  readDetails: (
-    accountAddress: string,
-  ) => Effect.Effect<AccountDetails, unknown>;
-}) =>
+  readDetails: (accountAddress: string) => Effect.Effect<unknown, unknown>;
+}): Effect.Effect<AccountShowResult, unknown> =>
   input.readDetails(input.accountAddress).pipe(
-    Effect.map((details) => ({
+    Effect.map((result) => ({
       type: 'commandResult' as const,
       command: 'account show' as const,
-      ...details,
+      result: toJsonSafe(result),
     })),
   );
 
@@ -262,13 +228,13 @@ export const getAccountTransactionHistory = (input: {
   readHistory: (
     accountAddress: string,
     limit: number,
-  ) => Effect.Effect<AccountTransactionHistory, unknown>;
-}) =>
+  ) => Effect.Effect<unknown, unknown>;
+}): Effect.Effect<TransactionHistoryResult, unknown> =>
   input.readHistory(input.accountAddress, input.limit).pipe(
-    Effect.map((history) => ({
+    Effect.map((result) => ({
       type: 'commandResult' as const,
       command: 'tx history' as const,
-      ...history,
+      result: toJsonSafe(result),
     })),
   );
 
@@ -313,13 +279,15 @@ export class AccountReadService extends Effect.Service<AccountReadService>()(
   'AccountReadService',
   {
     sync: () => ({
-      getAccountBalance,
       getAccountDetails,
+      getAccountFungibles,
+      getAccountNfts,
       getAccountTransactionHistory,
       deriveVirtualAccountAddress,
-      gatewayAccountBalance,
       gatewayAccountDetails,
+      gatewayAccountFungibles,
       gatewayAccountHistory,
+      gatewayAccountNfts,
     }),
   },
 ) {}
