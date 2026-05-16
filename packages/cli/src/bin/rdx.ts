@@ -4,7 +4,7 @@ import {
   Terminal,
   type Terminal as TerminalService,
 } from '@effect/platform/Terminal';
-import { Effect } from 'effect';
+import { Effect, Option, Schema } from 'effect';
 import { cli } from '../cli';
 
 const shouldRenderCliTerminal = process.argv.some(
@@ -50,44 +50,54 @@ if (!shouldRenderCliTerminal) {
         )) as typeof process.stderr.write;
 }
 
+const CliValidationTextSchema = Schema.Struct({
+  error: Schema.Struct({
+    value: Schema.Struct({
+      value: Schema.String,
+    }),
+  }),
+});
+
+const CodedErrorSchema = Schema.Struct({
+  code: Schema.String,
+});
+
+const TaggedErrorSchema = Schema.Struct({
+  _tag: Schema.String,
+  code: Schema.optional(Schema.String),
+  path: Schema.optional(Schema.String),
+  subintentId: Schema.optional(Schema.String),
+  reason: Schema.optional(Schema.Unknown),
+});
+
+const decodeUnknownOption = <A>(schema: Schema.Schema<A>, value: unknown) =>
+  Option.getOrUndefined(Schema.decodeUnknownOption(schema)(value));
+
 const validationMessage = (error: unknown) => {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'error' in error &&
-    typeof error.error === 'object' &&
-    error.error !== null &&
-    'value' in error.error &&
-    typeof error.error.value === 'object' &&
-    error.error.value !== null &&
-    'value' in error.error.value &&
-    typeof error.error.value.value === 'string'
-  ) {
-    return error.error.value.value;
+  const cliValidationText = decodeUnknownOption(CliValidationTextSchema, error);
+  if (cliValidationText) {
+    return cliValidationText.error.value.value;
   }
 
-  if (typeof error === 'object' && error !== null && '_tag' in error) {
-    const tag = String(error._tag);
-    const code =
-      'code' in error && typeof error.code === 'string'
-        ? error.code
-        : undefined;
-    const path =
-      'path' in error && typeof error.path === 'string'
-        ? ` at ${error.path}`
-        : '';
-    const subintentId =
-      'subintentId' in error && typeof error.subintentId === 'string'
-        ? ` for ${error.subintentId}`
-        : '';
+  const taggedError = decodeUnknownOption(TaggedErrorSchema, error);
+  if (taggedError) {
+    const path = taggedError.path ? ` at ${taggedError.path}` : '';
+    const subintentId = taggedError.subintentId
+      ? ` for ${taggedError.subintentId}`
+      : '';
     const reason =
-      'reason' in error
-        ? error.reason instanceof Error
-          ? `: ${error.reason.message}`
-          : `: ${String(error.reason)}`
-        : '';
+      taggedError.reason === undefined
+        ? ''
+        : taggedError.reason instanceof Error
+          ? `: ${taggedError.reason.message}`
+          : `: ${String(taggedError.reason)}`;
 
-    return [tag, code].filter(Boolean).join(' ') + subintentId + path + reason;
+    return (
+      [taggedError._tag, taggedError.code].filter(Boolean).join(' ') +
+      subintentId +
+      path +
+      reason
+    );
   }
 
   return error instanceof Error ? error.message : String(error);
@@ -98,19 +108,14 @@ const validationCode = (error: unknown, message: string) => {
     return 'UNKNOWN_COMMAND';
   }
 
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string'
-  ) {
-    return error.code;
+  const codedError = decodeUnknownOption(CodedErrorSchema, error);
+  if (codedError) {
+    return codedError.code;
   }
 
-  if (typeof error === 'object' && error !== null && '_tag' in error) {
-    return String(error._tag)
-      .replace(/([a-z])([A-Z])/g, '$1_$2')
-      .toUpperCase();
+  const taggedError = decodeUnknownOption(TaggedErrorSchema, error);
+  if (taggedError) {
+    return taggedError._tag.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase();
   }
 
   return 'CLI_VALIDATION_ERROR';
