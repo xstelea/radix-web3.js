@@ -190,6 +190,9 @@ importers:
       '@noble/curves':
         specifier: 'catalog:'
         version: 1.8.1
+      '@radix-effects/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@steleaio/radix-engine-toolkit':
         specifier: 'catalog:'
         version: 2.0.0-dev.5

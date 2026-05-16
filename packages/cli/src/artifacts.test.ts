@@ -10,7 +10,11 @@ import {
   normalizeSignatures,
   writeCanonicalSignatures,
 } from './artifacts';
-import { type SignatureEntry, SignatureFileSchema } from './schemas';
+import {
+  NetworkSchema,
+  type SignatureEntry,
+  SignatureFileSchema,
+} from './schemas';
 import { makeTempDir } from './test-helpers';
 
 const publicKey =
@@ -21,6 +25,8 @@ const signature =
   '22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222';
 const otherSignature =
   '44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444';
+
+const stokenet = NetworkSchema.make('stokenet');
 
 const entry = (input: Partial<SignatureEntry> = {}): SignatureEntry => ({
   scope: { kind: 'rootIntent' },
@@ -141,7 +147,7 @@ describe('artifact store', () => {
       yield* writePreparedArtifact({
         artifactPath: join(artifactRoot, 'txid_2'),
         transactionId: 'txid_2',
-        network: 'stokenet',
+        network: stokenet,
         intentHash: 'intent_beta',
         manifestSourceFile: 'beta.rtm',
       });
@@ -163,14 +169,14 @@ describe('artifact store', () => {
 
       const filteredResult = yield* listTransactionArtifacts({
         artifactRoot,
-        network: 'stokenet',
+        network: stokenet,
         status: 'submitted',
       });
       expect(filteredResult).toMatchObject([
         {
           transactionId: 'txid_2',
           status: 'submitted',
-          network: 'stokenet',
+          network: stokenet,
         },
       ]);
     }),

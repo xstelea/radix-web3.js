@@ -1,4 +1,5 @@
-import { Effect, Schema } from 'effect';
+import { AccountAddress, TransactionId } from '@radix-effects/shared';
+import { Data, Effect, Schema } from 'effect';
 import {
   deriveVirtualAccountAddress,
   gatewayAccountBalance,
@@ -31,6 +32,8 @@ import { readJsonFile } from './platformIo';
 import { prepareTransactionArtifacts } from './prepare';
 import {
   type ArtifactStatus,
+  ArtifactStatusSchema,
+  NetworkSchema,
   NotaryFileSchema,
   type PreparedTransaction,
 } from './schemas';
@@ -129,258 +132,411 @@ const takeRepeatedOption = (argv: string[], name: string) => {
   return values;
 };
 
-export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
+type ParsedRdxCommand = Data.TaggedEnum<{
+  // biome-ignore lint/complexity/noBannedTypes: Effect's taggedEnum uses `{}` for nullary variants.
+  ConfigShow: {};
+  // biome-ignore lint/complexity/noBannedTypes: Effect's taggedEnum uses `{}` for nullary variants.
+  Llm: {};
+  AccountBalance: { accountAddress: AccountAddress };
+  AccountDerive: { publicKeyHex?: string };
+  AccountShow: { accountAddress: AccountAddress };
+  TxPath: { transactionId: TransactionId };
+  TxPrepare: {
+    manifestPath?: string;
+    notaryFilePath?: string;
+    subintentsPath?: string;
+  };
+  TxAddSignatures: {
+    transactionId: TransactionId;
+    signatureFilePaths: string[];
+  };
+  TxNotarize: { transactionId: TransactionId };
+  TxSubmit: { transactionId: TransactionId };
+  TxList: {
+    pattern?: string;
+    regex?: string;
+    network?: PreparedTransaction['network'];
+    status?: ArtifactStatus;
+    withNetworkStatus: boolean;
+    updateNetworkStatus: boolean;
+  };
+  TxStatus: { transactionId: TransactionId; readOnly: boolean };
+  TxHistory: { accountAddress: AccountAddress; limit: number };
+  TemplatePrint: { kind: TemplateKind };
+  Unknown: { command: string };
+}>;
+
+const RdxCommand = Data.taggedEnum<ParsedRdxCommand>();
+
+const decodeOptional = <A, I, R>(
+  schema: Schema.Schema<A, I, R>,
+  value: string | undefined,
+) =>
+  value === undefined
+    ? Effect.succeed(undefined)
+    : Schema.decodeUnknown(schema)(value);
+
+const parseRdxCommand = (
+  argv: string[],
+): Effect.Effect<ParsedRdxCommand, unknown> =>
   Effect.gen(function* () {
-    const { format, argv } = parseGlobalFlags(input.argv);
     const command = argv.join(' ');
 
     if (command === 'config show') {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd }).pipe(
-        Effect.mapError((error) => error),
-      );
-      return {
-        exitCode: 0,
-        stdout: `${renderConfigShow(format, config)}\n`,
-        stderr: '',
-      };
+      return RdxCommand.ConfigShow();
     }
 
     if (command === 'llm') {
-      return {
-        exitCode: 0,
-        stdout: `${renderLlmGuide()}\n`,
-        stderr: '',
-      };
+      return RdxCommand.Llm();
     }
 
     if (argv[0] === 'account' && argv[1] === 'balance' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const result = yield* getAccountBalance({
-        accountAddress: argv[2],
-        readBalance: (accountAddress) =>
-          gatewayAccountBalance({ config, accountAddress }),
+      return RdxCommand.AccountBalance({
+        accountAddress: AccountAddress.make(argv[2]),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderCommandResult(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'account' && argv[1] === 'derive') {
-      const publicKeyHex = takeOption(argv, '--public-key');
-      if (!publicKeyHex) {
-        return structuredError({
-          code: 'MISSING_ARGUMENT',
-          message: 'account derive requires --public-key',
-          exitCode: 64,
-        });
-      }
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const result = yield* deriveVirtualAccountAddress({
-        network: config.network,
-        publicKeyHex,
+      return RdxCommand.AccountDerive({
+        publicKeyHex: takeOption(argv, '--public-key'),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderAccountDerive(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'account' && argv[1] === 'show' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const result = yield* getAccountDetails({
-        accountAddress: argv[2],
-        readDetails: (accountAddress) =>
-          gatewayAccountDetails({ config, accountAddress }),
+      return RdxCommand.AccountShow({
+        accountAddress: AccountAddress.make(argv[2]),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderCommandResult(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'tx' && argv[1] === 'path' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const artifactPath = yield* findTransactionArtifact({
-        artifactRoot: config.artifactRoot,
-        transactionId: argv[2],
+      return RdxCommand.TxPath({
+        transactionId: TransactionId.make(argv[2]),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderTxPath(format, {
-          transactionId: argv[2],
-          artifactPath,
-        })}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'tx' && argv[1] === 'prepare') {
-      const manifestPath = takeOption(argv, '--manifest');
-      const notaryFilePath = takeOption(argv, '--notary-file');
-      const subintentsPath = takeOption(argv, '--subintents');
-      if (!manifestPath) {
-        return structuredError({
-          code: 'MISSING_ARGUMENT',
-          message: 'tx prepare requires --manifest',
-          exitCode: 64,
-        });
-      }
-
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const notary = notaryFilePath
-        ? yield* readJsonFile(notaryFilePath, (reason) => reason).pipe(
-            Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)),
-          )
-        : config.notary;
-      if (!notary) {
-        return structuredError({
-          code: 'MISSING_ARGUMENT',
-          message:
-            'tx prepare requires --notary-file or config notary settings',
-          exitCode: 64,
-        });
-      }
-      const result = yield* prepareTransactionArtifacts({
-        artifactRoot: config.artifactRoot,
-        network: config.network,
-        manifestPath,
-        subintentsPath,
-        notary,
-        previewPreparedTransaction: () => Effect.void,
+      return RdxCommand.TxPrepare({
+        manifestPath: takeOption(argv, '--manifest'),
+        notaryFilePath: takeOption(argv, '--notary-file'),
+        subintentsPath: takeOption(argv, '--subintents'),
       });
-
-      return {
-        exitCode: 0,
-        stdout: `${renderPrepare(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'tx' && argv[1] === 'add-signatures' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const result = yield* addSignaturesToArtifact({
-        artifactRoot: config.artifactRoot,
-        transactionId: argv[2],
+      return RdxCommand.TxAddSignatures({
+        transactionId: TransactionId.make(argv[2]),
         signatureFilePaths: takeRepeatedOption(argv, '--file'),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderAddSignatures(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'tx' && argv[1] === 'notarize' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const result = yield* notarizeTransactionArtifact({
-        artifactRoot: config.artifactRoot,
-        transactionId: argv[2],
+      return RdxCommand.TxNotarize({
+        transactionId: TransactionId.make(argv[2]),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderNotarize(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'tx' && argv[1] === 'submit' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const result = yield* submitTransactionArtifact({
-        artifactRoot: config.artifactRoot,
-        transactionId: argv[2],
-        submitNotarizedTransaction: (notarizedTransactionHex) =>
-          gatewaySubmitNotarizedTransaction({
-            config,
-            transactionId: argv[2],
-            notarizedTransactionHex,
-          }),
-        pollTransactionStatus: (id) =>
-          gatewayTransactionStatus({ config, transactionId: id }),
+      return RdxCommand.TxSubmit({
+        transactionId: TransactionId.make(argv[2]),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderSubmit(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'tx' && argv[1] === 'list') {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const listInput = {
-        artifactRoot: config.artifactRoot,
+      const network = yield* decodeOptional(
+        NetworkSchema,
+        takeOption(argv, '--network'),
+      );
+      const status = yield* decodeOptional(
+        ArtifactStatusSchema,
+        takeOption(argv, '--status'),
+      );
+
+      return RdxCommand.TxList({
         pattern: takeOption(argv, '--pattern'),
         regex: takeOption(argv, '--regex'),
-        network: takeOption(argv, '--network') as
-          | PreparedTransaction['network']
-          | undefined,
-        status: takeOption(argv, '--status') as ArtifactStatus | undefined,
-      };
-      const withNetworkStatus = argv.includes('--with-network-status');
-      const updateNetworkStatus = argv.includes('--update-network-status');
-      const artifacts =
-        withNetworkStatus || updateNetworkStatus
-          ? yield* listTransactionArtifactsWithNetworkStatus({
-              ...listInput,
-              update: updateNetworkStatus,
-              getNetworkStatus: (id) =>
-                gatewayTransactionStatus({ config, transactionId: id }),
-            })
-          : yield* listTransactionArtifacts(listInput);
-      return {
-        exitCode: 0,
-        stdout: `${renderTxList(format, artifacts)}\n`,
-        stderr: '',
-      };
+        network,
+        status,
+        withNetworkStatus: argv.includes('--with-network-status'),
+        updateNetworkStatus: argv.includes('--update-network-status'),
+      });
     }
 
     if (argv[0] === 'tx' && argv[1] === 'status' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const result = yield* queryTransactionStatus({
-        artifactRoot: config.artifactRoot,
-        transactionId: argv[2],
+      return RdxCommand.TxStatus({
+        transactionId: TransactionId.make(argv[2]),
         readOnly: argv.includes('--read-only'),
-        getNetworkStatus: (id) =>
-          gatewayTransactionStatus({ config, transactionId: id }),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderTxStatus(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'tx' && argv[1] === 'history' && argv[2]) {
-      const config = yield* resolveRdxConfig({ cwd: input.cwd });
-      const limit = Number(takeOption(argv, '--limit') ?? 10);
-      const result = yield* getAccountTransactionHistory({
-        accountAddress: argv[2],
-        limit,
-        readHistory: (accountAddress, itemLimit) =>
-          gatewayAccountHistory({ config, accountAddress, limit: itemLimit }),
+      return RdxCommand.TxHistory({
+        accountAddress: AccountAddress.make(argv[2]),
+        limit: Number(takeOption(argv, '--limit') ?? 10),
       });
-      return {
-        exitCode: 0,
-        stdout: `${renderCommandResult(format, result)}\n`,
-        stderr: '',
-      };
     }
 
     if (argv[0] === 'template' && argv[1] === 'print' && argv[2]) {
-      return {
-        exitCode: 0,
-        stdout: `${renderTemplate(argv[2] as TemplateKind)}\n`,
-        stderr: '',
-      };
+      return RdxCommand.TemplatePrint({ kind: argv[2] as TemplateKind });
     }
 
-    return structuredError({
-      code: 'UNKNOWN_COMMAND',
-      message: `Unknown command: ${argv[0] ?? ''}`,
-      exitCode: 64,
+    return RdxCommand.Unknown({ command: argv[0] ?? '' });
+  });
+
+export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
+  Effect.gen(function* () {
+    const { format, argv } = parseGlobalFlags(input.argv);
+    const command = yield* parseRdxCommand(argv);
+
+    return yield* RdxCommand.$match(command, {
+      ConfigShow: () =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd }).pipe(
+            Effect.mapError((error) => error),
+          );
+          return {
+            exitCode: 0,
+            stdout: `${renderConfigShow(format, config)}\n`,
+            stderr: '',
+          };
+        }),
+      Llm: () =>
+        Effect.succeed({
+          exitCode: 0,
+          stdout: `${renderLlmGuide()}\n`,
+          stderr: '',
+        }),
+      AccountBalance: ({ accountAddress }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* getAccountBalance({
+            accountAddress,
+            readBalance: (accountAddress) =>
+              gatewayAccountBalance({ config, accountAddress }),
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderCommandResult(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      AccountDerive: ({ publicKeyHex }) =>
+        Effect.gen(function* () {
+          if (!publicKeyHex) {
+            return structuredError({
+              code: 'MISSING_ARGUMENT',
+              message: 'account derive requires --public-key',
+              exitCode: 64,
+            });
+          }
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* deriveVirtualAccountAddress({
+            network: config.network,
+            publicKeyHex,
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderAccountDerive(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      AccountShow: ({ accountAddress }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* getAccountDetails({
+            accountAddress,
+            readDetails: (accountAddress) =>
+              gatewayAccountDetails({ config, accountAddress }),
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderCommandResult(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      TxPath: ({ transactionId }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const artifactPath = yield* findTransactionArtifact({
+            artifactRoot: config.artifactRoot,
+            transactionId,
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderTxPath(format, {
+              transactionId,
+              artifactPath,
+            })}\n`,
+            stderr: '',
+          };
+        }),
+      TxPrepare: ({ manifestPath, notaryFilePath, subintentsPath }) =>
+        Effect.gen(function* () {
+          if (!manifestPath) {
+            return structuredError({
+              code: 'MISSING_ARGUMENT',
+              message: 'tx prepare requires --manifest',
+              exitCode: 64,
+            });
+          }
+
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const notary = notaryFilePath
+            ? yield* readJsonFile(notaryFilePath, (reason) => reason).pipe(
+                Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)),
+              )
+            : config.notary;
+          if (!notary) {
+            return structuredError({
+              code: 'MISSING_ARGUMENT',
+              message:
+                'tx prepare requires --notary-file or config notary settings',
+              exitCode: 64,
+            });
+          }
+          const result = yield* prepareTransactionArtifacts({
+            artifactRoot: config.artifactRoot,
+            network: config.network,
+            manifestPath,
+            subintentsPath,
+            notary,
+            previewPreparedTransaction: () => Effect.void,
+          });
+
+          return {
+            exitCode: 0,
+            stdout: `${renderPrepare(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      TxAddSignatures: ({ transactionId, signatureFilePaths }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* addSignaturesToArtifact({
+            artifactRoot: config.artifactRoot,
+            transactionId,
+            signatureFilePaths,
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderAddSignatures(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      TxNotarize: ({ transactionId }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* notarizeTransactionArtifact({
+            artifactRoot: config.artifactRoot,
+            transactionId,
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderNotarize(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      TxSubmit: ({ transactionId }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* submitTransactionArtifact({
+            artifactRoot: config.artifactRoot,
+            transactionId,
+            submitNotarizedTransaction: (notarizedTransactionHex) =>
+              gatewaySubmitNotarizedTransaction({
+                config,
+                transactionId,
+                notarizedTransactionHex,
+              }),
+            pollTransactionStatus: (id) =>
+              gatewayTransactionStatus({ config, transactionId: id }),
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderSubmit(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      TxList: ({
+        pattern,
+        regex,
+        network,
+        status,
+        withNetworkStatus,
+        updateNetworkStatus,
+      }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const listInput = {
+            artifactRoot: config.artifactRoot,
+            pattern,
+            regex,
+            network,
+            status,
+          };
+          const artifacts =
+            withNetworkStatus || updateNetworkStatus
+              ? yield* listTransactionArtifactsWithNetworkStatus({
+                  ...listInput,
+                  update: updateNetworkStatus,
+                  getNetworkStatus: (id) =>
+                    gatewayTransactionStatus({ config, transactionId: id }),
+                })
+              : yield* listTransactionArtifacts(listInput);
+          return {
+            exitCode: 0,
+            stdout: `${renderTxList(format, artifacts)}\n`,
+            stderr: '',
+          };
+        }),
+      TxStatus: ({ transactionId, readOnly }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* queryTransactionStatus({
+            artifactRoot: config.artifactRoot,
+            transactionId,
+            readOnly,
+            getNetworkStatus: (id) =>
+              gatewayTransactionStatus({ config, transactionId: id }),
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderTxStatus(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      TxHistory: ({ accountAddress, limit }) =>
+        Effect.gen(function* () {
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* getAccountTransactionHistory({
+            accountAddress,
+            limit,
+            readHistory: (accountAddress, itemLimit) =>
+              gatewayAccountHistory({
+                config,
+                accountAddress,
+                limit: itemLimit,
+              }),
+          });
+          return {
+            exitCode: 0,
+            stdout: `${renderCommandResult(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      TemplatePrint: ({ kind }) =>
+        Effect.succeed({
+          exitCode: 0,
+          stdout: `${renderTemplate(kind)}\n`,
+          stderr: '',
+        }),
+      Unknown: ({ command }) =>
+        Effect.succeed(
+          structuredError({
+            code: 'UNKNOWN_COMMAND',
+            message: `Unknown command: ${command}`,
+            exitCode: 64,
+          }),
+        ),
     });
   }).pipe(
     Effect.catchAll((error) => {

@@ -5,6 +5,7 @@ import { Effect, Schema } from 'effect';
 import { describe, expect } from 'vitest';
 import { prepareTransactionArtifacts } from './prepare';
 import {
+  NetworkSchema,
   PreparedTransactionSchema,
   SignatureTemplateSchema,
   SigningRequestSchema,
@@ -15,6 +16,7 @@ const notaryPublicKey = {
   curve: 'Ed25519' as const,
   hex: '1111111111111111111111111111111111111111111111111111111111111111',
 };
+const stokenet = NetworkSchema.make('stokenet');
 const stokenetFaucetManifest =
   'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free";';
 
@@ -30,7 +32,7 @@ describe('tx prepare workflow', () => {
 
       const result = yield* prepareTransactionArtifacts({
         artifactRoot,
-        network: 'stokenet',
+        network: stokenet,
         manifestPath,
         notary: {
           publicKey: notaryPublicKey,
@@ -54,7 +56,7 @@ describe('tx prepare workflow', () => {
       expect(prepared).toMatchObject({
         type: 'preparedTransaction',
         transactionId: result.transactionId,
-        network: 'stokenet',
+        network: stokenet,
         transactionIntentPath: 'transactionIntent.json',
         staticAnalysisPath: 'staticAnalysis.json',
         notaryPublicKey,
@@ -107,7 +109,7 @@ describe('tx prepare workflow', () => {
 
       yield* prepareTransactionArtifacts({
         artifactRoot,
-        network: 'stokenet',
+        network: stokenet,
         manifestPath,
         notary: {
           publicKey: notaryPublicKey,
@@ -118,7 +120,7 @@ describe('tx prepare workflow', () => {
       const result = yield* Effect.exit(
         prepareTransactionArtifacts({
           artifactRoot,
-          network: 'stokenet',
+          network: stokenet,
           manifestPath,
           notary: {
             publicKey: notaryPublicKey,
@@ -143,7 +145,7 @@ describe('tx prepare workflow', () => {
       const result = yield* Effect.either(
         prepareTransactionArtifacts({
           artifactRoot,
-          network: 'stokenet',
+          network: stokenet,
           manifestPath,
           notary: {
             publicKey: notaryPublicKey,
@@ -195,7 +197,7 @@ describe('tx prepare workflow', () => {
 
       const result = yield* prepareTransactionArtifacts({
         artifactRoot,
-        network: 'stokenet',
+        network: stokenet,
         manifestPath,
         subintentsPath,
         notary: {

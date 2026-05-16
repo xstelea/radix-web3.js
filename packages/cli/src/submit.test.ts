@@ -4,7 +4,7 @@ import { it } from '@effect/vitest';
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, vi } from 'vitest';
-import { SubmitResultSchema } from './schemas';
+import { NetworkSchema, SubmitResultSchema } from './schemas';
 import {
   gatewaySubmitNotarizedTransaction,
   submitTransactionArtifact,
@@ -13,6 +13,7 @@ import { makeTempDir } from './test-helpers';
 
 const transactionId = 'txid';
 const notaryPublicKeyHex = '1'.repeat(64);
+const stokenet = NetworkSchema.make('stokenet');
 const stokenetFaucetManifest =
   'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free";';
 
@@ -28,7 +29,7 @@ describe('tx submit workflow', () => {
         .mockResolvedValue({ ok: true } as Response);
 
       yield* gatewaySubmitNotarizedTransaction({
-        config: { network: 'stokenet' },
+        config: { network: stokenet },
         transactionId,
         notarizedTransactionHex: 'aa',
       });
@@ -309,7 +310,7 @@ const writeArtifactFixture = (
           type: 'preparedTransaction',
           version: 1,
           transactionId,
-          network: 'stokenet',
+          network: stokenet,
           intentHash: { id: 'intent', hex: 'aa' },
           manifestSourceFile: 'root.rtm',
           transactionIntentPath: 'transactionIntent.json',

@@ -4,6 +4,21 @@ export const PLACEHOLDER_PUBLIC_KEY_HEX =
   '<replace-with-ed25519-public-key-hex>';
 export const PLACEHOLDER_SIGNATURE_HEX = '<replace-with-ed25519-signature-hex>';
 
+export const NetworkSchema = Schema.Literal('mainnet', 'stokenet').pipe(
+  Schema.brand('Network'),
+);
+export type Network = typeof NetworkSchema.Type;
+
+export const ArtifactScopeSchema = Schema.Literal('local', 'global').pipe(
+  Schema.brand('ArtifactScope'),
+);
+export type ArtifactScope = typeof ArtifactScopeSchema.Type;
+
+export const OutputFormatSchema = Schema.Literal('json', 'text').pipe(
+  Schema.brand('OutputFormat'),
+);
+export type OutputFormat = typeof OutputFormatSchema.Type;
+
 const HexString = Schema.String.pipe(Schema.pattern(/^[0-9a-fA-F]+$/));
 const Ed25519PublicKeyHex = HexString.pipe(Schema.length(64));
 const Ed25519SignatureHex = HexString.pipe(Schema.length(128));
@@ -150,7 +165,7 @@ export const PreparedTransactionSchema = Schema.Struct({
   type: Schema.Literal('preparedTransaction'),
   version: Schema.Literal(1),
   transactionId: Schema.NonEmptyString,
-  network: Schema.Union(Schema.Literal('mainnet'), Schema.Literal('stokenet')),
+  network: NetworkSchema,
   intentHash: HashSchema,
   manifestSourceFile: Schema.String,
   transactionIntentPath: Schema.String,

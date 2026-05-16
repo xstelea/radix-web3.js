@@ -2,19 +2,20 @@ import { homedir } from 'node:os';
 import { dirname, join, parse, resolve } from 'node:path';
 import { Data, Effect, Schema } from 'effect';
 import { fileExists, readJsonFile } from './platformIo';
-import { PublicKeySchema } from './schemas';
+import {
+  type ArtifactScope,
+  ArtifactScopeSchema,
+  type Network,
+  NetworkSchema,
+  PublicKeySchema,
+} from './schemas';
 
-export type Network = 'mainnet' | 'stokenet';
-export type ArtifactScope = 'local' | 'global';
+export type { ArtifactScope, Network };
 
 const RdxConfigFileSchema = Schema.Struct({
-  network: Schema.optional(
-    Schema.Union(Schema.Literal('mainnet'), Schema.Literal('stokenet')),
-  ),
+  network: Schema.optional(NetworkSchema),
   gatewayBaseUrl: Schema.optional(Schema.String),
-  artifactScope: Schema.optional(
-    Schema.Union(Schema.Literal('local'), Schema.Literal('global')),
-  ),
+  artifactScope: Schema.optional(ArtifactScopeSchema),
   artifactDirectory: Schema.optional(Schema.String),
   notary: Schema.optional(
     Schema.Struct({
@@ -45,8 +46,8 @@ export class ConfigResolutionError extends Data.TaggedError(
 }> {}
 
 const defaultConfig = {
-  network: 'mainnet',
-  artifactScope: 'local',
+  network: NetworkSchema.make('mainnet'),
+  artifactScope: ArtifactScopeSchema.make('local'),
 } satisfies Pick<ResolvedRdxConfig, 'network' | 'artifactScope'>;
 
 const findNearestProjectConfig = (
