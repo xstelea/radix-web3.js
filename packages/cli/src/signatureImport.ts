@@ -114,13 +114,17 @@ const decodeImportableFile = (file: ImportableSignatureFile) =>
   });
 
 const rejectPlaceholders = (entry: SignatureEntry) => {
-  if (
-    entry.publicKey.hex === PLACEHOLDER_PUBLIC_KEY_HEX ||
-    entry.signature.hex === PLACEHOLDER_SIGNATURE_HEX
-  ) {
+  if (entry.publicKey.hex === PLACEHOLDER_PUBLIC_KEY_HEX) {
     return new SignatureImportError({
       code: 'PLACEHOLDER_VALUE',
-      reason: entry,
+      reason: `publicKey.hex is still a placeholder for ${scopeKey(entry.scope)}${entry.signingRequestPath ? ` at ${entry.signingRequestPath}` : ''}`,
+    });
+  }
+
+  if (entry.signature.hex === PLACEHOLDER_SIGNATURE_HEX) {
+    return new SignatureImportError({
+      code: 'PLACEHOLDER_VALUE',
+      reason: `signature.hex is still a placeholder for ${scopeKey(entry.scope)}${entry.signingRequestPath ? ` at ${entry.signingRequestPath}` : ''}`,
     });
   }
 };

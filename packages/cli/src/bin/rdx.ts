@@ -90,6 +90,22 @@ class CliFailure extends Data.TaggedError('CliFailure')<{
   message: string;
 }> {}
 
+const reasonMessage = (reason: unknown) => {
+  if (reason === undefined) {
+    return '';
+  }
+
+  if (reason instanceof Error) {
+    return `: ${reason.message}`;
+  }
+
+  if (typeof reason === 'string') {
+    return `: ${reason}`;
+  }
+
+  return `: ${renderJson(reason)}`;
+};
+
 const validationMessage = (error: unknown) => {
   const cliValidationText = decodeUnknownOption(CliValidationTextSchema, error);
   if (cliValidationText) {
@@ -102,12 +118,7 @@ const validationMessage = (error: unknown) => {
     const subintentId = taggedError.subintentId
       ? ` for ${taggedError.subintentId}`
       : '';
-    const reason =
-      taggedError.reason === undefined
-        ? ''
-        : taggedError.reason instanceof Error
-          ? `: ${taggedError.reason.message}`
-          : `: ${String(taggedError.reason)}`;
+    const reason = reasonMessage(taggedError.reason);
 
     return (
       [taggedError._tag, taggedError.code].filter(Boolean).join(' ') +

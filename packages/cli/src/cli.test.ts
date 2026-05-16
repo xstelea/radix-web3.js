@@ -7,7 +7,7 @@ import { runRdx } from './index';
 import { SignatureFileSchema } from './schemas';
 
 const stokenetFaucetManifest =
-  'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free";';
+  'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free"; CALL_METHOD Address("account_tdx_2_1284vgk4yrqj7p0plsa2hptcxrt9lpw2s446jlu8egcl7zwk4wzg36g") "try_deposit_batch_or_abort" Expression("ENTIRE_WORKTOP") Enum<0u8>();';
 
 describe('rdx command interface', () => {
   it('prints JSON command results by default', async () => {
@@ -273,6 +273,8 @@ describe('rdx command interface', () => {
     expect(JSON.parse(result.stdout)).toMatchObject({
       type: 'commandResult',
       command: 'tx prepare',
+      startEpochInclusive: 1,
+      endEpochExclusive: 10,
     });
   });
 

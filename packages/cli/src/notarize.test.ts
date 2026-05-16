@@ -16,7 +16,7 @@ const transactionId = 'txid';
 const hashHex = 'aabbcc';
 const notaryPublicKeyHex = '1'.repeat(64);
 const stokenetFaucetManifest =
-  'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free";';
+  'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free"; CALL_METHOD Address("account_tdx_2_1284vgk4yrqj7p0plsa2hptcxrt9lpw2s446jlu8egcl7zwk4wzg36g") "try_deposit_batch_or_abort" Expression("ENTIRE_WORKTOP") Enum<0u8>();';
 
 const signingRequest: SigningRequest = {
   type: 'signingRequest',
@@ -119,6 +119,51 @@ describe('tx notarize workflow', () => {
       }),
   );
 
+  it.effect('reports a missing signature file before notarization', () =>
+    Effect.gen(function* () {
+      const artifactRoot = yield* makeTempDir('notarize-missing-signatures');
+      const artifactPath = join(artifactRoot, transactionId);
+      yield* writeArtifactFixture(artifactPath, {
+        complete: false,
+        omitSignaturesFile: true,
+      });
+
+      const result = yield* Effect.either(
+        notarizeTransactionArtifact({ artifactRoot, transactionId }),
+      );
+
+      expect(result._tag).toBe('Left');
+      if (result._tag === 'Left') {
+        expect(result.left).toMatchObject({
+          _tag: 'NotarizeError',
+          code: 'MISSING_SIGNATURE_FILE',
+        });
+      }
+    }),
+  );
+
+  it.effect(
+    'creates a notary signing request when no intent signatures are required',
+    () =>
+      Effect.gen(function* () {
+        const artifactRoot = yield* makeTempDir('notarize-no-auth');
+        const artifactPath = join(artifactRoot, transactionId);
+        yield* writeArtifactFixture(artifactPath, {
+          complete: true,
+          noRequiredSignatures: true,
+        });
+
+        const result = yield* notarizeTransactionArtifact({
+          artifactRoot,
+          transactionId,
+        });
+
+        expect(result.notarySigningRequestPath).toBe(
+          join(artifactPath, 'signing-requests/notary.json'),
+        );
+      }),
+  );
+
   it.effect('blocks notary request creation when notarize preview fails', () =>
     Effect.gen(function* () {
       const artifactRoot = yield* makeTempDir('notarize-preview-fails');
@@ -174,7 +219,12 @@ describe('tx notarize workflow', () => {
 
 const writeArtifactFixture = (
   artifactPath: string,
-  input: { complete: boolean; withSubintent?: boolean },
+  input: {
+    complete: boolean;
+    withSubintent?: boolean;
+    noRequiredSignatures?: boolean;
+    omitSignaturesFile?: boolean;
+  },
 ) =>
   Effect.promise(async () => {
     const childSubintent = input.withSubintent
@@ -211,16 +261,18 @@ const writeArtifactFixture = (
           manifestSourceFile: 'root.rtm',
           transactionIntentPath: 'transactionIntent.json',
           staticAnalysisPath: 'staticAnalysis.json',
-          signingRequests: input.withSubintent
-            ? [
-                signingRequest.signingRequestPath,
-                'signing-requests/subintents/child_one/account_rdx1-child.json',
-              ]
-            : [signingRequest.signingRequestPath],
+          signingRequests: input.noRequiredSignatures
+            ? []
+            : input.withSubintent
+              ? [
+                  signingRequest.signingRequestPath,
+                  'signing-requests/subintents/child_one/account_rdx1-child.json',
+                ]
+              : [signingRequest.signingRequestPath],
           signatureTemplates: [],
           subintentOrder: input.withSubintent ? ['child_one'] : [],
           authorizationAnalysis: {
-            rootIntent: ['account_rdx1'],
+            rootIntent: input.noRequiredSignatures ? [] : ['account_rdx1'],
             subintents: input.withSubintent
               ? { child_one: ['account_rdx1-child'] }
               : {},
@@ -233,11 +285,13 @@ const writeArtifactFixture = (
       ),
       'utf8',
     );
-    await writeFile(
-      join(artifactPath, signingRequest.signingRequestPath ?? ''),
-      JSON.stringify(signingRequest, null, 2),
-      'utf8',
-    );
+    if (!input.noRequiredSignatures) {
+      await writeFile(
+        join(artifactPath, signingRequest.signingRequestPath ?? ''),
+        JSON.stringify(signingRequest, null, 2),
+        'utf8',
+      );
+    }
     if (input.withSubintent) {
       await mkdir(join(artifactPath, 'signing-requests/subintents/child_one'), {
         recursive: true,
@@ -302,42 +356,50 @@ const writeArtifactFixture = (
       ),
       'utf8',
     );
-    await writeFile(
-      join(artifactPath, 'signatures.json'),
-      JSON.stringify(
-        {
-          type: 'signatureFile',
-          version: 1,
-          transactionId,
-          signatures: input.complete
-            ? [
-                {
-                  scope: signingRequest.scope,
-                  account: signingRequest.account,
-                  hash: signingRequest.hash,
-                  signingRequestPath: signingRequest.signingRequestPath,
-                  publicKey: { curve: 'Ed25519', hex: '2'.repeat(64) },
-                  signature: { curve: 'Ed25519', hex: '3'.repeat(128) },
-                },
-                ...(input.withSubintent
-                  ? [
-                      {
-                        scope: { kind: 'subintent', subintentId: 'child_one' },
-                        account: 'account_rdx1-child',
-                        hash: { id: 'subtxid_child', hex: hashHex },
-                        signingRequestPath:
-                          'signing-requests/subintents/child_one/account_rdx1-child.json',
-                        publicKey: { curve: 'Ed25519', hex: '2'.repeat(64) },
-                        signature: { curve: 'Ed25519', hex: '3'.repeat(128) },
-                      },
-                    ]
-                  : []),
-              ]
-            : [],
-        },
-        null,
-        2,
-      ),
-      'utf8',
-    );
+    if (!input.noRequiredSignatures && !input.omitSignaturesFile) {
+      await writeFile(
+        join(artifactPath, 'signatures.json'),
+        JSON.stringify(
+          {
+            type: 'signatureFile',
+            version: 1,
+            transactionId,
+            signatures: input.complete
+              ? [
+                  {
+                    scope: signingRequest.scope,
+                    account: signingRequest.account,
+                    hash: signingRequest.hash,
+                    signingRequestPath: signingRequest.signingRequestPath,
+                    publicKey: { curve: 'Ed25519', hex: '2'.repeat(64) },
+                    signature: { curve: 'Ed25519', hex: '3'.repeat(128) },
+                  },
+                  ...(input.withSubintent
+                    ? [
+                        {
+                          scope: {
+                            kind: 'subintent',
+                            subintentId: 'child_one',
+                          },
+                          account: 'account_rdx1-child',
+                          hash: { id: 'subtxid_child', hex: hashHex },
+                          signingRequestPath:
+                            'signing-requests/subintents/child_one/account_rdx1-child.json',
+                          publicKey: { curve: 'Ed25519', hex: '2'.repeat(64) },
+                          signature: {
+                            curve: 'Ed25519',
+                            hex: '3'.repeat(128),
+                          },
+                        },
+                      ]
+                    : []),
+                ]
+              : [],
+          },
+          null,
+          2,
+        ),
+        'utf8',
+      );
+    }
   });

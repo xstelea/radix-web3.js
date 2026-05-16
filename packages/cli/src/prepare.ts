@@ -11,6 +11,7 @@ import {
 import { Data, Effect, Schema } from 'effect';
 import { createTransactionArtifactDirectory } from './artifacts';
 import type { Network, ResolvedRdxConfig } from './config';
+import { gatewayErrorMessage } from './gatewayHttp';
 import {
   makeDirectory,
   readFileString,
@@ -36,6 +37,8 @@ export type PrepareTransactionResult = {
   transactionIntentPath: string;
   staticAnalysisPath: string;
   signatureTemplatePaths: string[];
+  startEpochInclusive: number;
+  endEpochExclusive: number;
 };
 
 export class PreparePreviewError extends Data.TaggedError(
@@ -51,6 +54,24 @@ const gatewayBaseUrl = (network: Network) =>
   network === 'stokenet'
     ? 'https://stokenet.radixdlt.com'
     : 'https://mainnet.radixdlt.com';
+
+type EpochWindow = {
+  startEpochInclusive: number;
+  endEpochExclusive: number;
+};
+
+const defaultEpochWindow = (): EpochWindow => ({
+  startEpochInclusive: 1,
+  endEpochExclusive: 10,
+});
+
+const epochWindowFromCurrentEpoch = (currentEpoch?: number): EpochWindow =>
+  currentEpoch === undefined
+    ? defaultEpochWindow()
+    : {
+        startEpochInclusive: currentEpoch,
+        endEpochExclusive: currentEpoch + 100,
+      };
 
 const intentDiscriminator = (input: {
   manifest: string;
@@ -75,8 +96,10 @@ const buildTransactionIntent = (input: {
   notary: Pick<NotaryFile, 'publicKey' | 'notaryIsSignatory'>;
   childHashes?: Uint8Array[];
   nonRootSubintents?: SubintentV2[];
+  epochWindow?: EpochWindow;
 }) => {
   const id = networkId(input.network);
+  const epochWindow = input.epochWindow ?? defaultEpochWindow();
   return {
     transactionHeader: {
       notaryPublicKey: new PublicKey.Ed25519(input.notary.publicKey.hex),
@@ -86,8 +109,8 @@ const buildTransactionIntent = (input: {
     rootIntentCore: {
       header: {
         networkId: id,
-        startEpochInclusive: 1,
-        endEpochExclusive: 10,
+        startEpochInclusive: epochWindow.startEpochInclusive,
+        endEpochExclusive: epochWindow.endEpochExclusive,
         intentDiscriminator: intentDiscriminator({
           manifest: input.manifest,
           network: input.network,
@@ -108,12 +131,17 @@ const buildSubintent = (input: {
   manifest: string;
   network: Network;
   notaryPublicKeyHex: string;
+  epochWindow?: EpochWindow;
 }): SubintentV2 => ({
   intentCore: {
     header: {
       networkId: networkId(input.network),
-      startEpochInclusive: 1,
-      endEpochExclusive: 10,
+      startEpochInclusive:
+        input.epochWindow?.startEpochInclusive ??
+        defaultEpochWindow().startEpochInclusive,
+      endEpochExclusive:
+        input.epochWindow?.endEpochExclusive ??
+        defaultEpochWindow().endEpochExclusive,
       intentDiscriminator: intentDiscriminator({
         manifest: `${input.subintentId}\n${input.manifest}`,
         network: input.network,
@@ -234,7 +262,9 @@ export const gatewayPreparePreview = (input: {
       );
       if (!response.ok) {
         throw new Error(
-          `Gateway preview failed with status ${response.status}`,
+          await Effect.runPromise(
+            gatewayErrorMessage('Gateway preview', response),
+          ),
         );
       }
       const body = (await response.json()) as {
@@ -247,12 +277,44 @@ export const gatewayPreparePreview = (input: {
     catch: (reason) => new PreparePreviewError({ reason }),
   });
 
+export const gatewayCurrentEpoch = (input: {
+  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
+}) =>
+  Effect.tryPromise({
+    try: async () => {
+      const response = await fetch(
+        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/status/gateway-status`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          await Effect.runPromise(
+            gatewayErrorMessage('Gateway status', response),
+          ),
+        );
+      }
+      const body = (await response.json()) as {
+        ledger_state?: { epoch?: unknown };
+      };
+      if (typeof body.ledger_state?.epoch !== 'number') {
+        throw new Error('Gateway status response did not include an epoch');
+      }
+      return body.ledger_state.epoch;
+    },
+    catch: (reason) => new PreparePreviewError({ reason }),
+  });
+
 export const prepareTransactionArtifacts = (input: {
   artifactRoot: string;
   network: Network;
   manifestPath: string;
   subintentsPath?: string;
   notary: Pick<NotaryFile, 'publicKey' | 'notaryIsSignatory'>;
+  currentEpoch?: number;
   previewPreparedTransaction?: (
     previewTransactionHex: string,
   ) => Effect.Effect<void, unknown>;
@@ -276,6 +338,7 @@ export const prepareTransactionArtifacts = (input: {
               manifest: subintent.manifest,
               network: input.network,
               notaryPublicKeyHex: input.notary.publicKey.hex,
+              epochWindow: epochWindowFromCurrentEpoch(input.currentEpoch),
             });
             const hash = yield* Effect.tryPromise(() =>
               RadixEngineToolkit.SubintentV2.hash(transactionSubintent),
@@ -304,10 +367,12 @@ export const prepareTransactionArtifacts = (input: {
           (subintent) => subintent.subintentId === subintentId,
         )!,
     );
+    const epochWindow = epochWindowFromCurrentEpoch(input.currentEpoch);
     const intent = buildTransactionIntent({
       manifest: assembled.rootManifest,
       network: input.network,
       notary: input.notary,
+      epochWindow,
       childHashes: orderedChildSubintents.map((subintent) =>
         subintent.hash.hash.slice(),
       ),
@@ -453,6 +518,8 @@ export const prepareTransactionArtifacts = (input: {
       transactionIntentPath,
       staticAnalysisPath,
       signatureTemplatePaths,
+      startEpochInclusive: epochWindow.startEpochInclusive,
+      endEpochExclusive: epochWindow.endEpochExclusive,
     };
   });
 
@@ -462,6 +529,7 @@ export class TransactionPreparer extends Effect.Service<TransactionPreparer>()(
     sync: () => ({
       prepareTransactionArtifacts,
       gatewayPreparePreview,
+      gatewayCurrentEpoch,
     }),
   },
 ) {}

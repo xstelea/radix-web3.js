@@ -90,7 +90,7 @@ describe('signature import', () => {
 
   it.effect('rejects unchanged filled-template placeholders', () =>
     Effect.gen(function* () {
-      const result = yield* Effect.exit(
+      const result = yield* Effect.either(
         importSignatures({
           transactionId: 'txid',
           generatedRequests: [request],
@@ -116,7 +116,10 @@ describe('signature import', () => {
         }),
       );
 
-      expect(result._tag).toBe('Failure');
+      expect(result._tag).toBe('Left');
+      if (result._tag === 'Left') {
+        expect(String(result.left.reason)).toContain('publicKey.hex');
+      }
     }),
   );
 

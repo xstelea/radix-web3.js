@@ -95,6 +95,27 @@ const structuredError = (input: {
   }),
 });
 
+const reasonMessage = (reason: unknown) => {
+  if (reason === undefined) {
+    return '';
+  }
+
+  if (reason instanceof Error) {
+    return `: ${reason.message}`;
+  }
+
+  if (typeof reason === 'string') {
+    return `: ${reason}`;
+  }
+
+  return `: ${renderJson(reason)}`;
+};
+
+const taggedErrorCode = (error: { _tag: string; code?: unknown }) =>
+  typeof error.code === 'string'
+    ? error.code
+    : error._tag.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase();
+
 const parseGlobalFlags = (argv: string[]) => {
   let format: OutputFormat = 'json';
   const rest: string[] = [];
@@ -608,6 +629,32 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
             code: 'ARTIFACT_STORE_ERROR',
             message: `Could not read transaction artifact: ${error.path}`,
             exitCode: 66,
+          }),
+        );
+      }
+
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        '_tag' in error &&
+        typeof error._tag === 'string'
+      ) {
+        const taggedError = error as {
+          _tag: string;
+          code?: unknown;
+          path?: unknown;
+          reason?: unknown;
+        };
+        const path =
+          typeof taggedError.path === 'string' ? ` at ${taggedError.path}` : '';
+        const reason =
+          'reason' in taggedError ? reasonMessage(taggedError.reason) : '';
+
+        return Effect.succeed(
+          structuredError({
+            code: taggedErrorCode(taggedError),
+            message: `${taggedError._tag}${path}${reason}`,
+            exitCode: 64,
           }),
         );
       }

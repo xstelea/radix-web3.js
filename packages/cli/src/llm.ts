@@ -5,6 +5,7 @@ Use \`rdx\` to prepare, inspect, sign-orchestrate, notarize, submit, and track R
 ## Core Rules
 
 - Run \`rdx config show\` before \`tx prepare\` to verify the resolved network and artifact root.
+- After \`tx prepare\`, check \`startEpochInclusive\` and \`endEpochExclusive\` in the command JSON before collecting signatures.
 - \`rdx\` defaults to Mainnet. Prepare on the intended network; do not reuse prepared artifacts across networks.
 - A transaction lifecycle is network-bound from \`tx prepare\` through signing, notarization, submission, and status.
 - \`rdx\` never stores, accepts, or derives private keys.
@@ -69,7 +70,7 @@ rdx tx submit txid_example
 rdx tx status txid_example
 \`\`\`
 
-After \`tx prepare\`, inspect the JSON result for \`transactionId\`, \`artifactPath\`, \`preparedPath\`, and generated \`signatureTemplatePaths\`. Fill the generated templates by replacing placeholder Ed25519 public key and signature values. Sign only each request's \`hash.hex\`.
+After \`tx prepare\`, inspect the JSON result for \`transactionId\`, \`artifactPath\`, \`preparedPath\`, \`startEpochInclusive\`, \`endEpochExclusive\`, and generated \`signatureTemplatePaths\`. Fill the generated templates by replacing placeholder Ed25519 public key and signature values. Sign only each request's \`hash.hex\`.
 
 ## Multi-party And Subintent Example
 
@@ -121,6 +122,7 @@ rdx template print signature-file
 ## Troubleshooting
 
 - Workflow command failures print structured JSON errors with \`type\`, \`code\`, and \`message\`.
+- Gateway failures include response details in \`message\` when the Gateway returns a structured error body.
 - Inspect \`code\` and \`message\` first; avoid parsing human help text.
 - Use \`rdx tx status\`, \`rdx tx list\`, and \`rdx tx path\` before reading files manually.
 - If the network is wrong, prepare a new transaction for the intended network.

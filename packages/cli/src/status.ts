@@ -7,6 +7,7 @@ import {
   writeSubmitResult,
 } from './artifacts';
 import type { Network, ResolvedRdxConfig } from './config';
+import { gatewayErrorMessage } from './gatewayHttp';
 import { readJsonFile } from './platformIo';
 import {
   type ArtifactStatus,
@@ -60,7 +61,11 @@ export const gatewayTransactionStatus = (input: {
       );
 
       if (!response.ok) {
-        throw new Error(`Gateway returned ${response.status}`);
+        throw new Error(
+          await Effect.runPromise(
+            gatewayErrorMessage('Gateway status', response),
+          ),
+        );
       }
 
       const body = (await response.json()) as {

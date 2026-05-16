@@ -10,7 +10,13 @@ import {
 import { Data, Effect, Schema } from 'effect';
 import { findTransactionArtifact } from './artifacts';
 import type { ResolvedRdxConfig } from './config';
-import { makeDirectory, readJsonFile, writeJsonFile } from './platformIo';
+import { gatewayErrorMessage } from './gatewayHttp';
+import {
+  fileExists,
+  makeDirectory,
+  readJsonFile,
+  writeJsonFile,
+} from './platformIo';
 import {
   PLACEHOLDER_SIGNATURE_HEX,
   PreparedTransactionSchema,
@@ -24,6 +30,7 @@ import {
 export class NotarizeError extends Data.TaggedError('NotarizeError')<{
   code:
     | 'INCOMPLETE_SIGNATURES'
+    | 'MISSING_SIGNATURE_FILE'
     | 'MISSING_NOTARY_PUBLIC_KEY'
     | 'PREVIEW_FAILED'
     | 'READ_FAILED'
@@ -70,6 +77,38 @@ const readJson = (path: string) =>
     path,
     (reason) => new NotarizeError({ code: 'READ_FAILED', path, reason }),
   );
+
+const readSignatureFile = (input: {
+  artifactPath: string;
+  transactionId: string;
+  requiredSignatureCount: number;
+}) =>
+  Effect.gen(function* () {
+    const path = join(input.artifactPath, 'signatures.json');
+    const exists = yield* fileExists(path);
+
+    if (!exists && input.requiredSignatureCount === 0) {
+      return SignatureFileSchema.make({
+        type: 'signatureFile',
+        version: 1,
+        transactionId: input.transactionId,
+        signatures: [],
+      });
+    }
+
+    if (!exists) {
+      return yield* new NotarizeError({
+        code: 'MISSING_SIGNATURE_FILE',
+        path,
+        reason:
+          'Run `rdx tx add-signatures <transactionId> --file <signature-file>` before `rdx tx notarize`.',
+      });
+    }
+
+    return yield* readJson(path).pipe(
+      Effect.flatMap(Schema.decodeUnknown(SignatureFileSchema)),
+    );
+  });
 
 const writeJson = (path: string, value: unknown) =>
   Effect.gen(function* () {
@@ -257,7 +296,9 @@ export const gatewayNotarizePreview = (input: {
       );
       if (!response.ok) {
         throw new Error(
-          `Gateway preview failed with status ${response.status}`,
+          await Effect.runPromise(
+            gatewayErrorMessage('Gateway preview', response),
+          ),
         );
       }
       const body = (await response.json()) as {
@@ -298,17 +339,26 @@ export const notarizeTransactionArtifact = (input: {
         ),
       ),
     );
-    const signatureFile = yield* readJson(
-      join(artifactPath, 'signatures.json'),
-    ).pipe(Effect.flatMap(Schema.decodeUnknown(SignatureFileSchema)));
-
-    const complete = generatedRequests.every((request) =>
-      requestComplete(request, signatureFile.signatures),
+    const requestsRequiringSignatures = generatedRequests.filter(
+      (request) => request.scope.kind !== 'notary',
     );
-    if (!complete) {
+    const signatureFile = yield* readSignatureFile({
+      artifactPath,
+      transactionId: prepared.transactionId,
+      requiredSignatureCount: requestsRequiringSignatures.length,
+    });
+
+    const missingRequest = requestsRequiringSignatures.find(
+      (request) => !requestComplete(request, signatureFile.signatures),
+    );
+    if (missingRequest) {
+      const nextCommand = `rdx tx add-signatures ${prepared.transactionId} --file <signature-file>`;
       return yield* new NotarizeError({
         code: 'INCOMPLETE_SIGNATURES',
-        path: join(artifactPath, 'signatures.json'),
+        path:
+          missingRequest.signingRequestPath ??
+          join(artifactPath, 'signatures.json'),
+        reason: `Missing signature for ${missingRequest.scope.kind}${missingRequest.account ? ` (${missingRequest.account})` : ''}. Next: ${nextCommand}`,
       });
     }
 

@@ -32,6 +32,7 @@ import {
 import { readJsonFile } from './platformIo';
 import {
   type PrepareTransactionResult,
+  gatewayCurrentEpoch,
   gatewayPreparePreview,
   prepareTransactionArtifacts,
 } from './prepare';
@@ -182,6 +183,8 @@ export const renderPrepare = (
     transactionIntentPath: result.transactionIntentPath,
     staticAnalysisPath: result.staticAnalysisPath,
     signatureTemplatePaths: result.signatureTemplatePaths,
+    startEpochInclusive: result.startEpochInclusive,
+    endEpochExclusive: result.endEpochExclusive,
   };
 
   if (format === 'text') {
@@ -411,12 +414,14 @@ const txPrepareCommand = Command.make(
           ),
         );
       }
+      const currentEpoch = yield* gatewayCurrentEpoch({ config });
       const result = yield* prepareTransactionArtifacts({
         artifactRoot: config.artifactRoot,
         network: config.network,
         manifestPath: manifest,
         subintentsPath: Option.getOrUndefined(subintents),
         notary,
+        currentEpoch,
         previewPreparedTransaction: (previewTransactionHex) =>
           gatewayPreparePreview({ config, previewTransactionHex }),
       });

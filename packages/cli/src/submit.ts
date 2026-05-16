@@ -10,6 +10,7 @@ import {
 import { Data, Effect, Schema } from 'effect';
 import { findTransactionArtifact, writeSubmitResult } from './artifacts';
 import type { ResolvedRdxConfig } from './config';
+import { gatewayErrorMessage } from './gatewayHttp';
 import { readJsonFile, writeFileString } from './platformIo';
 import {
   NetworkTransactionStatusSchema,
@@ -192,7 +193,11 @@ export const gatewaySubmitNotarizedTransaction = (input: {
         },
       );
       if (!response.ok) {
-        throw new Error(`Gateway submit failed with status ${response.status}`);
+        throw new Error(
+          await Effect.runPromise(
+            gatewayErrorMessage('Gateway submit', response),
+          ),
+        );
       }
       return NetworkTransactionStatusSchema.make({
         transactionId: input.transactionId,
