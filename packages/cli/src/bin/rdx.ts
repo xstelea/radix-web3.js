@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { NodeContext, NodeRuntime } from '@effect/platform-node';
+import { FileSystem, Path } from '@effect/platform';
 import {
   Terminal,
   type Terminal as TerminalService,
@@ -7,14 +8,15 @@ import {
 import { Effect, Option, Schema } from 'effect';
 import { cli } from '../cli';
 
-const shouldRenderCliTerminal = process.argv.some(
-  (arg) =>
-    arg === '--help' ||
-    arg === '-h' ||
-    arg === '--version' ||
-    arg === '--wizard' ||
-    arg === '--completions',
-);
+const shouldRenderCliTerminal = (argv: ReadonlyArray<string>) =>
+  argv.some(
+    (arg) =>
+      arg === '--help' ||
+      arg === '-h' ||
+      arg === '--version' ||
+      arg === '--wizard' ||
+      arg === '--completions',
+  );
 
 const quietTerminal = {
   columns: Effect.succeed(80),
@@ -25,30 +27,38 @@ const quietTerminal = {
   display: () => Effect.void,
 } as TerminalService;
 
-if (!shouldRenderCliTerminal) {
-  const stdoutWrite = process.stdout.write.bind(process.stdout);
-  const stderrWrite = process.stderr.write.bind(process.stderr);
-  const shouldSuppressCliValidationText = (chunk: unknown) =>
-    typeof chunk === 'string' &&
-    (chunk.startsWith('Invalid ') ||
-      chunk.startsWith('Missing ') ||
-      chunk.startsWith('Expected '));
+let hasSuppressedCliValidationText = false;
 
-  process.stdout.write = ((chunk: unknown, ...args: unknown[]) =>
-    shouldSuppressCliValidationText(chunk)
-      ? true
-      : stdoutWrite(
-          chunk as never,
-          ...(args as never[]),
-        )) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: unknown, ...args: unknown[]) =>
-    shouldSuppressCliValidationText(chunk)
-      ? true
-      : stderrWrite(
-          chunk as never,
-          ...(args as never[]),
-        )) as typeof process.stderr.write;
-}
+const suppressCliValidationText = (argv: ReadonlyArray<string>) =>
+  Effect.sync(() => {
+    if (shouldRenderCliTerminal(argv) || hasSuppressedCliValidationText) {
+      return;
+    }
+
+    hasSuppressedCliValidationText = true;
+    const stdoutWrite = process.stdout.write.bind(process.stdout);
+    const stderrWrite = process.stderr.write.bind(process.stderr);
+    const shouldSuppressCliValidationText = (chunk: unknown) =>
+      typeof chunk === 'string' &&
+      (chunk.startsWith('Invalid ') ||
+        chunk.startsWith('Missing ') ||
+        chunk.startsWith('Expected '));
+
+    process.stdout.write = ((chunk: unknown, ...args: unknown[]) =>
+      shouldSuppressCliValidationText(chunk)
+        ? true
+        : stdoutWrite(
+            chunk as never,
+            ...(args as never[]),
+          )) as typeof process.stdout.write;
+    process.stderr.write = ((chunk: unknown, ...args: unknown[]) =>
+      shouldSuppressCliValidationText(chunk)
+        ? true
+        : stderrWrite(
+            chunk as never,
+            ...(args as never[]),
+          )) as typeof process.stderr.write;
+  });
 
 const CliValidationTextSchema = Schema.Struct({
   error: Schema.Struct({
@@ -121,24 +131,47 @@ const validationCode = (error: unknown, message: string) => {
   return 'CLI_VALIDATION_ERROR';
 };
 
-const cliEffect = Effect.suspend(() => cli(process.argv)).pipe(
-  shouldRenderCliTerminal
-    ? (effect) => effect
-    : Effect.provideService(Terminal, quietTerminal),
-  Effect.catchAll((error) =>
-    Effect.sync(() => {
-      const message = validationMessage(error);
-      const code = validationCode(error, message);
-      console.error(
-        JSON.stringify({
-          type: 'error',
-          code,
-          message,
-        }),
-      );
-      process.exitCode = 64;
-    }),
-  ),
-);
+class RdxCliRuntime extends Effect.Service<RdxCliRuntime>()('RdxCliRuntime', {
+  accessors: true,
+  effect: Effect.gen(function* () {
+    const fileSystem = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const terminal = yield* Terminal;
 
-cliEffect.pipe(Effect.provide(NodeContext.layer), NodeRuntime.runMain);
+    return {
+      run: (argv: ReadonlyArray<string>) =>
+        suppressCliValidationText(argv).pipe(
+          Effect.zipRight(
+            Effect.suspend(() => cli([...argv])).pipe(
+              Effect.provideService(FileSystem.FileSystem, fileSystem),
+              Effect.provideService(Path.Path, path),
+              Effect.provideService(
+                Terminal,
+                shouldRenderCliTerminal(argv) ? terminal : quietTerminal,
+              ),
+            ),
+          ),
+          Effect.catchAll((error) =>
+            Effect.sync(() => {
+              const message = validationMessage(error);
+              const code = validationCode(error, message);
+              console.error(
+                JSON.stringify({
+                  type: 'error',
+                  code,
+                  message,
+                }),
+              );
+              process.exitCode = 64;
+            }),
+          ),
+        ),
+    };
+  }),
+  dependencies: [NodeContext.layer],
+}) {}
+
+RdxCliRuntime.run(process.argv).pipe(
+  Effect.provide(RdxCliRuntime.Default),
+  NodeRuntime.runMain,
+);
