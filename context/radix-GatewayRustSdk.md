@@ -1,12 +1,12 @@
 # Radix Gateway Rust SDK Reference
 
-Technical reference for the `radix-client` Rust crate (v1.0.1) — the Gateway and Core API SDK at `.repos/radix-gateway-api-rust`. Provides typed async and blocking HTTP clients for the Radix network APIs.
+Technical reference for the `rdx-client` Rust crate (v1.0.1) — the Gateway and Core API SDK at `.repos/radix-gateway-api-rust`. Provides typed async and blocking HTTP clients for the Radix network APIs.
 
 ## Overview
 
 |                   |                                                                                                                                               |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Crate**         | `radix-client`                                                                                                                                |
+| **Crate**         | `rdx-client`                                                                                                                                |
 | **Version**       | `1.0.1`                                                                                                                                       |
 | **Feature flags** | `gateway` (default), `core` (default)                                                                                                         |
 | **Key deps**      | `reqwest` (json, blocking), `serde`, `serde_json`, `serde_path_to_error`, `chrono` (serde), `rust_decimal`, `duplicate`, `maybe-async`, `log` |

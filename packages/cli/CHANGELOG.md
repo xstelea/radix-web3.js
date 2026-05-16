@@ -1,4 +1,4 @@
-# radix-cli
+# rdx-cli
 
 ## 0.1.0
 

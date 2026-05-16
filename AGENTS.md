@@ -111,7 +111,7 @@ Ordered by dependency (prerequisites listed first within each category).
 | [radix-SubIntents](./context/radix-SubIntents.md) | 567 | Subintents / pre-authorizations — composable partial transactions, multisig, governance | TransactionManifest |
 | [radix-Gateway](./context/radix-Gateway.md) | 541 | `@radix-effects/gateway` — Effect wrapper with tagged errors, 429 retry, pagination, batching | — |
 | [radix-TxTool](./context/radix-TxTool.md) | 329 | `@radix-effects/tx-tool` — Effect transaction builder: Signer, lifecycle hooks, manifest helpers | Gateway, TransactionManifest, Context, Layer, Schema |
-| [radix-GatewayRustSdk](./context/radix-GatewayRustSdk.md) | 718 | `radix-client` Rust crate — typed async/blocking HTTP clients for Gateway and Core APIs | — |
+| [radix-GatewayRustSdk](./context/radix-GatewayRustSdk.md) | 718 | `rdx-client` Rust crate — typed async/blocking HTTP clients for Gateway and Core APIs | — |
 | [radix-radix-dapp-toolkit](./context/radix-radix-dapp-toolkit.md) | 357 | `@radixdlt/radix-dapp-toolkit` — wallet connection, signing, dual transport, RxJS state | — |
 | [radix-ROLA](./context/radix-ROLA.md) | 532 | ROLA — challenge-response auth verifying wallet identity via on-ledger `owner_keys` signatures | dapp-toolkit, Gateway, Account |
 

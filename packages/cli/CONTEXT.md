@@ -8,13 +8,13 @@ Radix Web3.js provides TypeScript packages for building Radix applications, agen
 A local-key command-line signer and transaction executor designed for autonomous agents and scripted workflows.
 _Avoid_: Consumer wallet, browser wallet, mobile wallet
 
-**radix-cli**:
+**rdx-cli**:
 The npm package that distributes the Agent-first CLI Wallet executable.
 _Avoid_: radix-agent-toolkit, radix-web3.js core
 
 **rdx**:
-The command-line binary exposed by the radix-cli package.
-_Avoid_: radix-wallet, radix-cli command
+The command-line binary exposed by the rdx-cli package.
+_Avoid_: radix-wallet, rdx-cli command
 
 **Radix Agent Protocol (RAP)**:
 The draft versioned state-machine protocol for coordinating agent-first Radix transaction workflows without taking key custody.
@@ -277,7 +277,7 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 - An **Agent-first CLI Wallet** signs, notarizes, previews, submits, and queries transactions for a Radix account.
 - An **Agent-first CLI Wallet** prepares, previews, submits, and queries Radix account state without taking custody of private keys.
 - An **Agent-first CLI Wallet** is not responsible for consumer wallet UX, mobile pairing, personas, hardware wallets, or full portfolio management.
-- **radix-cli** publishes the **rdx** executable.
+- **rdx-cli** publishes the **rdx** executable.
 - The **rdx** executable uses an **Agent-first Interface** by default and reserves prompt-driven behavior for explicit interactive mode.
 - An **Agent-first CLI Wallet** uses **Out-of-band Signing** for key custody: rdx prepares the hash, and the calling agent signs it outside the CLI.
 - **Out-of-band Signing** starts with a **Signing Request** and completes when the agent supplies a matching signature.
@@ -309,7 +309,7 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 - An **Account Read Command** exposes Gateway-shaped data as an **Account Read Result** instead of hand-normalizing Gateway data into separate CLI DTOs.
 - Account read schemas validate the CLI-owned command result envelope and keep Gateway-owned payload internals permissive.
 - Fungible and non-fungible account balances are exposed through separate **Fungible Token Read Command** and **NFT Read Command** flows rather than one combined balance command.
-- Because radix-cli has not been released, `rdx account balance` is replaced rather than kept as a compatibility alias.
+- Because rdx-cli has not been released, `rdx account balance` is replaced rather than kept as a compatibility alias.
 - `rdx account show` exposes the Gateway state entity details response shape under the command result rather than a CLI-specific details wrapper.
 - `rdx tx history` exposes the Gateway stream transactions response shape under the command result rather than a CLI-specific transaction list.
 - **Virtual Account Address Derivation** does not query Gateway and does not prove the account currently exists on-ledger.
@@ -417,8 +417,8 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 > **Dev:** "Should the CLI wallet support browser wallet pairing?"
 > **Domain expert:** "No — an **Agent-first CLI Wallet** is a local-key CLI signer and executor for agents, not a consumer wallet."
 
-> **Dev:** "Should agents invoke `radix-cli` directly?"
-> **Domain expert:** "They install **radix-cli**, but invoke the wallet through the **rdx** command."
+> **Dev:** "Should agents invoke `rdx-cli` directly?"
+> **Domain expert:** "They install **rdx-cli**, but invoke the wallet through the **rdx** command."
 
 > **Dev:** "Should `rdx tx submit` prompt for confirmation by default?"
 > **Domain expert:** "No — the **Agent-first Interface** should be non-interactive by default and rely on explicit policy gates."

@@ -1,5 +1,5 @@
 {
-  "name": "radix-cli",
+  "name": "rdx-cli",
   "version": "0.1.0",
   "type": "module",
   "bin": {

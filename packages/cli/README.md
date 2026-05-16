@@ -1,4 +1,4 @@
-# radix-cli
+# rdx-cli
 
 
 <p align="center">
@@ -12,10 +12,10 @@ Agent-first Radix transaction workflow CLI. The package publishes the `rdx` exec
 ## Installation
 
 ```bash
-npm install -g radix-cli
+npm install -g rdx-cli
 ```
 
-Or run from a project script after adding `radix-cli` as a dependency.
+Or run from a project script after adding `rdx-cli` as a dependency.
 
 ## Get Started
 
