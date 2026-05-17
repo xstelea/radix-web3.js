@@ -4,6 +4,22 @@ Deep-analysis reference docs for AI agents building on Radix + Effect + TanStack
 
 ---
 
+## Agent skills
+
+### Issue tracker
+
+Implementation issues are tracked in Linear; long-form PRDs and design docs are stored in Notion. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-role triage vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context repo: read `CONTEXT-MAP.md` first, then the relevant package `CONTEXT.md`. See `docs/agents/domain.md`.
+
+---
+
 ## Vendored Repositories
 
 - Use vendored repositories as read-only reference material when working with related libraries.
