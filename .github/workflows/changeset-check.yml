@@ -12,6 +12,7 @@ permissions:
 
 env:
   CI: true
+  NPM_TOKEN: unused
 
 jobs:
   changeset:
