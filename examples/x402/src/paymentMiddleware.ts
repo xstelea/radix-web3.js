@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import type { MiddlewareHandler } from 'hono';
 import { parseX402PaymentHeader } from './paymentPayload';
 import {
@@ -7,7 +8,7 @@ import {
 import { settlementCacheKey } from './settlementCache';
 
 type SettlementResult =
-  | { status: 'CommittedSuccess'; subintentHash: string }
+  | { status: 'CommittedSuccess'; subintentHash?: string }
   | { status: string; subintentHash?: string };
 
 export type X402PaymentMiddlewareOptions = {
@@ -16,7 +17,7 @@ export type X402PaymentMiddlewareOptions = {
     signedPartialTransactionHex: string;
     requirements: PaymentRequirements;
     resourceUrl: string;
-  }) => Promise<SettlementResult>;
+  }) => Effect.Effect<SettlementResult, unknown>;
 };
 
 export const createX402PaymentMiddleware = ({
@@ -26,64 +27,96 @@ export const createX402PaymentMiddleware = ({
   const settlementRecords = new Set<string>();
   const payloadSettlementKeys = new Map<string, string>();
 
-  return async (context, next) => {
-    const paymentPayload = context.req.header('X-PAYMENT');
+  return (context, next) =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const paymentPayload = context.req.header('X-PAYMENT');
 
-    if (paymentPayload === undefined) {
-      return context.json(
-        {
-          x402Version: 2,
-          accepts: [
+        if (paymentPayload === undefined) {
+          return context.json(
             {
-              ...requirements,
-              paymentRequirementsHash: paymentRequirementsHash(requirements),
+              x402Version: 2,
+              accepts: [
+                {
+                  ...requirements,
+                  paymentRequirementsHash:
+                    paymentRequirementsHash(requirements),
+                },
+              ],
             },
-          ],
-        },
-        402,
-      );
-    }
+            402,
+          );
+        }
 
-    const parsedPaymentPayload = parseX402PaymentHeader(paymentPayload);
-    const existingSettlementKey = payloadSettlementKeys.get(
-      parsedPaymentPayload.transaction,
+        const parsedPaymentPayload =
+          yield* parseX402PaymentHeader(paymentPayload);
+        const existingSettlementKey = payloadSettlementKeys.get(
+          parsedPaymentPayload.transaction,
+        );
+
+        if (
+          existingSettlementKey !== undefined &&
+          settlementRecords.has(existingSettlementKey)
+        ) {
+          yield* Effect.promise(() => next());
+          return;
+        }
+
+        const pendingCacheKey = (subintentHash: string) =>
+          settlementCacheKey({
+            subintentHash,
+            requirements,
+            resourceUrl: requirements.resourceUrl,
+          });
+        const settlementEffect: Effect.Effect<SettlementResult> =
+          settlePayment === undefined
+            ? Effect.succeed({
+                status: 'MissingSettlementHandler',
+              } satisfies SettlementResult)
+            : settlePayment({
+                signedPartialTransactionHex: parsedPaymentPayload.transaction,
+                requirements,
+                resourceUrl: requirements.resourceUrl,
+              }).pipe(
+                Effect.catchAll(() =>
+                  Effect.succeed({
+                    status: 'SettlementFailed',
+                  } satisfies SettlementResult),
+                ),
+              );
+        const settlement = yield* settlementEffect;
+
+        if (settlement.status !== 'CommittedSuccess') {
+          return context.json(
+            {
+              error: 'payment_not_settled',
+              paymentStatus: settlement.status,
+            },
+            402,
+          );
+        }
+
+        if (
+          'subintentHash' in settlement &&
+          settlement.subintentHash !== undefined
+        ) {
+          const cacheKey = pendingCacheKey(settlement.subintentHash);
+          settlementRecords.add(cacheKey);
+          payloadSettlementKeys.set(parsedPaymentPayload.transaction, cacheKey);
+        }
+
+        yield* Effect.promise(() => next());
+      }).pipe(
+        Effect.catchTag('InvalidPaymentPayloadError', () =>
+          Effect.succeed(
+            context.json(
+              {
+                error: 'invalid_payment_payload',
+              },
+              402,
+            ),
+          ),
+        ),
+      ),
     );
-    if (
-      existingSettlementKey !== undefined &&
-      settlementRecords.has(existingSettlementKey)
-    ) {
-      await next();
-      return;
-    }
-
-    const pendingCacheKey = (subintentHash: string) =>
-      settlementCacheKey({
-        subintentHash,
-        requirements,
-        resourceUrl: requirements.resourceUrl,
-      });
-    const settlement = await settlePayment?.({
-      signedPartialTransactionHex: parsedPaymentPayload.transaction,
-      requirements,
-      resourceUrl: requirements.resourceUrl,
-    });
-
-    if (settlement?.status !== 'CommittedSuccess') {
-      return context.json(
-        {
-          error: 'payment_not_settled',
-          paymentStatus: settlement?.status ?? 'MissingSettlementHandler',
-        },
-        402,
-      );
-    }
-
-    if (settlement.subintentHash !== undefined) {
-      const cacheKey = pendingCacheKey(settlement.subintentHash);
-      settlementRecords.add(cacheKey);
-      payloadSettlementKeys.set(parsedPaymentPayload.transaction, cacheKey);
-    }
-
-    await next();
-  };
 };

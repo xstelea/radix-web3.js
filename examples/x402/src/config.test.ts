@@ -1,8 +1,10 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 import {
+  ConfigParseError,
   ConfigPlaceholderError,
   mainnetConfigTemplate,
+  parseX402Config,
   validateX402Config,
 } from './config';
 
@@ -22,5 +24,11 @@ describe('Placeholder Rejection', () => {
       'asset',
       'intentDiscriminator',
     ]);
+  });
+
+  it('rejects malformed config JSON with a typed parse error', async () => {
+    const error = await Effect.runPromise(Effect.flip(parseX402Config('{')));
+
+    expect(error).toBeInstanceOf(ConfigParseError);
   });
 });

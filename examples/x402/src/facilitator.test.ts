@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 import { createFacilitatorSettlementBackend } from './facilitator';
 import type { PaymentRequirements } from './paymentRequirements';
@@ -23,30 +24,37 @@ describe('facilitator settlement backend', () => {
     const settle = createFacilitatorSettlementBackend({
       feePayerAccount:
         'account_rdx12fee2he2pm0qdgrwn9nsymr8v3n2dr59u2rwzfq8t2vrlv9av0000',
-      preview: async ({ rootManifest }) => {
-        calls.push('preview');
-        expect(rootManifest).toContain('lock_fee');
-        expect(rootManifest).toContain('YIELD_TO_CHILD NamedIntent("payment")');
-        expect(rootManifest).toContain('Intent("subtxid_rdx1paid")');
-      },
-      submit: async () => {
-        calls.push('submit');
-        return { transactionId: 'txid_rdx1settlement' };
-      },
-      waitForCommittedSuccess: async ({ transactionId }) => {
-        calls.push(`wait:${transactionId}`);
-      },
+      preview: ({ rootManifest }) =>
+        Effect.sync(() => {
+          calls.push('preview');
+          expect(rootManifest).toContain('lock_fee');
+          expect(rootManifest).toContain(
+            'YIELD_TO_CHILD NamedIntent("payment")',
+          );
+          expect(rootManifest).toContain('Intent("subtxid_rdx1paid")');
+        }),
+      submit: () =>
+        Effect.sync(() => {
+          calls.push('submit');
+          return { transactionId: 'txid_rdx1settlement' };
+        }),
+      waitForCommittedSuccess: ({ transactionId }) =>
+        Effect.sync(() => {
+          calls.push(`wait:${transactionId}`);
+        }),
     });
 
     await expect(
-      settle({
-        requirements,
-        resourceUrl: requirements.resourceUrl,
-        signedPartialTransactionHex: '4d220504',
-        payerAccount:
-          'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
-        subintentHash: 'subtxid_rdx1paid',
-      }),
+      Effect.runPromise(
+        settle({
+          requirements,
+          resourceUrl: requirements.resourceUrl,
+          signedPartialTransactionHex: '4d220504',
+          payerAccount:
+            'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
+          subintentHash: 'subtxid_rdx1paid',
+        }),
+      ),
     ).resolves.toEqual({
       status: 'CommittedSuccess',
       payerAccount:

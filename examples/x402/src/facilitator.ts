@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import type { PaymentRequirements } from './paymentRequirements';
 
 export type ValidatedPaymentSettlementInput = {
@@ -8,17 +9,25 @@ export type ValidatedPaymentSettlementInput = {
   subintentHash: string;
 };
 
+export type FacilitatorSettlementResult = {
+  status: 'CommittedSuccess';
+  payerAccount: string;
+  subintentHash: string;
+};
+
 export type FacilitatorSettlementBackendOptions = {
   feePayerAccount: string;
   preview: (input: {
     rootManifest: string;
     signedPartialTransactionHex: string;
-  }) => Promise<void>;
+  }) => Effect.Effect<void, unknown>;
   submit: (input: {
     rootManifest: string;
     signedPartialTransactionHex: string;
-  }) => Promise<{ transactionId: string }>;
-  waitForCommittedSuccess: (input: { transactionId: string }) => Promise<void>;
+  }) => Effect.Effect<{ transactionId: string }, unknown>;
+  waitForCommittedSuccess: (input: {
+    transactionId: string;
+  }) => Effect.Effect<void, unknown>;
 };
 
 export const sponsoredRootManifest = (input: {
@@ -46,33 +55,34 @@ CALL_METHOD
     None
 ;`;
 
-export const createFacilitatorSettlementBackend =
-  ({
-    feePayerAccount,
-    preview,
-    submit,
-    waitForCommittedSuccess,
-  }: FacilitatorSettlementBackendOptions) =>
-  async (input: ValidatedPaymentSettlementInput) => {
+export const createFacilitatorSettlementBackend = ({
+  feePayerAccount,
+  preview,
+  submit,
+  waitForCommittedSuccess,
+}: FacilitatorSettlementBackendOptions) =>
+  Effect.fn('facilitatorSettlementBackend')(function* (
+    input: ValidatedPaymentSettlementInput,
+  ) {
     const rootManifest = sponsoredRootManifest({
       feePayerAccount,
       requirements: input.requirements,
       subintentHash: input.subintentHash,
     });
 
-    await preview({
+    yield* preview({
       rootManifest,
       signedPartialTransactionHex: input.signedPartialTransactionHex,
     });
-    const { transactionId } = await submit({
+    const { transactionId } = yield* submit({
       rootManifest,
       signedPartialTransactionHex: input.signedPartialTransactionHex,
     });
-    await waitForCommittedSuccess({ transactionId });
+    yield* waitForCommittedSuccess({ transactionId });
 
     return {
-      status: 'CommittedSuccess' as const,
+      status: 'CommittedSuccess',
       payerAccount: input.payerAccount,
       subintentHash: input.subintentHash,
-    };
-  };
+    } satisfies FacilitatorSettlementResult;
+  });

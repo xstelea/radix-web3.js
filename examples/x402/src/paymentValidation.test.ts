@@ -4,6 +4,7 @@ import { paymentSubintentManifest } from './exactRadix';
 import type { PaymentRequirements } from './paymentRequirements';
 import {
   ExactPaymentSubintentValidationError,
+  type PaymentSubintentInspection,
   validateExactPaymentSubintent,
 } from './paymentValidation';
 
@@ -22,7 +23,7 @@ const requirements: PaymentRequirements = {
   },
 };
 
-const inspection = {
+const inspection: PaymentSubintentInspection = {
   rootSubintentHash: {
     id: 'subtxid_rdx1valid',
     hex: 'aa',
@@ -30,7 +31,7 @@ const inspection = {
   nonRootSubintentCount: 0,
   rootSubintentSignatures: [
     {
-      curve: 'Ed25519' as const,
+      curve: 'Ed25519',
       signature: '22'.repeat(64),
       publicKey: '11'.repeat(32),
     },
@@ -39,8 +40,6 @@ const inspection = {
     intentCore: {
       header: {
         networkId: 1,
-        startEpochInclusive: 1,
-        endEpochExclusive: 10,
         intentDiscriminator: 123,
       },
       instructions: paymentSubintentManifest({

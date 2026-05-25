@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 import { createX402PaymentMiddleware } from './paymentMiddleware';
@@ -49,9 +50,7 @@ describe('x402 Payment Middleware', () => {
       '/protected/reference.md',
       createX402PaymentMiddleware({
         requirements,
-        settlePayment: async () => ({
-          status: 'Submitted',
-        }),
+        settlePayment: () => Effect.succeed({ status: 'Submitted' }),
       }),
       (context) => context.text('paid resource'),
     );
@@ -72,6 +71,29 @@ describe('x402 Payment Middleware', () => {
     });
   });
 
+  it('returns 402 when the payment payload cannot be decoded', async () => {
+    const app = new Hono();
+
+    app.get(
+      '/protected/reference.md',
+      createX402PaymentMiddleware({
+        requirements,
+      }),
+      (context) => context.text('paid resource'),
+    );
+
+    const response = await app.request('/protected/reference.md', {
+      headers: {
+        'X-PAYMENT': '{',
+      },
+    });
+
+    expect(response.status).toBe(402);
+    expect(await response.json()).toEqual({
+      error: 'invalid_payment_payload',
+    });
+  });
+
   it('reuses in-memory Settlement Records after CommittedSuccess', async () => {
     const app = new Hono();
     let settlementAttempts = 0;
@@ -80,12 +102,12 @@ describe('x402 Payment Middleware', () => {
       '/protected/reference.md',
       createX402PaymentMiddleware({
         requirements,
-        settlePayment: async () => {
+        settlePayment: () => {
           settlementAttempts += 1;
-          return {
+          return Effect.succeed({
             status: 'CommittedSuccess',
             subintentHash: 'subtxid_rdx1paid',
-          };
+          });
         },
       }),
       (context) => context.text('paid resource'),

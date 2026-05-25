@@ -1,6 +1,7 @@
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 import type { PaymentRequirements } from './paymentRequirements';
 import { createX402Server } from './server';
@@ -29,7 +30,11 @@ describe('x402 server', () => {
     const app = createX402Server({
       requirements,
       markdownPath,
-      settlePayment: async () => ({ status: 'CommittedSuccess' }),
+      settlePayment: () =>
+        Effect.succeed({
+          status: 'CommittedSuccess',
+          subintentHash: 'subtxid_rdx1paid',
+        }),
     });
 
     const response = await app.request('/protected/reference.md', {

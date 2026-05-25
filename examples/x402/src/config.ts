@@ -1,17 +1,24 @@
-import { Data, Effect } from 'effect';
+import { Data, Effect, Schema } from 'effect';
+import type { PaymentRequirements } from './paymentRequirements';
 
-export type X402Config = {
-  networkId: 1;
-  gatewayBaseUrl: string;
-  resourceBaseUrl: string;
-  feePayerAccount: string;
-  payTo: string;
-  facilitatorNotaryBadge: string;
-  asset: string;
-  amount: string;
-  maxTimeoutSeconds: number;
-  intentDiscriminator: string;
-};
+export const X402ConfigSchema = Schema.Struct({
+  networkId: Schema.Literal(1),
+  gatewayBaseUrl: Schema.String,
+  resourceBaseUrl: Schema.String,
+  feePayerAccount: Schema.String,
+  payTo: Schema.String,
+  facilitatorNotaryBadge: Schema.String,
+  asset: Schema.String,
+  amount: Schema.String,
+  maxTimeoutSeconds: Schema.Number,
+  intentDiscriminator: Schema.String,
+});
+
+export type X402Config = typeof X402ConfigSchema.Type;
+
+export class ConfigParseError extends Data.TaggedError('ConfigParseError')<{
+  reason: unknown;
+}> {}
 
 export class ConfigPlaceholderError extends Data.TaggedError(
   'ConfigPlaceholderError',
@@ -35,9 +42,9 @@ export const mainnetConfigTemplate: X402Config = {
 const isPlaceholder = (value: string): boolean =>
   value.startsWith('<') && value.endsWith('>');
 
-export const validateX402Config = (
+export const validateX402Config = Effect.fn('validateX402Config')(function* (
   config: X402Config,
-): Effect.Effect<X402Config, ConfigPlaceholderError> => {
+) {
   const placeholderPaths = [
     isPlaceholder(config.gatewayBaseUrl) ? 'gatewayBaseUrl' : undefined,
     isPlaceholder(config.resourceBaseUrl) ? 'resourceBaseUrl' : undefined,
@@ -53,24 +60,38 @@ export const validateX402Config = (
       : undefined,
   ].filter((path) => path !== undefined);
 
-  return placeholderPaths.length === 0
-    ? Effect.succeed(config)
-    : Effect.fail(new ConfigPlaceholderError({ placeholderPaths }));
-};
+  if (placeholderPaths.length > 0) {
+    return yield* Effect.fail(new ConfigPlaceholderError({ placeholderPaths }));
+  }
+
+  return config;
+});
+
+export const parseX402Config = Effect.fn('parseX402Config')(function* (
+  rawConfig: string,
+) {
+  const config = yield* Schema.decodeUnknown(
+    Schema.parseJson(X402ConfigSchema),
+  )(rawConfig).pipe(
+    Effect.mapError((reason) => new ConfigParseError({ reason })),
+  );
+
+  return yield* validateX402Config(config);
+});
 
 export const paymentRequirementsFromConfig = (input: {
   config: X402Config;
   resourceUrl: string;
-}) => ({
-  scheme: 'exact' as const,
-  network: 'radix:mainnet' as const,
+}): PaymentRequirements => ({
+  scheme: 'exact',
+  network: 'radix:mainnet',
   resourceUrl: input.resourceUrl,
   payTo: input.config.payTo,
   asset: input.config.asset,
   amount: input.config.amount,
   maxTimeoutSeconds: input.config.maxTimeoutSeconds,
   extra: {
-    mode: 'sponsored' as const,
+    mode: 'sponsored',
     notaryBadge: input.config.facilitatorNotaryBadge,
     intentDiscriminator: input.config.intentDiscriminator,
   },

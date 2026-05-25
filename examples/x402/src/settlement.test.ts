@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 import { paymentSubintentManifest } from './exactRadix';
 import type { PaymentRequirements } from './paymentRequirements';
@@ -21,43 +22,47 @@ const requirements: PaymentRequirements = {
 describe('Sponsored Subintent settlement', () => {
   it('inspects, validates, settles, and returns CommittedSuccess', async () => {
     const settlePayment = createSponsoredSettlement({
-      inspectSignedPartialTransaction: async () => ({
-        rootSubintentHash: { id: 'subtxid_rdx1paid', hex: 'aa' },
-        nonRootSubintentCount: 0,
-        rootSubintentSignatures: [
-          {
-            curve: 'Ed25519',
-            signature: '22'.repeat(64),
-            publicKey: '11'.repeat(32),
-          },
-        ],
-        rootSubintent: {
-          intentCore: {
-            header: {
-              networkId: 1,
-              intentDiscriminator: 123,
+      inspectSignedPartialTransaction: () =>
+        Effect.succeed({
+          rootSubintentHash: { id: 'subtxid_rdx1paid', hex: 'aa' },
+          nonRootSubintentCount: 0,
+          rootSubintentSignatures: [
+            {
+              curve: 'Ed25519',
+              signature: '22'.repeat(64),
+              publicKey: '11'.repeat(32),
             },
-            instructions: paymentSubintentManifest({
-              requirements,
-              payerAccount:
-                'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
-            }),
+          ],
+          rootSubintent: {
+            intentCore: {
+              header: {
+                networkId: 1,
+                intentDiscriminator: 123,
+              },
+              instructions: paymentSubintentManifest({
+                requirements,
+                payerAccount:
+                  'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
+              }),
+            },
           },
-        },
-      }),
-      settleValidatedPayment: async ({ payerAccount, subintentHash }) => ({
-        status: 'CommittedSuccess',
-        payerAccount,
-        subintentHash,
-      }),
+        }),
+      settleValidatedPayment: ({ payerAccount, subintentHash }) =>
+        Effect.succeed({
+          status: 'CommittedSuccess',
+          payerAccount,
+          subintentHash,
+        }),
     });
 
     await expect(
-      settlePayment({
-        requirements,
-        resourceUrl: requirements.resourceUrl,
-        signedPartialTransactionHex: '4d220504',
-      }),
+      Effect.runPromise(
+        settlePayment({
+          requirements,
+          resourceUrl: requirements.resourceUrl,
+          signedPartialTransactionHex: '4d220504',
+        }),
+      ),
     ).resolves.toEqual({
       status: 'CommittedSuccess',
       payerAccount:

@@ -40,69 +40,79 @@ const normalizeManifest = (manifest: string) =>
 
 const payerAccountPattern = /CALL_METHOD\s+Address\("([^"]+)"\)\s+"withdraw"/;
 
-export const validateExactPaymentSubintent = (input: {
+export const validateExactPaymentSubintent = Effect.fn(
+  'validateExactPaymentSubintent',
+)(function* (input: {
   inspection: PaymentSubintentInspection;
   requirements: PaymentRequirements;
-}): Effect.Effect<
-  { payerAccount: string; subintentHash: string },
-  ExactPaymentSubintentValidationError
-> =>
-  Effect.gen(function* () {
-    if (input.inspection.rootSubintent.intentCore.header.networkId !== 1) {
-      return yield* new ExactPaymentSubintentValidationError({
+}) {
+  if (input.inspection.rootSubintent.intentCore.header.networkId !== 1) {
+    return yield* Effect.fail(
+      new ExactPaymentSubintentValidationError({
         code: 'UNSUPPORTED_NETWORK',
-      });
-    }
+      }),
+    );
+  }
 
-    if (
-      input.inspection.rootSubintent.intentCore.header.intentDiscriminator !==
-      Number(input.requirements.extra.intentDiscriminator)
-    ) {
-      return yield* new ExactPaymentSubintentValidationError({
+  if (
+    input.inspection.rootSubintent.intentCore.header.intentDiscriminator !==
+    Number(input.requirements.extra.intentDiscriminator)
+  ) {
+    return yield* Effect.fail(
+      new ExactPaymentSubintentValidationError({
         code: 'NON_EXACT_PAYMENT_SUBINTENT',
-      });
-    }
+      }),
+    );
+  }
 
-    if (input.inspection.rootSubintentSignatures.length === 0) {
-      return yield* new ExactPaymentSubintentValidationError({
+  if (input.inspection.rootSubintentSignatures.length === 0) {
+    return yield* Effect.fail(
+      new ExactPaymentSubintentValidationError({
         code: 'MISSING_SIGNATURE',
-      });
-    }
+      }),
+    );
+  }
 
-    if (input.inspection.nonRootSubintentCount !== 0) {
-      return yield* new ExactPaymentSubintentValidationError({
+  if (input.inspection.nonRootSubintentCount !== 0) {
+    return yield* Effect.fail(
+      new ExactPaymentSubintentValidationError({
         code: 'NESTED_SUBINTENTS_UNSUPPORTED',
-      });
-    }
+      }),
+    );
+  }
 
-    const payerAccount = payerAccountPattern.exec(
-      input.inspection.rootSubintent.intentCore.instructions,
-    )?.[1];
+  const payerAccount = payerAccountPattern.exec(
+    input.inspection.rootSubintent.intentCore.instructions,
+  )?.[1];
 
-    if (payerAccount === undefined) {
-      return yield* new ExactPaymentSubintentValidationError({
+  if (payerAccount === undefined) {
+    return yield* Effect.fail(
+      new ExactPaymentSubintentValidationError({
         code: 'PAYER_ACCOUNT_NOT_FOUND',
-      });
-    }
+      }),
+    );
+  }
 
-    const expectedManifest = paymentSubintentManifest({
-      requirements: input.requirements,
-      payerAccount,
-    });
-
-    if (
-      normalizeManifest(expectedManifest) !==
-      normalizeManifest(input.inspection.rootSubintent.intentCore.instructions)
-    ) {
-      return yield* new ExactPaymentSubintentValidationError({
-        code: 'NON_EXACT_PAYMENT_SUBINTENT',
-      });
-    }
-
-    return {
-      payerAccount,
-      subintentHash:
-        input.inspection.rootSubintentHash.id ??
-        input.inspection.rootSubintentHash.hex,
-    };
+  const expectedManifest = paymentSubintentManifest({
+    requirements: input.requirements,
+    payerAccount,
   });
+
+  if (
+    normalizeManifest(expectedManifest) !==
+    normalizeManifest(input.inspection.rootSubintent.intentCore.instructions)
+  ) {
+    return yield* Effect.fail(
+      new ExactPaymentSubintentValidationError({
+        code: 'NON_EXACT_PAYMENT_SUBINTENT',
+      }),
+    );
+  }
+
+  return {
+    payerAccount,
+    subintentHash:
+      input.inspection.rootSubintentHash.id ??
+      input.inspection.rootSubintentHash.hex,
+  };
+});
