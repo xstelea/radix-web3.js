@@ -1,0 +1,126 @@
+name: Changeset Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  CI: true
+  NPM_TOKEN: unused
+  FORCE_COLOR: "0"
+  NO_COLOR: "1"
+
+jobs:
+  changeset:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install
+
+      - name: check release intent
+        id: changeset
+        shell: bash
+        run: |
+          set +e
+          output="$(pnpm changeset status --since=origin/main 2>&1)"
+          status="$?"
+          {
+            echo "status=$status"
+            echo "output<<CHANGESET_STATUS"
+            echo "$output"
+            echo "CHANGESET_STATUS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: comment release intent
+        uses: actions/github-script@v7
+        continue-on-error: true
+        env:
+          CHANGESET_STATUS: ${{ steps.changeset.outputs.status }}
+          CHANGESET_OUTPUT: ${{ steps.changeset.outputs.output }}
+        with:
+          script: |
+            const marker = "<!-- changeset-check -->";
+            const status = process.env.CHANGESET_STATUS;
+            const rawOutput = process.env.CHANGESET_OUTPUT ?? "";
+            const plainOutput = rawOutput.replace(
+              // biome-ignore lint/suspicious/noControlCharactersInRegex: strips ANSI escape codes from command output before posting a PR comment.
+              /[\u001b\u009b][[\]()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g,
+              "",
+            );
+            const output = plainOutput.length > 6000
+              ? `${plainOutput.slice(0, 6000)}\n... truncated ...`
+              : plainOutput;
+            const passed = status === "0";
+            const body = [
+              marker,
+              `## ${passed ? "Changeset check passed" : "Changeset check failed"}`,
+              "",
+              passed
+                ? "This PR has valid Changesets release intent for changed publishable packages."
+                : "This PR changes publishable packages without valid Changesets release intent. Add a `.changeset/*.md` file, or add an empty changeset if no release is needed.",
+              "",
+              "<details>",
+              "<summary>changeset status output</summary>",
+              "",
+              "```text",
+              output,
+              "```",
+              "",
+              "</details>",
+            ].join("\n");
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            try {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              });
+              const existing = comments.find((comment) =>
+                comment.body?.includes(marker)
+              );
+
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number,
+                  body,
+                });
+              }
+            } catch (error) {
+              core.warning(
+                `Unable to write Changeset PR comment: ${error.message}`
+              );
+            }
+
+      - name: fail on invalid release intent
+        if: steps.changeset.outputs.status != '0'
+        run: exit 1

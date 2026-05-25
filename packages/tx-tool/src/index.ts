@@ -6,6 +6,7 @@ export * from './createTransactionIntent';
 export * from './createTransactionIntentV2';
 export * from './epoch';
 export * from './intentHash';
+export * from './inspectSignedPartialTransaction';
 export * from './notaryKeyPair';
 export * from './previewTransaction';
 export * from './staticallyAnalyzeManifest';

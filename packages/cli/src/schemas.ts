@@ -146,6 +146,20 @@ export const SubintentsFileSchema = Schema.Struct({
   ),
 });
 
+export const SubintentHeaderFileSchema = Schema.Struct({
+  type: Schema.Literal('subintentHeader'),
+  version: Schema.Literal(1),
+  header: Schema.Struct({
+    networkId: Schema.Number,
+    startEpochInclusive: Schema.Number,
+    endEpochExclusive: Schema.Number,
+    intentDiscriminator: Schema.Number,
+    minProposerTimestampInclusive: Schema.optional(Schema.Number),
+    maxProposerTimestampExclusive: Schema.optional(Schema.Number),
+  }),
+  message: Schema.optional(Schema.String),
+});
+
 export const NotaryFileSchema = Schema.Struct({
   type: Schema.Literal('notary'),
   version: Schema.Literal(1),
@@ -182,6 +196,22 @@ export const PreparedTransactionSchema = Schema.Struct({
   authorizationAnalysis: AuthorizationAnalysisSchema,
   notaryPublicKey: Schema.optional(PublicKeySchema),
   notaryIsSignatory: Schema.optional(Schema.Boolean),
+});
+
+export const PreparedSubintentSchema = Schema.Struct({
+  type: Schema.Literal('preparedSubintent'),
+  version: Schema.Literal(1),
+  subintentHash: HashSchema,
+  networkId: Schema.Number,
+  manifestSourceFile: Schema.String,
+  headerSourceFile: Schema.String,
+  subintentPath: Schema.String,
+  subintentManifestPath: Schema.String,
+  subintentHeaderPath: Schema.String,
+  signingRequestPath: Schema.String,
+  signatureTemplatePath: Schema.String,
+  previewRootManifestPath: Schema.optional(Schema.String),
+  previewResultPath: Schema.String,
 });
 
 export const NetworkTransactionStatusSchema = Schema.Struct({
@@ -244,10 +274,12 @@ export type SignatureTemplate = typeof SignatureTemplateSchema.Type;
 export type SignatureEntry = typeof SignatureEntrySchema.Type;
 export type SignatureFile = typeof SignatureFileSchema.Type;
 export type SubintentsFile = typeof SubintentsFileSchema.Type;
+export type SubintentHeaderFile = typeof SubintentHeaderFileSchema.Type;
 export type NotaryFile = typeof NotaryFileSchema.Type;
 export type ArtifactStatus = typeof ArtifactStatusSchema.Type;
 export type AuthorizationAnalysis = typeof AuthorizationAnalysisSchema.Type;
 export type PreparedTransaction = typeof PreparedTransactionSchema.Type;
+export type PreparedSubintent = typeof PreparedSubintentSchema.Type;
 export type NetworkTransactionStatus =
   typeof NetworkTransactionStatusSchema.Type;
 export type SubmitResult = typeof SubmitResultSchema.Type;

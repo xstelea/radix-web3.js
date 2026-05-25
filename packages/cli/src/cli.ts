@@ -1,3 +1,4 @@
+import { dirname, join } from 'node:path';
 import { Args, Command, Options } from '@effect/cli';
 import { Console, Effect, Option, Schema } from 'effect';
 import {
@@ -47,6 +48,12 @@ import {
   listTransactionArtifactsWithNetworkStatus,
   queryTransactionStatus,
 } from './status';
+import {
+  type BuildSignedPartialTransactionResult,
+  type PrepareSubintentResult,
+  buildSignedPartialTransaction,
+  prepareSubintentArtifacts,
+} from './subintent';
 import {
   type SubmitTransactionResult,
   gatewaySubmitNotarizedTransaction,
@@ -189,6 +196,47 @@ export const renderPrepare = (
 
   if (format === 'text') {
     return result.preparedPath;
+  }
+
+  return renderJson(commandResult);
+};
+
+export const renderSubintentPrepare = (
+  format: OutputFormat,
+  result: PrepareSubintentResult,
+) => {
+  const commandResult = {
+    type: 'commandResult',
+    command: 'subintent prepare',
+    subintentHash: result.subintentHash,
+    artifactPath: result.artifactPath,
+    preparedPath: result.preparedPath,
+    signingRequestPath: result.signingRequestPath,
+    signatureTemplatePath: result.signatureTemplatePath,
+  };
+
+  if (format === 'text') {
+    return result.preparedPath;
+  }
+
+  return renderJson(commandResult);
+};
+
+export const renderSubintentBuild = (
+  format: OutputFormat,
+  result: BuildSignedPartialTransactionResult,
+) => {
+  const commandResult = {
+    type: 'commandResult',
+    command: 'subintent build',
+    subintentHash: result.subintentHash,
+    artifactPath: result.artifactPath,
+    signedPartialTransactionPath: result.signedPartialTransactionPath,
+    signedPartialTransactionHex: result.signedPartialTransactionHex,
+  };
+
+  if (format === 'text') {
+    return result.signedPartialTransactionHex;
   }
 
   return renderJson(commandResult);
@@ -359,8 +407,33 @@ const txCommand = Command.make('tx').pipe(
   Command.withDescription('Work with transaction artifacts'),
 );
 
+const subintentCommand = Command.make('subintent').pipe(
+  Command.withDescription('Prepare and build standalone Subintent artifacts'),
+);
+
 const manifestOption = Options.file('manifest', { exists: 'yes' }).pipe(
   Options.withDescription('Root Transaction Manifest V2 file'),
+);
+const subintentManifestOption = Options.file('manifest', {
+  exists: 'yes',
+}).pipe(Options.withDescription('Subintent Manifest V2 file'));
+const subintentHeaderOption = Options.file('header', { exists: 'yes' }).pipe(
+  Options.withDescription('Subintent header workflow file'),
+);
+const rootManifestOption = Options.file('root-manifest', {
+  exists: 'yes',
+}).pipe(
+  Options.optional,
+  Options.withDescription('Temporary root manifest for Subintent preview'),
+);
+const noPreviewOption = Options.boolean('no-preview').pipe(
+  Options.withDescription('Explicitly skip Subintent preview'),
+);
+const preparedSubintentOption = Options.file('prepared', {
+  exists: 'yes',
+}).pipe(Options.withDescription('Prepared Subintent workflow file'));
+const signatureOption = Options.file('signature', { exists: 'yes' }).pipe(
+  Options.withDescription('Signature file for the prepared Subintent'),
 );
 const notaryFileOption = Options.file('notary-file', { exists: 'yes' }).pipe(
   Options.optional,
@@ -428,6 +501,50 @@ const txPrepareCommand = Command.make(
       yield* Console.log(renderPrepare(format, result));
     }),
 ).pipe(Command.withDescription('Prepare transaction artifacts'));
+
+const subintentArtifactRoot = (
+  config: Pick<ResolvedRdxConfig, 'artifactRoot'>,
+) => join(dirname(config.artifactRoot), 'subintents');
+
+const subintentPrepareCommand = Command.make(
+  'prepare',
+  {
+    manifest: subintentManifestOption,
+    header: subintentHeaderOption,
+    rootManifest: rootManifestOption,
+    noPreview: noPreviewOption,
+  },
+  ({ header, manifest, noPreview, rootManifest }) =>
+    Effect.gen(function* () {
+      const { format } = yield* rdxCommand;
+      const config = yield* resolveRdxConfig({ cwd: process.cwd() });
+      const result = yield* prepareSubintentArtifacts({
+        artifactRoot: subintentArtifactRoot(config),
+        manifestPath: manifest,
+        headerPath: header,
+        rootManifestPath: Option.getOrUndefined(rootManifest),
+        noPreview,
+      });
+      yield* Console.log(renderSubintentPrepare(format, result));
+    }),
+).pipe(Command.withDescription('Prepare a standalone Subintent for signing'));
+
+const subintentBuildCommand = Command.make(
+  'build',
+  {
+    prepared: preparedSubintentOption,
+    signature: signatureOption,
+  },
+  ({ prepared, signature }) =>
+    Effect.gen(function* () {
+      const { format } = yield* rdxCommand;
+      const result = yield* buildSignedPartialTransaction({
+        preparedPath: prepared,
+        signaturePath: signature,
+      });
+      yield* Console.log(renderSubintentBuild(format, result));
+    }),
+).pipe(Command.withDescription('Build a signed partial transaction'));
 
 const patternOption = Options.text('pattern').pipe(Options.optional);
 const regexOption = Options.text('regex').pipe(Options.optional);
@@ -641,6 +758,9 @@ export const command = rdxCommand.pipe(
     configCommand.pipe(Command.withSubcommands([configShowCommand])),
     llmCommand,
     templateCommand.pipe(Command.withSubcommands([templatePrintCommand])),
+    subintentCommand.pipe(
+      Command.withSubcommands([subintentPrepareCommand, subintentBuildCommand]),
+    ),
     txCommand.pipe(
       Command.withSubcommands([
         txAddSignaturesCommand,

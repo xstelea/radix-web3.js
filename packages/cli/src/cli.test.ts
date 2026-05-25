@@ -47,6 +47,11 @@ describe('rdx command interface', () => {
     expect(result.stdout).toContain(
       '`rdx` never stores, accepts, or derives private keys',
     );
+    expect(result.stdout).toContain('## Standalone Subintent Lifecycle');
+    expect(result.stdout).toContain(
+      'rdx subintent prepare --manifest <subintent.rtm> --header <header.json> --root-manifest <root.rtm>',
+    );
+    expect(result.stdout).toContain('signedPartialTransactionHex');
     expect(() => JSON.parse(result.stdout)).toThrow();
   });
 
@@ -368,6 +373,86 @@ describe('rdx command interface', () => {
     const output = JSON.parse(result.stdout);
     const prepared = JSON.parse(await readFile(output.preparedPath, 'utf8'));
     expect(prepared.subintentOrder).toEqual(['child_one']);
+  });
+
+  it('prepares and builds standalone subintent artifacts', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'rdx-cli-subintent-'));
+    const manifestPath = join(cwd, 'payment.rtm');
+    const headerPath = join(cwd, 'subintent-header.json');
+    await writeFile(manifestPath, 'YIELD_TO_PARENT;', 'utf8');
+    await writeFile(
+      headerPath,
+      JSON.stringify({
+        type: 'subintentHeader',
+        version: 1,
+        header: {
+          networkId: 1,
+          startEpochInclusive: 1,
+          endEpochExclusive: 10,
+          intentDiscriminator: 123,
+        },
+      }),
+      'utf8',
+    );
+
+    const prepareResult = await runRdx({
+      argv: [
+        'subintent',
+        'prepare',
+        '--manifest',
+        manifestPath,
+        '--header',
+        headerPath,
+        '--no-preview',
+      ],
+      cwd,
+    });
+
+    expect(prepareResult.exitCode).toBe(0);
+    const preparedOutput = JSON.parse(prepareResult.stdout);
+    expect(preparedOutput).toMatchObject({
+      type: 'commandResult',
+      command: 'subintent prepare',
+    });
+
+    const signaturePath = join(cwd, 'signature.json');
+    await writeFile(
+      signaturePath,
+      JSON.stringify({
+        type: 'signatureFile',
+        version: 1,
+        transactionId: preparedOutput.subintentHash.id,
+        signatures: [
+          {
+            scope: { kind: 'subintent', subintentId: 'root' },
+            account: null,
+            hash: preparedOutput.subintentHash,
+            publicKey: { curve: 'Ed25519', hex: '1'.repeat(64) },
+            signature: { curve: 'Ed25519', hex: '2'.repeat(128) },
+          },
+        ],
+      }),
+      'utf8',
+    );
+
+    const buildResult = await runRdx({
+      argv: [
+        'subintent',
+        'build',
+        '--prepared',
+        preparedOutput.preparedPath,
+        '--signature',
+        signaturePath,
+      ],
+      cwd,
+    });
+
+    expect(buildResult.exitCode).toBe(0);
+    expect(JSON.parse(buildResult.stdout)).toMatchObject({
+      type: 'commandResult',
+      command: 'subintent build',
+      signedPartialTransactionHex: expect.stringMatching(/^[0-9a-f]+$/),
+    });
   });
 
   it('creates notary signing artifacts from complete transaction artifacts', async () => {

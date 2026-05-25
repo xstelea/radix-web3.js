@@ -1,3 +1,4 @@
+import { dirname, join } from 'node:path';
 import { AccountAddress, TransactionId } from '@radix-effects/shared';
 import { Data, Effect, Schema } from 'effect';
 import {
@@ -22,6 +23,8 @@ import {
   renderLlmGuide,
   renderNotarize,
   renderPrepare,
+  renderSubintentBuild,
+  renderSubintentPrepare,
   renderSubmit,
   renderTemplate,
   renderTxList,
@@ -46,6 +49,10 @@ import {
   queryTransactionStatus,
 } from './status';
 import {
+  buildSignedPartialTransaction,
+  prepareSubintentArtifacts,
+} from './subintent';
+import {
   gatewaySubmitNotarizedTransaction,
   submitTransactionArtifact,
 } from './submit';
@@ -66,6 +73,7 @@ export * from './signingRequests';
 export * from './status';
 export * from './submit';
 export * from './subintentAssembly';
+export * from './subintent';
 export * from './templates';
 
 export type RdxResult = {
@@ -188,6 +196,16 @@ type ParsedRdxCommand = Data.TaggedEnum<{
   };
   TxStatus: { transactionId: TransactionId; readOnly: boolean };
   TxHistory: { accountAddress: AccountAddress; limit: number };
+  SubintentPrepare: {
+    manifestPath?: string;
+    headerPath?: string;
+    rootManifestPath?: string;
+    noPreview: boolean;
+  };
+  SubintentBuild: {
+    preparedPath?: string;
+    signaturePath?: string;
+  };
   TemplatePrint: { kind: TemplateKind };
   Unknown: { command: string };
 }>;
@@ -304,6 +322,22 @@ const parseRdxCommand = (
       return RdxCommand.TxHistory({
         accountAddress: AccountAddress.make(argv[2]),
         limit: Number(takeOption(argv, '--limit') ?? 10),
+      });
+    }
+
+    if (argv[0] === 'subintent' && argv[1] === 'prepare') {
+      return RdxCommand.SubintentPrepare({
+        manifestPath: takeOption(argv, '--manifest'),
+        headerPath: takeOption(argv, '--header'),
+        rootManifestPath: takeOption(argv, '--root-manifest'),
+        noPreview: argv.includes('--no-preview'),
+      });
+    }
+
+    if (argv[0] === 'subintent' && argv[1] === 'build') {
+      return RdxCommand.SubintentBuild({
+        preparedPath: takeOption(argv, '--prepared'),
+        signaturePath: takeOption(argv, '--signature'),
       });
     }
 
@@ -566,6 +600,71 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
           return {
             exitCode: 0,
             stdout: `${renderCommandResult(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      SubintentPrepare: ({
+        headerPath,
+        manifestPath,
+        noPreview,
+        rootManifestPath,
+      }) =>
+        Effect.gen(function* () {
+          if (!manifestPath) {
+            return structuredError({
+              code: 'MISSING_ARGUMENT',
+              message: 'subintent prepare requires --manifest',
+              exitCode: 64,
+            });
+          }
+          if (!headerPath) {
+            return structuredError({
+              code: 'MISSING_ARGUMENT',
+              message: 'subintent prepare requires --header',
+              exitCode: 64,
+            });
+          }
+
+          const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const result = yield* prepareSubintentArtifacts({
+            artifactRoot: join(dirname(config.artifactRoot), 'subintents'),
+            manifestPath,
+            headerPath,
+            rootManifestPath,
+            noPreview,
+          });
+
+          return {
+            exitCode: 0,
+            stdout: `${renderSubintentPrepare(format, result)}\n`,
+            stderr: '',
+          };
+        }),
+      SubintentBuild: ({ preparedPath, signaturePath }) =>
+        Effect.gen(function* () {
+          if (!preparedPath) {
+            return structuredError({
+              code: 'MISSING_ARGUMENT',
+              message: 'subintent build requires --prepared',
+              exitCode: 64,
+            });
+          }
+          if (!signaturePath) {
+            return structuredError({
+              code: 'MISSING_ARGUMENT',
+              message: 'subintent build requires --signature',
+              exitCode: 64,
+            });
+          }
+
+          const result = yield* buildSignedPartialTransaction({
+            preparedPath,
+            signaturePath,
+          });
+
+          return {
+            exitCode: 0,
+            stdout: `${renderSubintentBuild(format, result)}\n`,
             stderr: '',
           };
         }),

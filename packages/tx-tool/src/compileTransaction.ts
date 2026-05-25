@@ -1,3 +1,4 @@
+import { HexString } from '@radix-effects/shared';
 import {
   Convert,
   type NotarizedTransaction,
@@ -6,8 +7,7 @@ import {
   TransactionBuilder as RetTransactionBuilder,
   TransactionV2Builder as RetTransactionV2Builder,
 } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect, pipe, Schema } from 'effect';
-import { HexString } from '@radix-effects/shared';
+import { Data, Effect, Schema, pipe } from 'effect';
 import { NotaryKeyPair } from './notaryKeyPair';
 import {
   Ed25519SignatureWithPublicKeySchema,
@@ -78,7 +78,7 @@ export class CompileTransaction extends Effect.Service<CompileTransaction>()(
             for (let i = 0; i < intent.nonRootSubintents.length; i++) {
               builderStep = builderStep.addSignedSubintent(
                 intent.nonRootSubintents[i],
-                input.subintentSignatures?.[i] ?? [],
+                [...(input.subintentSignatures?.[i] ?? [])],
               );
             }
 
