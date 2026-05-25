@@ -47,6 +47,11 @@ describe('rdx command interface', () => {
     expect(result.stdout).toContain(
       '`rdx` never stores, accepts, or derives private keys',
     );
+    expect(result.stdout).toContain('## Standalone Subintent Lifecycle');
+    expect(result.stdout).toContain(
+      'rdx subintent prepare --manifest <subintent.rtm> --header <header.json> --root-manifest <root.rtm>',
+    );
+    expect(result.stdout).toContain('signedPartialTransactionHex');
     expect(() => JSON.parse(result.stdout)).toThrow();
   });
 
