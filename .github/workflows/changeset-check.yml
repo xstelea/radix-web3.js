@@ -60,9 +60,14 @@ jobs:
             const marker = "<!-- changeset-check -->";
             const status = process.env.CHANGESET_STATUS;
             const rawOutput = process.env.CHANGESET_OUTPUT ?? "";
-            const output = rawOutput.length > 6000
-              ? `${rawOutput.slice(0, 6000)}\n... truncated ...`
-              : rawOutput;
+            const plainOutput = rawOutput.replace(
+              // biome-ignore lint/suspicious/noControlCharactersInRegex: strips ANSI escape codes from command output before posting a PR comment.
+              /[\u001b\u009b][[\]()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g,
+              "",
+            );
+            const output = plainOutput.length > 6000
+              ? `${plainOutput.slice(0, 6000)}\n... truncated ...`
+              : plainOutput;
             const passed = status === "0";
             const body = [
               marker,
