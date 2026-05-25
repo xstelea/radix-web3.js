@@ -13,6 +13,8 @@ permissions:
 env:
   CI: true
   NPM_TOKEN: unused
+  FORCE_COLOR: "0"
+  NO_COLOR: "1"
 
 jobs:
   changeset:
