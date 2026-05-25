@@ -1,0 +1,23 @@
+{
+  "name": "@radix-effects/x402-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "server": "tsx src/serverMain.ts",
+    "test": "vitest",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.4",
+    "@radix-effects/tx-tool": "workspace:*",
+    "effect": "catalog:",
+    "hono": "^4.12.23"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

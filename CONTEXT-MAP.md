@@ -7,6 +7,7 @@ This repo uses multiple domain contexts. Read the relevant `CONTEXT.md` before p
 | Area | Context file | Use when |
 | ---- | ------------ | -------- |
 | CLI / Agent-first CLI Wallet | `packages/cli/CONTEXT.md` | Working on `rdx`, transaction workflow artifacts, out-of-band signing, CLI file schemas, structured command output, or agent-first Radix transaction flows. |
+| x402 Radix Reference Design | `examples/x402/CONTEXT.md` | Working on the x402 reference implementation, sponsored payment flow, Hono resource server or facilitator, and agent client payment examples. |
 
 ## ADRs
 

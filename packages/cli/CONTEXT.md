@@ -256,6 +256,38 @@ _Avoid_: Array position, duplicate subintent name
 The rdx preparation step that composes a provided root RTM manifest with provided direct child subintent manifests into a Transaction Manifest V2 transaction.
 _Avoid_: Business intent inference, placeholder-driven root manifest
 
+**Subintent Signing Preparation**:
+The rdx step that builds or reads a standalone Subintent and emits the Subintent hash as a signing request.
+_Avoid_: Full transaction preparation, facilitator root preparation
+
+**Subintent Header File**:
+A typed workflow file passed with `--header` that supplies standalone Subintent header settings and optional message settings for Subintent Signing Preparation.
+_Avoid_: Core file, settings file, manifest-only subintent input
+
+**Subintent Preview-before-Signing**:
+A signer-safety preview where rdx uses a temporary root transaction manifest to execute a standalone Subintent before emitting a signing request.
+_Avoid_: Naked Subintent preview, mandatory settlement preview
+
+**Subintent Preview Root Manifest**:
+A Transaction Manifest V2 root manifest passed to standalone Subintent preparation with `--root-manifest` and used only for Subintent Preview-before-Signing.
+_Avoid_: Preview parent file, x402-only preview template, implicit root manifest
+
+**Subintent Hash Placeholder**:
+The literal `<subintentHash>` token in a Subintent Preview Root Manifest that rdx replaces with the computed Subintent hash for preview.
+_Avoid_: Precomputed preview child hash, implicit placeholder
+
+**Prepared Subintent File**:
+A JSON file produced by Subintent Signing Preparation that records the Subintent hash and paths to copied Subintent artifacts needed for signing and build.
+_Avoid_: Prepared transaction file, stdout-only Subintent hash
+
+**Signed Partial Transaction Build**:
+The rdx step that builds a signed partial transaction from a prepared Subintent and out-of-band signature.
+_Avoid_: Notarized transaction assembly, root transaction submission
+
+**Signed Partial Transaction File**:
+A hex artifact written by `rdx subintent build` containing the signed partial transaction payload.
+_Avoid_: Stdout-only signed payload, notarized transaction file
+
 **Subintent Order**:
 The deterministic ordered list of subintent IDs used to map keyed rdx workflow files to Radix toolkit subintent arrays.
 _Avoid_: Implicit object iteration, index-only subintent identity
@@ -398,6 +430,18 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 - v1 **CLI Public Key** and **CLI Signature** values support Ed25519 only; other curves are deferred.
 - Unknown **CLI Public Key** values in generated templates use `{ "curve": "Ed25519", "hex": "<replace-with-ed25519-public-key-hex>" }` and are rejected if submitted unchanged.
 - v1 supports root transactions with direct child **Subintents** only; nested subintent graphs are out of scope.
+- Standalone Subintent workflows use **Subintent Signing Preparation** followed by **Signed Partial Transaction Build**.
+- **Subintent Signing Preparation** reads the Subintent manifest plus a **Subintent Header File** because the signed Subintent includes both header and message.
+- **Subintent Signing Preparation** performs **Subintent Preview-before-Signing** when a **Subintent Preview Root Manifest** is supplied.
+- A **Subintent Preview Root Manifest** must contain exactly one **Subintent Hash Placeholder**.
+- **Subintent Preview-before-Signing** is best-effort and may be skipped when the caller does not have a suitable preview root manifest.
+- Standalone Subintent preparation may bypass preview only through an explicit no-preview option.
+- `rdx subintent prepare` requires either `--root-manifest` or an explicit no-preview option.
+- **Subintent Signing Preparation** writes a **Prepared Subintent File** and copied Subintent artifacts.
+- Standalone Subintent commands belong under the generic `rdx subintent` surface rather than x402-specific command names.
+- **Signed Partial Transaction Build** is exposed as `rdx subintent build`.
+- **Signed Partial Transaction Build** writes a **Signed Partial Transaction File** and also prints the hex payload in its JSON command result.
+- v1 standalone Subintent workflows do not support nested child Subintents.
 - Root RTM manifests are provided by the caller and may contain normal root instructions with or without subintent yields.
 - **Subintent Assembly** injects required `USE_CHILD` declarations for provided subintents and leaves the caller's root instructions otherwise unchanged.
 - **Subintent Assembly** strictly validates that each provided **Subintent ID** is referenced by the root manifest and that each root `YIELD_TO_CHILD` has a provided subintent.
@@ -605,6 +649,42 @@ _Avoid_: Signature mutation during notarization, raw signature archive
 
 > **Dev:** "Should v1 support nested subintent graphs?"
 > **Domain expert:** "No — v1 supports direct child **Subintents** only."
+
+> **Dev:** "Should standalone Subintent signing commands live under `rdx x402`?"
+> **Domain expert:** "No — use generic `rdx subintent` commands because **Subintent Signing Preparation** and **Signed Partial Transaction Build** are not x402-specific."
+
+> **Dev:** "Can standalone Subintent preparation take only a manifest and infer the rest?"
+> **Domain expert:** "No — require a **Subintent Header File** with `--header` so header and message settings are explicit."
+
+> **Dev:** "Can rdx preview a standalone Subintent without a parent?"
+> **Domain expert:** "No — use **Subintent Preview-before-Signing** with a temporary parent preview transaction."
+
+> **Dev:** "Should rdx hard-code the preview root manifest for standalone Subintents?"
+> **Domain expert:** "No — accept a **Subintent Preview Root Manifest** with `--root-manifest` so each use case can provide a realistic root shape."
+
+> **Dev:** "Should agents precompute the child hash before writing the preview root manifest?"
+> **Domain expert:** "No — use a **Subintent Hash Placeholder** and let rdx replace it after hashing the Subintent."
+
+> **Dev:** "Can standalone Subintent preparation proceed without a preview root manifest?"
+> **Domain expert:** "Yes — **Subintent Preview-before-Signing** is best-effort, but skipping it must be explicit."
+
+> **Dev:** "Can `rdx subintent prepare` omit both `--root-manifest` and no-preview?"
+> **Domain expert:** "No — require either `--root-manifest` or an explicit no-preview option."
+
+> **Dev:** "Can standalone Subintent preparation silently skip preview?"
+> **Domain expert:** "No — preview is the default; skipping requires an explicit no-preview option."
+
+> **Dev:** "Can `rdx subintent prepare` only print the Subintent hash to stdout?"
+> **Domain expert:** "No — write a **Prepared Subintent File** so `rdx subintent build` has a stable artifact input."
+
+> **Dev:** "Should the signed partial transaction command be called `finalize` or `assemble`?"
+> **Domain expert:** "No — use `rdx subintent build`; the `subintent` command context already scopes what is being built."
+
+> **Dev:** "Should `rdx subintent build` only write the signed partial transaction to a file?"
+> **Domain expert:** "No — write a **Signed Partial Transaction File** and include the hex in the command result for agent handoff."
+
+> **Dev:** "Should v1 standalone Subintent workflows support nested child Subintents?"
+> **Domain expert:** "No — v1 standalone Subintent workflows build one root Subintent with no children."
 
 > **Dev:** "Should users precompute child intent IDs before writing the root manifest?"
 > **Domain expert:** "No — provide root and child manifests separately and let **Subintent Assembly** inject `USE_CHILD` declarations."

@@ -14,6 +14,7 @@ import {
 } from "effect";
 import {
   AccountAddress,
+  Epoch,
   HexString,
   NetworkId,
   TransactionManifestString,
@@ -119,7 +120,7 @@ describe("CreateTransactionIntent", () => {
   );
 
   it.live(
-    "should create, compile, submit, and poll a v2 transaction intent",
+    "should submit a v2 transaction when root and subintent headers differ",
     () =>
       Effect.gen(function* () {
         const createTransactionHeaderV2 = yield* TransactionHeaderV2;
@@ -158,6 +159,8 @@ describe("CreateTransactionIntent", () => {
             startEpochInclusive: Option.none(),
             endEpochExclusive: Option.none(),
           });
+        const currentEpoch = intentHeader.startEpochInclusive;
+        const currentTimestamp = Math.floor(Date.now() / 1000);
 
         const subintentInstructions = TransactionManifestString.make(`
           CALL_METHOD
@@ -186,6 +189,10 @@ describe("CreateTransactionIntent", () => {
           intentCore: {
             header: {
               ...intentHeader,
+              startEpochInclusive: Epoch.make(currentEpoch),
+              endEpochExclusive: Epoch.make(currentEpoch + 2),
+              minProposerTimestampInclusive: currentTimestamp - 300,
+              maxProposerTimestampExclusive: currentTimestamp + 3_600,
               intentDiscriminator: uniqueDiscriminator,
             },
             instructions: subintentInstructions,
@@ -235,8 +242,11 @@ describe("CreateTransactionIntent", () => {
           rootIntentCore: {
             header: {
               ...intentHeader,
+              startEpochInclusive: Epoch.make(Math.max(1, currentEpoch - 1)),
+              endEpochExclusive: Epoch.make(currentEpoch + 3),
+              minProposerTimestampInclusive: currentTimestamp - 600,
+              maxProposerTimestampExclusive: currentTimestamp + 7_200,
               intentDiscriminator: uniqueDiscriminator + 1,
-              
             },
             instructions: manifest,
             blobs: [],
@@ -246,9 +256,8 @@ describe("CreateTransactionIntent", () => {
           nonRootSubintents: [childSubintent],
         });
 
-
-
-        const staticallyAnalyzeManifestV2Result = yield* staticallyAnalyzeManifestV2({ intent });
+        const staticallyAnalyzeManifestV2Result =
+          yield* staticallyAnalyzeManifestV2({ intent });
         yield* Effect.log("Statically analyze manifest v2 result", {
           staticallyAnalyzeManifestV2Result: JSON.stringify(staticallyAnalyzeManifestV2Result, null, 2),
         });
@@ -301,7 +310,7 @@ describe("CreateTransactionIntent", () => {
             rootSignerPublicKeys: [],
             nonRootSubintentSignerPublicKeys: [[]],
           });
-          
+
         const compiledPreview = yield* Effect.tryPromise(() =>
           RadixEngineToolkit.PreviewTransactionV2.compile(previewTx),
         );
@@ -331,6 +340,7 @@ describe("CreateTransactionIntent", () => {
         const statusResult = yield* pollTransactionStatus.poll({ id });
 
         expect(statusResult).toBeDefined();
+        expect(statusResult.intent_status).toBe("CommittedSuccess");
       }).pipe(
         Effect.tapError(Effect.logError),
         Effect.provide(Logger.pretty),

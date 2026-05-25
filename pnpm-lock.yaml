@@ -76,7 +76,7 @@ catalogs:
       specifier: ^8.0.2
       version: 8.3.5
     tsx:
-      specifier: ^4.7.1
+      specifier: 4.19.2
       version: 4.19.2
     typescript:
       specifier: ^5.3.3
@@ -147,6 +147,34 @@ importers:
       typescript:
         specifier: ~5.6.2
         version: 5.6.3
+
+  examples/x402:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^2.0.4
+        version: 2.0.4(hono@4.12.23)
+      '@radix-effects/tx-tool':
+        specifier: workspace:*
+        version: link:../../packages/tx-tool
+      effect:
+        specifier: 'catalog:'
+        version: 3.19.19
+      hono:
+        specifier: ^4.12.23
+        version: 4.12.23
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.10.2
+      tsx:
+        specifier: 'catalog:'
+        version: 4.19.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.6.3
+      vitest:
+        specifier: 'catalog:'
+        version: 1.6.0(@types/node@22.10.2)(terser@5.37.0)
 
   packages/agent-toolkit:
     dependencies:
@@ -2248,6 +2276,12 @@ packages:
 
   '@hapi/topo@5.1.0':
     resolution: {integrity: sha512-foQZKJig7Ob0BMAYBfcJk8d77QtOe7Wo4ox7ff1lQYoNNAb6jwcY1ncdoy2e9wQZzvNy7ODZCYJkK8kzmcAnAg==}
+
+  '@hono/node-server@2.0.4':
+    resolution: {integrity: sha512-Ut3y0dMMPWy6bZ2kVfx25EOVbZlm15dhF4mOsezMlhpNHy+4MkU1qN9Y6lnruYi4wPmFzimGX2X7LF/FwHli4A==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4
 
   '@inquirer/external-editor@1.0.3':
     resolution: {integrity: sha512-RWbSrDiYmO4LbejWY7ttpxczuwQyZLBUyygsA9Nsv95hpzUWwnNTVQmAq3xuh7vNwCp07UTmE5i11XAEExx4RA==}
@@ -4626,6 +4660,10 @@ packages:
 
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
+
+  hono@4.12.23:
+    resolution: {integrity: sha512-eIaZ9qDgu7XV0pxOCrg7/WhnQ6Ivm22UcxhXx/A3dcbqbbYgBEkc6e/J/s7j2tS96zoB0S9VBdLwQNCWwUo4LA==}
+    engines: {node: '>=16.9.0'}
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
@@ -10108,6 +10146,10 @@ snapshots:
     dependencies:
       '@hapi/hoek': 9.3.0
 
+  '@hono/node-server@2.0.4(hono@4.12.23)':
+    dependencies:
+      hono: 4.12.23
+
   '@inquirer/external-editor@1.0.3(@types/node@22.13.10)':
     dependencies:
       chardet: 2.1.1
@@ -12793,6 +12835,8 @@ snapshots:
   hoist-non-react-statics@3.3.2:
     dependencies:
       react-is: 16.13.1
+
+  hono@4.12.23: {}
 
   hookable@5.5.3: {}
 
