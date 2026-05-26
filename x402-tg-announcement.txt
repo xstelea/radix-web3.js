@@ -1,0 +1,19 @@
+rdx-cli@0.2.0 is out with support for Radix x402-style payment flows.
+
+It adds standalone Subintent commands so an agent can prepare/sign a payer Subintent, then send the signed partial transaction to a facilitator that wraps and settles it.
+
+Install:
+
+npm install -g rdx-cli@0.2.0
+
+Then give your agent the CLI context:
+
+rdx llm
+
+To try the flow, point the agent at this protected resource:
+
+https://x402-radix-reference.xstelea.workers.dev/protected/reference.md
+
+Example implementation:
+
+https://github.com/xstelea/radix-web3.js/tree/main/examples/x402

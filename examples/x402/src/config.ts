@@ -35,7 +35,7 @@ export const mainnetConfigTemplate: X402Config = {
   facilitatorNotaryBadge: '<FACILITATOR_NOTARY_BADGE>',
   asset: '<PAYMENT_ASSET>',
   amount: '1',
-  maxTimeoutSeconds: 60,
+  maxTimeoutSeconds: 600,
   intentDiscriminator: '<INTENT_DISCRIMINATOR>',
 };
 

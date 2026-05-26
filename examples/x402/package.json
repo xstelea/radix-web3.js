@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "server": "tsx src/serverMain.ts",
+    "worker:dev": "wrangler dev --config wrangler.jsonc",
+    "worker:deploy": "wrangler deploy --config wrangler.jsonc",
+    "worker:dry-run": "wrangler deploy --config wrangler.jsonc --dry-run",
     "test": "vitest",
     "check-types": "tsc --noEmit"
   },
