@@ -5,10 +5,10 @@ sidebar_position: 9
 
 # sbor-ez-mode
 
-`sbor-ez-mode` is a small schema builder for parsing Gateway
+`sbor-ez-mode` provides Effect Schema transforms for Gateway
 `ProgrammaticScryptoSborValue` objects. It is useful when Gateway returns
 programmatic SBOR for events, component state, key-value store values, or
-non-fungible data and you want a typed JavaScript value.
+non-fungible data and you want decoded values with Radix meaning preserved.
 
 ## Install
 
@@ -19,106 +19,107 @@ npm install sbor-ez-mode
 ## Basic Usage
 
 ```ts
-import { Effect } from 'effect';
-import s from 'sbor-ez-mode';
+import { Effect, Schema } from 'effect';
+import { bool, decimal, resourceAddress, struct } from 'sbor-ez-mode';
 
-const swapEventSchema = s.struct({
-  input_address: s.address(),
-  input_amount: s.decimal(),
-  output_address: s.address(),
-  output_amount: s.decimal(),
-  is_success: s.bool(),
+const SwapEvent = struct({
+  input_address: resourceAddress,
+  input_amount: decimal,
+  output_address: resourceAddress,
+  output_amount: decimal,
+  is_success: bool,
 });
 
 const program = Effect.gen(function* () {
-  const parsed = yield* swapEventSchema.safeParse(programmaticSborValue);
-  console.log(parsed.input_amount);
+  const parsed = yield* Schema.decodeUnknown(SwapEvent)(programmaticSborValue);
+  console.log(parsed.input_amount.toString());
 });
 ```
 
-`safeParse` returns an `Effect.Effect` whose success channel is the typed parsed
-value. Failures are schema-backed `SborError` values with a message and path.
-Each `SborSchema` also exposes `effectSchema`, an Effect Schema transform for
-decoding unknown Gateway SBOR input into the parsed value shape.
+The exported schemas are ordinary Effect schemas. Decode Gateway SBOR with
+`Schema.decodeUnknown(schema)` and encode decoded values back with
+`Schema.encode(schema)`.
 
-## Schema Factory
+## Native Schemas
 
-| Factory | Parses |
+| Export | Decodes |
 | --- | --- |
-| `s.value()` | Raw `ProgrammaticScryptoSborValue` as a fallback. |
-| `s.decimal()` | `Decimal` and `PreciseDecimal` as strings. |
-| `s.string()` | SBOR string values. |
-| `s.bool()` | Boolean values. |
-| `s.bytes()` | SBOR bytes as a hex string. |
-| `s.number()` | Integer and numeric SBOR values as numbers. |
-| `s.instant()` | Radix `Instant` values as `Date`. |
-| `s.address()` | Referenced addresses such as account, component, or resource addresses. |
-| `s.internalAddress()` | Owned addresses such as vault or key-value-store addresses. |
-| `s.nonFungibleLocalId()` | Non-fungible local ids. |
-| `s.struct(definition)` | Field-name based tuple/struct parsing. |
-| `s.structNullable(definition)` | Struct parsing where missing fields become `null`. |
-| `s.tuple([...schemas])` | Ordered tuple parsing. |
-| `s.array(schema)` | Homogeneous array parsing. |
-| `s.enum(variants)` | Rust-style enum parsing. |
-| `s.option(schema)` | Rust `Option` enum parsing. |
-| `s.map({ key, value })` | SBOR map parsing into a JavaScript `Map`. |
+| `value` | Raw Gateway SBOR value as a fallback. |
+| `string` | SBOR string values. |
+| `bool` | Boolean values. |
+| `bytes` | SBOR bytes as a hex string. |
+| `u8`, `u16`, `u32`, `u64`, `u128` | Explicit unsigned integers as `BigNumber`. |
+| `i8`, `i16`, `i32`, `i64`, `i128` | Explicit signed integers as `BigNumber`. |
+| `decimal` | `Decimal` as `BigNumber`. |
+| `preciseDecimal` | `PreciseDecimal` as `BigNumber`. |
+| `number` / `numeric` | Any numeric SBOR value as `{ type, value: BigNumber }`. |
+| `instant` | Radix `Instant` values as `Date`. |
+| `resourceAddress`, `componentAddress`, `accountAddress`, `packageAddress` | Referenced addresses as shared branded types. |
+| `internalAddress`, `vaultAddress`, `keyValueStoreAddress` | Owned addresses as shared branded types. |
+| `nonFungibleLocalId` | Non-fungible local id as the shared branded type. |
+| `struct(fields)` | Field-name based tuple/struct transform. |
+| `tuple([...schemas])` | Ordered tuple transform. |
+| `array(schema)` | Homogeneous array transform. |
+| `option(schema)` | Rust `Option` enum transform. |
+| `map({ key, value })` | SBOR map transform into a readonly map. |
+| `enumeration(variants)` | Rust-style enum transform. |
 
 ## Type Inference
 
 ```ts
-import type { SborSchema } from 'sbor-ez-mode';
+import { Schema } from 'effect';
+import { decimal, string, struct, u64 } from 'sbor-ez-mode';
 
-const schema = s.struct({
-  pair: s.string(),
-  amount: s.decimal(),
-  updated_at: s.number(),
+const schema = struct({
+  pair: string,
+  amount: decimal,
+  updated_at: u64,
 });
 
-type InferSbor<T> = T extends SborSchema<infer Parsed> ? Parsed : never;
-type Parsed = InferSbor<typeof schema>;
+type Parsed = Schema.Schema.Type<typeof schema>;
 ```
 
 The inferred type follows the schema. For the example above, `Parsed` contains
-`pair: string`, `amount: string`, and `updated_at: number`.
+`pair: string`, `amount: BigNumber`, and `updated_at: BigNumber`.
 
 ## Parsing Nested Values
 
 ```ts
-const schema = s.struct({
-  updates: s.array(
-    s.tuple([
-      s.string(),
-      s.struct({
-        oi_long: s.decimal(),
-        oi_short: s.decimal(),
-        last_update: s.number(),
+const schema = struct({
+  updates: array(
+    tuple([
+      string,
+      struct({
+        oi_long: decimal,
+        oi_short: decimal,
+        last_update: u64,
       }),
     ]),
   ),
 });
 ```
 
-Use `s.tuple` for ordered SBOR tuple fields and `s.struct` when the Gateway
+Use `tuple` for ordered SBOR tuple fields and `struct` when the Gateway
 value carries field names.
 
 ## Enums And Options
 
 ```ts
-const balanceChange = s.enum([
+const balanceChange = enumeration([
   {
     variant: 'NonFungible',
-    schema: s.struct({
-      ids: s.array(s.nonFungibleLocalId()),
-      resource_address: s.address(),
+    schema: struct({
+      ids: array(nonFungibleLocalId),
+      resource_address: resourceAddress,
     }),
   },
   {
     variant: 'Fungible',
-    schema: s.tuple([s.decimal()]),
+    schema: tuple([decimal]),
   },
 ]);
 
-const maybeName = s.option(s.string());
+const maybeName = option(string);
 ```
 
 Enum parses return `{ variant, value }`. Option parses return

@@ -1,14 +1,2 @@
-import { s } from './factory';
-export default s;
 export * from './native';
-export { SborSchema } from './sborSchema';
-export { SborError } from './sborSchema';
-export { StructSchema } from './schemas/struct';
-export { OrderedTupleSchema } from './schemas/orderedTuple';
-export { EnumSchema } from './schemas/enum';
-export { MapSchema } from './schemas/map';
-export type { StructDefinition } from './schemas/struct';
-export type { TupleSchema } from './schemas/orderedTuple';
-export type { ParsedType } from './schemas/struct';
-export type { VariantDefinition, EnumParsedType } from './schemas/enum';
-export type { MapDefinition } from './schemas/map';
+export { s as default } from './native';

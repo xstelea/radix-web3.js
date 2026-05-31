@@ -1,9 +1,7 @@
 import type {
-  ProgrammaticScryptoSborValue,
   StateEntityDetailsVaultResponseItem,
 } from '@radixdlt/babylon-gateway-api-sdk';
-import { Effect } from 'effect';
-import type { ParsedType, StructDefinition, StructSchema } from 'sbor-ez-mode';
+import { Effect, Schema } from 'effect';
 import type { AtLedgerState } from './schemas';
 import {
   type GetEntityDetailsOptions,
@@ -24,12 +22,11 @@ export class GetComponentStateService extends Effect.Service<GetComponentStateSe
 
       return {
         run: Effect.fnUntraced(function* <
-          T extends StructDefinition,
-          R extends boolean,
+          S extends Schema.Schema.AnyNoContext,
         >(input: {
           addresses: string[];
           at_ledger_state?: AtLedgerState;
-          schema: StructSchema<T, R>;
+          schema: S;
           options?: GetEntityDetailsOptions;
         }) {
           const entityDetails = yield* getEntityDetails(
@@ -40,27 +37,21 @@ export class GetComponentStateService extends Effect.Service<GetComponentStateSe
 
           const results: {
             address: string;
-            state: {
-              [K in keyof T]: R extends true
-                ? ParsedType<T[K]> | null
-                : ParsedType<T[K]>;
-            };
+            state: Schema.Schema.Type<S>;
             details: StateEntityDetailsVaultResponseItem;
           }[] = [];
 
           for (const item of entityDetails) {
             if (item.details?.type === 'Component') {
               const componentDetails = item.details;
-              const componentState =
-                componentDetails.state as ProgrammaticScryptoSborValue;
 
-              const parsed = yield* input.schema
-                .safeParse(componentState)
-                .pipe(
-                  Effect.mapError(
-                    (error) => new InvalidComponentStateError(error),
-                  ),
-                );
+              const parsed = yield* Schema.decodeUnknown(input.schema)(
+                componentDetails.state,
+              ).pipe(
+                Effect.mapError(
+                  (error) => new InvalidComponentStateError(error),
+                ),
+              );
 
               results.push({
                 address: item.address,
