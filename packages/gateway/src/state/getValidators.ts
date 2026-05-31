@@ -14,6 +14,7 @@ export type Validator = z.infer<typeof ValidatorSchema>;
 export class GetValidators extends Effect.Service<GetValidators>()(
   'GetValidators',
   {
+    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       return Effect.fn(function* () {

@@ -6,6 +6,7 @@ import type { AtLedgerState } from './schemas';
 export class KeyValueStoreKeysService extends Effect.Service<KeyValueStoreKeysService>()(
   'KeyValueStoreKeysService',
   {
+    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
 

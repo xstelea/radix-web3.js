@@ -13,6 +13,7 @@ export type GetNonFungibleIdsInput = {
 export class EntityNonFungibleIdsPage extends Effect.Service<EntityNonFungibleIdsPage>()(
   'EntityNonFungibleIdsPage',
   {
+    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(
