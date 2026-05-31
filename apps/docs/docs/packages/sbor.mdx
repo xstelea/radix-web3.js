@@ -1,11 +1,11 @@
 ---
-title: sbor-ez-mode
+title: @radix-effects/sbor
 sidebar_position: 9
 ---
 
-# sbor-ez-mode
+# @radix-effects/sbor
 
-`sbor-ez-mode` provides Effect Schema transforms for Gateway
+`@radix-effects/sbor` provides Effect Schema transforms for Gateway
 `ProgrammaticScryptoSborValue` objects. It is useful when Gateway returns
 programmatic SBOR for events, component state, key-value store values, or
 non-fungible data and you want decoded values with Radix meaning preserved.
@@ -13,14 +13,14 @@ non-fungible data and you want decoded values with Radix meaning preserved.
 ## Install
 
 ```bash
-npm install sbor-ez-mode
+npm install @radix-effects/sbor
 ```
 
 ## Basic Usage
 
 ```ts
 import { Effect, Schema } from 'effect';
-import { bool, decimal, resourceAddress, struct } from 'sbor-ez-mode';
+import { bool, decimal, resourceAddress, struct } from '@radix-effects/sbor';
 
 const SwapEvent = struct({
   input_address: resourceAddress,
@@ -68,7 +68,7 @@ The exported schemas are ordinary Effect schemas. Decode Gateway SBOR with
 
 ```ts
 import { Schema } from 'effect';
-import { decimal, string, struct, u64 } from 'sbor-ez-mode';
+import { decimal, string, struct, u64 } from '@radix-effects/sbor';
 
 const schema = struct({
   pair: string,

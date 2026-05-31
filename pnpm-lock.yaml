@@ -326,6 +326,9 @@ importers:
 
   packages/gateway:
     dependencies:
+      '@radix-effects/sbor':
+        specifier: workspace:*
+        version: link:../sbor
       '@radixdlt/babylon-core-api-sdk':
         specifier: 'catalog:'
         version: 1.3.0
@@ -344,9 +347,6 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 3.19.19
-      sbor-ez-mode:
-        specifier: workspace:*
-        version: link:../sbor-ez-mode
       zod:
         specifier: 'catalog:'
         version: 3.24.1
@@ -370,7 +370,7 @@ importers:
         specifier: 'catalog:'
         version: 1.6.0(@types/node@22.10.2)(terser@5.37.0)
 
-  packages/sbor-ez-mode:
+  packages/sbor:
     dependencies:
       '@radix-effects/shared':
         specifier: workspace:*

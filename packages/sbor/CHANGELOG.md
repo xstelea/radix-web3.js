@@ -1,4 +1,4 @@
-# sbor-ez-mode
+# @radix-effects/sbor
 
 ## 0.2.0
 

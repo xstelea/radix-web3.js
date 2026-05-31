@@ -13,7 +13,7 @@ Key properties:
 - **All config via `Effect.Config`** — not `process.env`; 12+ config keys with sensible defaults
 
 **Source:** `.repos/radix-effects/packages/gateway/src/` (24 files + helpers)
-**Dependencies:** `effect`, `@radixdlt/babylon-gateway-api-sdk`, `@radixdlt/rola`, `@radixdlt/radix-engine-toolkit`, `sbor-ez-mode`, `bignumber.js`, `zod`
+**Dependencies:** `effect`, `@radixdlt/babylon-gateway-api-sdk`, `@radixdlt/rola`, `@radixdlt/radix-engine-toolkit`, `@radix-effects/sbor`, `bignumber.js`, `zod`
 
 ---
 
@@ -38,7 +38,7 @@ Key properties:
    │ EntityNonFungibles  │  │  │ GetNonFungibleBalance             │
    │ EntityNonFungibleIds│  │  │ GetNftResourceManagers            │
    │ StateEntityDetails  │  │  │ GetKeyValueStore                  │
-   │ GetEntityDetailsVA  │  │  │ GetComponentState (+ sbor-ez-mode)│
+   │ GetEntityDetailsVA  │  │  │ GetComponentState (+ @radix-effects/sbor)│
    │ NonFungibleData     │  │  │ GetAddressByNonFungible           │
    │ GetValidators       │  │  │ GetResourceHolders                │
    └─────────────────────┘  │  │ GetLedgerState                    │
@@ -149,7 +149,7 @@ All use `Data.TaggedError` from Effect (except 3 legacy class-based errors):
 | 13  | `VerifyRolaProofError`       | `'VerifyRolaProofError'`       | ROLA verification failure                           |
 | 14  | `TransactionPreviewError`    | `'TransactionPreviewError'`    | Preview returns error receipt                       |
 | —   | `InvalidStateInputError`     | `'InvalidStateInputError'`     | Zod validation of AtLedgerState (legacy class)      |
-| —   | `InvalidComponentStateError` | `'InvalidComponentStateError'` | sbor-ez-mode parse failure (legacy class)           |
+| —   | `InvalidComponentStateError` | `'InvalidComponentStateError'` | @radix-effects/sbor decode failure           |
 | —   | `InvalidInputError`          | `'InvalidInputError'`          | Service input validation (legacy class)             |
 
 Errors 1–8 carry the SDK error fields plus `{ code?: number; message?: string }`.
@@ -161,7 +161,7 @@ Errors 1–8 carry the SDK error fields plus `{ code?: number; message?: string 
 | Service                           | Input                                            | Output                                            | Dependencies                                     | Config                                                                    |
 | --------------------------------- | ------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
 | `GetLedgerStateService`           | `at_ledger_state`                                | `ledger_state`                                    | GatewayApiClient                                 | —                                                                         |
-| `GetComponentStateService`        | addresses, at_ledger_state, sbor-ez-mode schema  | `[{address, state, details}]`                     | GetEntityDetailsVaultAggregated                  | —                                                                         |
+| `GetComponentStateService`        | addresses, at_ledger_state, @radix-effects/sbor schema  | `[{address, state, details}]`                     | GetEntityDetailsVaultAggregated                  | —                                                                         |
 | `GetFungibleBalance`              | addresses, at_ledger_state                       | `[{address, items: [{amount: BigNumber, ...}]}]`  | EntityFungiblesPage, StateEntityDetails          | `GET_FUNGIBLE_BALANCE_CONCURRENCY` (5)                                    |
 | `GetNonFungibleBalance`           | addresses, at_ledger_state, resourceAddresses?   | `{items: [{address, nonFungibleResources}]}`      | NonFungibleData, GetNftResourceManagers          | `GET_NON_FUNGIBLE_DATA_CONCURRENCY` (15)                                  |
 | `GetNftResourceManagersService`   | addresses, at_ledger_state, resourceAddresses?   | `[{address, items: [{resourceAddress, nftIds}]}]` | EntityNonFungiblesPage, EntityNonFungibleIdsPage | 4 config keys (see Config table)                                          |
@@ -440,13 +440,13 @@ const program = Effect.gen(function* () {
 program.pipe(Effect.provide(GetKeyValueStore.Default), Effect.runPromise);
 ```
 
-### Component State with sbor-ez-mode Schema
+### Component State with @radix-effects/sbor Schema
 
 ```typescript
 import { GetComponentStateService } from "@radix-effects/gateway";
-import { Struct, String, U64 } from "sbor-ez-mode";
+import { string, struct, u64 } from "@radix-effects/sbor";
 
-const MyComponentSchema = Struct({ name: String, count: U64 });
+const MyComponentSchema = struct({ name: string, count: u64 });
 
 const program = Effect.gen(function* () {
   const svc = yield* GetComponentStateService;
@@ -455,7 +455,7 @@ const program = Effect.gen(function* () {
     at_ledger_state: { state_version: 123456 },
     schema: MyComponentSchema,
   });
-  // results[0].state.name → string, results[0].state.count → string
+  // results[0].state.name → string, results[0].state.count → BigNumber
 });
 
 program.pipe(

@@ -32,7 +32,7 @@
     "@radixdlt/rola": "catalog:",
     "bignumber.js": "catalog:",
     "effect": "catalog:",
-    "sbor-ez-mode": "workspace:*",
+    "@radix-effects/sbor": "workspace:*",
     "zod": "catalog:",
     "@radixdlt/babylon-core-api-sdk": "catalog:"
   },

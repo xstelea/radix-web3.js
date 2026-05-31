@@ -1,6 +1,6 @@
-# SBOR EZ Mode
+# @radix-effects/sbor
 
-SBOR EZ Mode defines a developer-facing language for decoding and encoding Gateway programmatic SBOR values into typed JavaScript values while preserving Scrypto value meaning.
+@radix-effects/sbor defines a developer-facing language for decoding and encoding Gateway programmatic SBOR values into typed JavaScript values while preserving Scrypto value meaning.
 
 ## Language
 
