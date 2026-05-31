@@ -1,6 +1,12 @@
 import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
 import {
+  AccountAddress,
+  ComponentAddress,
+  InternalAddress,
+  KeyValueStoreAddress,
   NonFungibleLocalId,
+  NonFungibleResourceAddress,
+  PackageAddress,
   ResourceAddress,
   VaultAddress,
 } from '@radix-effects/shared';
@@ -11,6 +17,7 @@ import {
   array,
   bool,
   bytes,
+  componentAddress,
   decimal,
   enumeration,
   i128,
@@ -19,10 +26,14 @@ import {
   i64,
   i8,
   instant,
+  internalAddress,
+  keyValueStoreAddress,
   map,
+  nonFungibleResourceAddress,
   nonFungibleLocalId,
   number,
   option,
+  packageAddress,
   preciseDecimal,
   resourceAddress,
   s,
@@ -34,7 +45,9 @@ import {
   u32,
   u64,
   u8,
+  value,
   vaultAddress,
+  accountAddress,
 } from './index';
 
 const decode = <S extends Schema.Schema.AnyNoContext>(
@@ -60,6 +73,287 @@ const encodeFailure = <S extends Schema.Schema.AnyNoContext>(
 ) => Effect.runSync(Effect.either(Schema.encode(schema)(input)));
 
 describe('native SBOR Effect schemas', () => {
+  it('round trips primitive scalar schemas', () => {
+    const raw = { kind: 'String', value: 'raw' };
+    expect(decode(value, raw)).toEqual(raw);
+    expect(encode(value, raw)).toEqual(raw);
+
+    expect(decode(string, { kind: 'String', value: 'hello' })).toBe('hello');
+    expect(encode(string, 'hello')).toEqual({
+      kind: 'String',
+      value: 'hello',
+    });
+
+    expect(decode(bool, { kind: 'Bool', value: true })).toBe(true);
+    expect(encode(bool, true)).toEqual({ kind: 'Bool', value: true });
+
+    expect(
+      decode(bytes, { kind: 'Bytes', element_kind: 'U8', hex: 'deadbeef' }),
+    ).toBe('deadbeef');
+    expect(encode(bytes, 'deadbeef')).toEqual({
+      kind: 'Bytes',
+      element_kind: 'U8',
+      element_type_name: 'U8',
+      hex: 'deadbeef',
+    });
+  });
+
+  it('round trips every explicit numeric schema', () => {
+    expect(decode(u8, { kind: 'U8', value: '255' }).toFixed(0)).toBe('255');
+    expect(encode(u8, new BigNumber(255))).toEqual({
+      kind: 'U8',
+      value: '255',
+    });
+
+    expect(decode(u16, { kind: 'U16', value: '65535' }).toFixed(0)).toBe(
+      '65535',
+    );
+    expect(encode(u16, new BigNumber(65535))).toEqual({
+      kind: 'U16',
+      value: '65535',
+    });
+
+    expect(decode(u32, { kind: 'U32', value: '4294967295' }).toFixed(0)).toBe(
+      '4294967295',
+    );
+    expect(encode(u32, new BigNumber('4294967295'))).toEqual({
+      kind: 'U32',
+      value: '4294967295',
+    });
+
+    expect(
+      decode(u64, {
+        kind: 'U64',
+        value: '18446744073709551615',
+      }).toFixed(0),
+    ).toBe('18446744073709551615');
+    expect(encode(u64, new BigNumber('18446744073709551615'))).toEqual({
+      kind: 'U64',
+      value: '18446744073709551615',
+    });
+
+    expect(
+      decode(u128, {
+        kind: 'U128',
+        value: '340282366920938463463374607431768211455',
+      }).toFixed(0),
+    ).toBe('340282366920938463463374607431768211455');
+    expect(
+      encode(u128, new BigNumber('340282366920938463463374607431768211455')),
+    ).toEqual({
+      kind: 'U128',
+      value: '340282366920938463463374607431768211455',
+    });
+
+    expect(decode(i8, { kind: 'I8', value: '-128' }).toFixed(0)).toBe('-128');
+    expect(encode(i8, new BigNumber(-128))).toEqual({
+      kind: 'I8',
+      value: '-128',
+    });
+
+    expect(decode(i16, { kind: 'I16', value: '-32768' }).toFixed(0)).toBe(
+      '-32768',
+    );
+    expect(encode(i16, new BigNumber(-32768))).toEqual({
+      kind: 'I16',
+      value: '-32768',
+    });
+
+    expect(decode(i32, { kind: 'I32', value: '-2147483648' }).toFixed(0)).toBe(
+      '-2147483648',
+    );
+    expect(encode(i32, new BigNumber('-2147483648'))).toEqual({
+      kind: 'I32',
+      value: '-2147483648',
+    });
+
+    expect(
+      decode(i64, {
+        kind: 'I64',
+        value: '-9223372036854775808',
+      }).toFixed(0),
+    ).toBe('-9223372036854775808');
+    expect(encode(i64, new BigNumber('-9223372036854775808'))).toEqual({
+      kind: 'I64',
+      value: '-9223372036854775808',
+    });
+
+    expect(
+      decode(i128, {
+        kind: 'I128',
+        value: '-170141183460469231731687303715884105728',
+      }).toFixed(0),
+    ).toBe('-170141183460469231731687303715884105728');
+    expect(
+      encode(i128, new BigNumber('-170141183460469231731687303715884105728')),
+    ).toEqual({
+      kind: 'I128',
+      value: '-170141183460469231731687303715884105728',
+    });
+
+    expect(decode(decimal, { kind: 'Decimal', value: '1.5' }).toString()).toBe(
+      '1.5',
+    );
+    expect(encode(decimal, new BigNumber('1.5'))).toEqual({
+      kind: 'Decimal',
+      value: '1.5',
+    });
+
+    expect(
+      decode(preciseDecimal, {
+        kind: 'PreciseDecimal',
+        value: '1.23456789',
+      }).toString(),
+    ).toBe('1.23456789');
+    expect(encode(preciseDecimal, new BigNumber('1.23456789'))).toEqual({
+      kind: 'PreciseDecimal',
+      value: '1.23456789',
+    });
+  });
+
+  it('round trips instant and every branded address schema', () => {
+    const date = new Date('2025-03-11T17:08:49.000Z');
+    expect(
+      decode(instant, {
+        kind: 'I64',
+        type_name: 'Instant',
+        value: '1741712929',
+      }).toISOString(),
+    ).toBe(date.toISOString());
+    expect(encode(instant, date)).toEqual({
+      kind: 'I64',
+      type_name: 'Instant',
+      value: '1741712929',
+    });
+
+    const resource = ResourceAddress.make('resource_rdx1');
+    expect(
+      decode(resourceAddress, {
+        kind: 'Reference',
+        type_name: 'ResourceAddress',
+        value: resource,
+      }),
+    ).toBe(resource);
+    expect(encode(resourceAddress, resource)).toEqual({
+      kind: 'Reference',
+      type_name: 'ResourceAddress',
+      value: resource,
+    });
+
+    const component = ComponentAddress.make('component_rdx1');
+    expect(
+      decode(componentAddress, {
+        kind: 'Reference',
+        type_name: 'ComponentAddress',
+        value: component,
+      }),
+    ).toBe(component);
+    expect(encode(componentAddress, component)).toEqual({
+      kind: 'Reference',
+      type_name: 'ComponentAddress',
+      value: component,
+    });
+
+    const account = AccountAddress.make('account_rdx1');
+    expect(
+      decode(accountAddress, {
+        kind: 'Reference',
+        type_name: 'AccountAddress',
+        value: account,
+      }),
+    ).toBe(account);
+    expect(encode(accountAddress, account)).toEqual({
+      kind: 'Reference',
+      type_name: 'AccountAddress',
+      value: account,
+    });
+
+    const packageValue = PackageAddress.make('package_rdx1');
+    expect(
+      decode(packageAddress, {
+        kind: 'Reference',
+        type_name: 'PackageAddress',
+        value: packageValue,
+      }),
+    ).toBe(packageValue);
+    expect(encode(packageAddress, packageValue)).toEqual({
+      kind: 'Reference',
+      type_name: 'PackageAddress',
+      value: packageValue,
+    });
+
+    const nonFungibleResource =
+      NonFungibleResourceAddress.make('resource_nft_rdx1');
+    expect(
+      decode(nonFungibleResourceAddress, {
+        kind: 'Reference',
+        type_name: 'NonFungibleResourceAddress',
+        value: nonFungibleResource,
+      }),
+    ).toBe(nonFungibleResource);
+    expect(
+      encode(nonFungibleResourceAddress, nonFungibleResource),
+    ).toEqual({
+      kind: 'Reference',
+      type_name: 'NonFungibleResourceAddress',
+      value: nonFungibleResource,
+    });
+
+    const internal = InternalAddress.make('internal_rdx1');
+    expect(
+      decode(internalAddress, {
+        kind: 'Own',
+        type_name: 'InternalAddress',
+        value: internal,
+      }),
+    ).toBe(internal);
+    expect(encode(internalAddress, internal)).toEqual({
+      kind: 'Own',
+      type_name: 'InternalAddress',
+      value: internal,
+    });
+
+    const vault = VaultAddress.make('internal_vault_rdx1');
+    expect(
+      decode(vaultAddress, {
+        kind: 'Own',
+        type_name: 'Vault',
+        value: vault,
+      }),
+    ).toBe(vault);
+    expect(encode(vaultAddress, vault)).toEqual({
+      kind: 'Own',
+      type_name: 'Vault',
+      value: vault,
+    });
+
+    const keyValueStore = KeyValueStoreAddress.make('internal_kv_rdx1');
+    expect(
+      decode(keyValueStoreAddress, {
+        kind: 'Own',
+        type_name: 'KeyValueStore',
+        value: keyValueStore,
+      }),
+    ).toBe(keyValueStore);
+    expect(encode(keyValueStoreAddress, keyValueStore)).toEqual({
+      kind: 'Own',
+      type_name: 'KeyValueStore',
+      value: keyValueStore,
+    });
+
+    const localId = NonFungibleLocalId.make('#1#');
+    expect(
+      decode(nonFungibleLocalId, {
+        kind: 'NonFungibleLocalId',
+        value: localId,
+      }),
+    ).toBe(localId);
+    expect(encode(nonFungibleLocalId, localId)).toEqual({
+      kind: 'NonFungibleLocalId',
+      value: localId,
+    });
+  });
+
   it('decodes and encodes an explicit u32 without inferring from value size', () => {
     const decoded = decode(u32, { kind: 'U32', value: '7' });
 
@@ -374,6 +668,13 @@ describe('native SBOR Effect schemas', () => {
         }),
       ),
     ).toBe(true);
+    expect(encode(MaybeString, { variant: 'None' })).toEqual({
+      kind: 'Enum',
+      type_name: 'Option',
+      variant_id: '0',
+      variant_name: 'None',
+      fields: [],
+    });
   });
 
   it('decodes and encodes enum variants through tuple payloads', () => {
@@ -395,6 +696,18 @@ describe('native SBOR Effect schemas', () => {
         kind: 'Tuple',
         fields: [{ kind: 'String', field_name: 'name', value: 'Ada' }],
       },
+    });
+    expect(encode(Event, {
+      variant: 'Named',
+      value: {
+        kind: 'Tuple',
+        fields: [{ kind: 'String', field_name: 'name', value: 'Ada' }],
+      },
+    })).toEqual({
+      kind: 'Enum',
+      variant_id: '0',
+      variant_name: 'Named',
+      fields: [{ kind: 'String', field_name: 'name', value: 'Ada' }],
     });
     expect(Either.isLeft(decodeFailure(Event, {
       kind: 'Enum',

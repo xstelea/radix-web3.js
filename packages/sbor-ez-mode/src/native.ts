@@ -1,5 +1,17 @@
 import { BigNumber } from 'bignumber.js';
 import { Data, Effect, flow, Option, ParseResult, pipe, Schema } from 'effect';
+import type {
+  ProgrammaticScryptoSborValueI8,
+  ProgrammaticScryptoSborValueI16,
+  ProgrammaticScryptoSborValueI32,
+  ProgrammaticScryptoSborValueI64,
+  ProgrammaticScryptoSborValueI128,
+  ProgrammaticScryptoSborValueU8,
+  ProgrammaticScryptoSborValueU16,
+  ProgrammaticScryptoSborValueU32,
+  ProgrammaticScryptoSborValueU64,
+  ProgrammaticScryptoSborValueU128,
+} from '@radixdlt/babylon-gateway-api-sdk';
 import {
   AccountAddress,
   ComponentAddress,
@@ -36,17 +48,19 @@ export type SborKind =
   | 'PreciseDecimal'
   | 'NonFungibleLocalId';
 
-export type IntegerKind =
-  | 'U8'
-  | 'U16'
-  | 'U32'
-  | 'U64'
-  | 'U128'
-  | 'I8'
-  | 'I16'
-  | 'I32'
-  | 'I64'
-  | 'I128';
+export type ProgrammaticScryptoSborValueNumber =
+  | ProgrammaticScryptoSborValueI8
+  | ProgrammaticScryptoSborValueI16
+  | ProgrammaticScryptoSborValueI32
+  | ProgrammaticScryptoSborValueI64
+  | ProgrammaticScryptoSborValueI128
+  | ProgrammaticScryptoSborValueU8
+  | ProgrammaticScryptoSborValueU16
+  | ProgrammaticScryptoSborValueU32
+  | ProgrammaticScryptoSborValueU64
+  | ProgrammaticScryptoSborValueU128;
+
+export type IntegerKind = ProgrammaticScryptoSborValueNumber['kind'];
 
 export type DecimalKind = 'Decimal' | 'PreciseDecimal';
 export type NumericKind = IntegerKind | DecimalKind;
