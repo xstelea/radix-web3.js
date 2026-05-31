@@ -385,6 +385,9 @@ importers:
         specifier: 'catalog:'
         version: 3.19.19
     devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 0.25.1(effect@3.19.19)(vitest@1.6.0(@types/node@22.10.2)(terser@5.37.0))
       '@types/node':
         specifier: 'catalog:'
         version: 22.10.2

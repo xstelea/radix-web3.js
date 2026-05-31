@@ -17,6 +17,7 @@
     "build": "tsdown"
   },
   "devDependencies": {
+    "@effect/vitest": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
