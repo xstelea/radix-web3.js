@@ -12,7 +12,7 @@ import {
 } from '@radix-effects/shared';
 import { BigNumber } from 'bignumber.js';
 import { Effect, Either, Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   array,
   bool,
@@ -584,11 +584,19 @@ describe('native SBOR Effect schemas', () => {
   });
 
   it('composes arrays, tuples, options, and maps as Effect schemas', () => {
+    const ResourceIndex = map({ key: resourceAddress, value: u128 });
     const Complex = struct({
       items: array(tuple([string, u64])),
       maybe: option(string),
       index: map({ key: string, value: u32 }),
     });
+
+    expectTypeOf<Schema.Schema.Type<typeof ResourceIndex>>().toEqualTypeOf<
+      ReadonlyMap<ResourceAddress, BigNumber>
+    >();
+    expectTypeOf<Schema.Schema.Type<typeof Complex>['index']>().toEqualTypeOf<
+      ReadonlyMap<string, BigNumber>
+    >();
 
     const decoded = decode(Complex, {
       kind: 'Tuple',

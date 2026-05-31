@@ -79,7 +79,14 @@ type SborInfo = {
   readonly typeName: Option.Option<string>;
 };
 
-export type NativeSborSchema = Schema.Schema.Any & {
+export type NativeSborSchema<
+  Decoded,
+  Encoded = Decoded,
+> = Schema.Schema<Decoded, Encoded, never> & {
+  readonly sbor: SborInfo;
+};
+
+type AnyNativeSborSchema = Schema.Schema.AnyNoContext & {
   readonly sbor: SborInfo;
 };
 
@@ -565,7 +572,7 @@ export const nonFungibleLocalId = withSbor(
   'NonFungibleLocalId',
 );
 
-export const struct = <const Fields extends Record<string, NativeSborSchema>>(
+export const struct = <const Fields extends Record<string, AnyNativeSborSchema>>(
   fields: Fields,
 ) =>
   withSbor(
@@ -596,7 +603,7 @@ export const struct = <const Fields extends Record<string, NativeSborSchema>>(
     'Tuple',
   );
 
-export const tuple = <const Items extends ReadonlyArray<NativeSborSchema>>(
+export const tuple = <const Items extends ReadonlyArray<AnyNativeSborSchema>>(
   items: Items,
 ) =>
   withSbor(
@@ -615,7 +622,7 @@ export const tuple = <const Items extends ReadonlyArray<NativeSborSchema>>(
     'Tuple',
   );
 
-export const array = <Item extends NativeSborSchema>(item: Item) =>
+export const array = <Item extends AnyNativeSborSchema>(item: Item) =>
   withSbor(
     Schema.transformOrFail(SborArray, Schema.Array(item), {
       strict: false,
@@ -633,7 +640,7 @@ export const array = <Item extends NativeSborSchema>(item: Item) =>
 
 const None = Schema.Struct({ variant: Schema.Literal('None') });
 
-export const option = <Item extends NativeSborSchema>(item: Item) =>
+export const option = <Item extends AnyNativeSborSchema>(item: Item) =>
   withSbor(
     Schema.transformOrFail(
       SborEnum,
@@ -687,8 +694,8 @@ export const option = <Item extends NativeSborSchema>(item: Item) =>
   );
 
 export const map = <
-  Key extends NativeSborSchema,
-  Value extends NativeSborSchema,
+  Key extends AnyNativeSborSchema,
+  Value extends AnyNativeSborSchema,
 >(definition: {
   readonly key: Key;
   readonly value: Value;
@@ -725,7 +732,7 @@ export const map = <
 
 export const enumeration = <const Variants extends ReadonlyArray<{
   readonly variant: string;
-  readonly schema: NativeSborSchema;
+  readonly schema: AnyNativeSborSchema;
 }>>(
   variants: Variants,
 ) =>
