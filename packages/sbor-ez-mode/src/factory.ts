@@ -2,6 +2,7 @@ import type { SborSchema } from './sborSchema';
 import { AddressSchema } from './schemas/address';
 import { ArraySchema } from './schemas/array';
 import { BoolSchema } from './schemas/bool';
+import { BytesSchema } from './schemas/bytes';
 import { DecimalSchema } from './schemas/decimal';
 import { EnumSchema, type VariantDefinition } from './schemas/enum'; // Add this import
 import { InstantSchema } from './schemas/instant';
@@ -30,7 +31,7 @@ import { ValueSchema } from './schemas/value';
  *
  * Parsing can be done using the returned schema:
  * ```ts
- * const parsed = myStructSchema.safeParse(myProgrammaticScryptoSborValue);
+ * const parsed = yield* myStructSchema.safeParse(myProgrammaticScryptoSborValue);
  * ```
  */
 export const s = {
@@ -55,6 +56,11 @@ export const s = {
    * @returns BoolSchema
    */
   bool: () => new BoolSchema(),
+  /**
+   * A schema for raw bytes, represented as a hex string.
+   * @returns BytesSchema
+   */
+  bytes: () => new BytesSchema(),
   /**
    * A schema for a NonFungibleLocalId
    * @returns NonFungibleLocalIdSchema

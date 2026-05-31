@@ -1,5 +1,5 @@
-import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
-import { SborError, SborSchema } from '../sborSchema';
+import { Effect } from 'effect';
+import { isSborKind, sborFail, SborSchema } from '../sborSchema';
 
 // Primitive schemas
 export class BytesSchema extends SborSchema<string> {
@@ -7,21 +7,24 @@ export class BytesSchema extends SborSchema<string> {
     super(['Bytes']);
   }
 
-  validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    if (value.kind !== 'Bytes') {
-      throw new SborError('Invalid bytes', path);
+  validate(value: unknown, path: string[]) {
+    if (!isSborKind(value, 'Bytes')) {
+      return sborFail('Invalid bytes', path);
     }
     if (value.element_type_name !== 'U8') {
-      throw new SborError('Invalid bytes element type', path);
+      return sborFail('Invalid bytes element type', path);
     }
-    return true;
+    return Effect.void;
   }
 
-  parse(value: ProgrammaticScryptoSborValue, path: string[]): string {
-    this.validate(value, path);
-    if (value.kind !== 'Bytes') {
-      throw new SborError('Invalid bytes', path);
-    }
-    return value.hex;
+  parse(value: unknown, path: string[]) {
+    const self = this;
+    return Effect.gen(function* () {
+      yield* self.validate(value, path);
+      if (!isSborKind(value, 'Bytes')) {
+        return yield* sborFail('Invalid bytes', path);
+      }
+      return value.hex;
+    });
   }
 }

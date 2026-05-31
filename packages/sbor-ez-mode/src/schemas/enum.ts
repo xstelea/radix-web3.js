@@ -1,9 +1,6 @@
-import type {
-  ProgrammaticScryptoSborValue,
-  ProgrammaticScryptoSborValueEnum,
-  ProgrammaticScryptoSborValueTuple,
-} from '@radixdlt/babylon-gateway-api-sdk';
-import { SborError, SborSchema } from '../sborSchema';
+import type { ProgrammaticScryptoSborValueTuple } from '@radixdlt/babylon-gateway-api-sdk';
+import { Effect } from 'effect';
+import { isSborKind, sborFail, SborError, SborSchema } from '../sborSchema';
 import type { OrderedTupleSchema } from './orderedTuple'; // Assuming you have this from your previous code
 import type { ParsedType, StructSchema } from './struct'; // Assuming you have this from your previous code
 
@@ -48,74 +45,70 @@ export class EnumSchema<T extends VariantDefinition<any>[]> extends SborSchema<
     super(['Enum']);
     this.variants = new Map(variants.map((v) => [v.variant, v]));
   }
-  validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    if (
-      !value ||
-      typeof value !== 'object' ||
-      !('kind' in value) ||
-      value.kind !== 'Enum'
-    ) {
-      throw new SborError('Invalid enum structure', path);
+  validate(value: unknown, path: string[]) {
+    if (!isSborKind(value, 'Enum')) {
+      return sborFail('Invalid enum structure', path);
     }
 
-    const enumValue = value as ProgrammaticScryptoSborValueEnum;
-
     // Validate variant exists
-    const variantName = enumValue.variant_name;
+    const variantName = value.variant_name;
     if (!variantName || !this.variants.has(variantName)) {
-      throw new SborError(
-        `Unknown variant: ${variantName || 'undefined'}`,
-        path,
-      );
+      return sborFail(`Unknown variant: ${variantName || 'undefined'}`, path);
     }
 
     const variantDef = this.variants.get(variantName)!;
 
     // If the variant has no schema (empty variant), fields should be empty
     if (!variantDef.schema) {
-      if (enumValue.fields.length > 0) {
-        throw new SborError(
+      if (value.fields.length > 0) {
+        return sborFail(
           `Empty variant ${variantName} should have no fields`,
           path,
         );
       }
-      return true;
+      return Effect.void;
     }
 
     // Validate the variant's contents using its schema
     const tupleValue: ProgrammaticScryptoSborValueTuple = {
       kind: 'Tuple',
-      fields: enumValue.fields,
-      field_name: enumValue.field_name,
-      type_name: enumValue.type_name,
+      fields: value.fields,
+      field_name: value.field_name,
+      type_name: value.type_name,
     };
     return variantDef.schema.validate(tupleValue, [...path, variantName]);
   }
 
   parse(
-    value: ProgrammaticScryptoSborValue,
+    value: unknown,
     path: string[],
-  ): EnumParsedType<T> {
-    this.validate(value, path);
-    const enumValue = value as ProgrammaticScryptoSborValueEnum;
-    const variantName = enumValue.variant_name!;
-    const variantDef = this.variants.get(variantName)!;
+  ): Effect.Effect<EnumParsedType<T>, SborError> {
+    const self = this;
+    return Effect.gen(function* () {
+      yield* self.validate(value, path);
+      if (!isSborKind(value, 'Enum')) {
+        return yield* sborFail('Invalid enum structure', path);
+      }
+      const variantName = value.variant_name!;
+      const variantDef = self.variants.get(variantName)!;
 
-    // Empty variant
-    if (!variantDef.schema) {
-      return { variant: variantName } as EnumParsedType<T>;
-    }
+      if (!variantDef.schema) {
+        return { variant: variantName } as EnumParsedType<T>;
+      }
 
-    // Parse variant with contents
-    const tupleValue: ProgrammaticScryptoSborValueTuple = {
-      kind: 'Tuple',
-      fields: enumValue.fields,
-      field_name: enumValue.field_name,
-      type_name: enumValue.type_name,
-    };
-    return {
-      variant: variantName,
-      value: variantDef.schema.parse(tupleValue, [...path, variantName]),
-    } as EnumParsedType<T>;
+      const tupleValue: ProgrammaticScryptoSborValueTuple = {
+        kind: 'Tuple',
+        fields: value.fields,
+        field_name: value.field_name,
+        type_name: value.type_name,
+      };
+      return {
+        variant: variantName,
+        value: yield* variantDef.schema.parse(tupleValue, [
+          ...path,
+          variantName,
+        ]),
+      } as EnumParsedType<T>;
+    }) as Effect.Effect<EnumParsedType<T>, SborError>;
   }
 }

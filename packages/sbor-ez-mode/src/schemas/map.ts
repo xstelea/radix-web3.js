@@ -1,8 +1,5 @@
-import type {
-  ProgrammaticScryptoSborValue,
-  ProgrammaticScryptoSborValueMap,
-} from '@radixdlt/babylon-gateway-api-sdk';
-import { SborError, SborSchema } from '../sborSchema';
+import { Effect } from 'effect';
+import { isSborKind, sborFail, SborSchema } from '../sborSchema';
 
 export interface MapDefinition<T, U> {
   key: SborSchema<T>;
@@ -17,40 +14,47 @@ export class MapSchema<K, V> extends SborSchema<Map<K, V>> {
     this.definition = definition;
   }
 
-  validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    if (
-      !value ||
-      typeof value !== 'object' ||
-      !('kind' in value) ||
-      value.kind !== 'Map'
-    ) {
-      throw new SborError('Invalid map structure', path);
+  validate(value: unknown, path: string[]) {
+    if (!isSborKind(value, 'Map')) {
+      return sborFail('Invalid map structure', path);
     }
 
-    const entries = value.entries;
+    const self = this;
+    return Effect.forEach(value.entries, (entry, index) =>
+      Effect.gen(function* () {
+        const entryPath = [...path, index.toString()];
+        if (!entry.key || !entry.value) {
+          return yield* sborFail('Invalid map entry', entryPath);
+        }
 
-    return entries.every((entry, index) => {
-      if (!entry.key || !entry.value) {
-        throw new SborError('Invalid map entry', [...path, index.toString()]);
-      }
-
-      return (
-        this.definition.key.validate(entry.key, [...path, index.toString()]) &&
-        this.definition.value.validate(entry.value, [...path, index.toString()])
-      );
-    });
+        yield* self.definition.key.validate(entry.key, entryPath);
+        yield* self.definition.value.validate(entry.value, entryPath);
+      }),
+    ).pipe(Effect.asVoid);
   }
 
-  parse(value: ProgrammaticScryptoSborValue, path: string[]): Map<K, V> {
-    this.validate(value, path);
-    const mapValue = value as ProgrammaticScryptoSborValueMap;
-    const entries = mapValue.entries;
+  parse(value: unknown, path: string[]) {
+    const self = this;
+    return Effect.gen(function* () {
+      yield* self.validate(value, path);
+      if (!isSborKind(value, 'Map')) {
+        return yield* sborFail('Invalid map structure', path);
+      }
 
-    return new Map<K, V>(
-      entries.map((entry, index) => [
-        this.definition.key.parse(entry.key, [...path, index.toString()]),
-        this.definition.value.parse(entry.value, [...path, index.toString()]),
-      ]),
-    );
+      const entries = yield* Effect.forEach(value.entries, (entry, index) =>
+        Effect.gen(function* () {
+          const entryPath = [...path, index.toString()];
+          if (!entry.key || !entry.value) {
+            return yield* sborFail('Invalid map entry', entryPath);
+          }
+          return [
+            yield* self.definition.key.parse(entry.key, entryPath),
+            yield* self.definition.value.parse(entry.value, entryPath),
+          ] as const;
+        }),
+      );
+
+      return new Map<K, V>(entries);
+    });
   }
 }

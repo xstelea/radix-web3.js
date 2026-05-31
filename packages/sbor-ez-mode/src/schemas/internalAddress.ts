@@ -1,26 +1,29 @@
-import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
-import { SborError, SborSchema } from '../sborSchema';
+import { Effect } from 'effect';
+import { isSborKind, sborFail, SborSchema } from '../sborSchema';
 
 export class InternalAddressSchema extends SborSchema<string> {
   constructor() {
     super(['Own']);
   }
 
-  validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    if (value.kind !== 'Own') {
-      throw new SborError('Invalid reference', path);
+  validate(value: unknown, path: string[]) {
+    if (!isSborKind(value, 'Own')) {
+      return sborFail('Invalid reference', path);
     }
     if (typeof value.value !== 'string') {
-      throw new SborError('Invalid owned value', path);
+      return sborFail('Invalid owned value', path);
     }
-    return true;
+    return Effect.void;
   }
 
-  parse(value: ProgrammaticScryptoSborValue, path: string[]): string {
-    this.validate(value, path);
-    if (value.kind !== 'Own') {
-      throw new SborError('Invalid owned value', path);
-    }
-    return value.value;
+  parse(value: unknown, path: string[]) {
+    const self = this;
+    return Effect.gen(function* () {
+      yield* self.validate(value, path);
+      if (!isSborKind(value, 'Own')) {
+        return yield* sborFail('Invalid owned value', path);
+      }
+      return value.value;
+    });
   }
 }

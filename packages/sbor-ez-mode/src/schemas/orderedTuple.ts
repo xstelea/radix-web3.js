@@ -1,8 +1,5 @@
-import type {
-  ProgrammaticScryptoSborValue,
-  ProgrammaticScryptoSborValueTuple,
-} from '@radixdlt/babylon-gateway-api-sdk';
-import { SborError, SborSchema } from '../sborSchema';
+import { Effect } from 'effect';
+import { isSborKind, sborFail, SborSchema } from '../sborSchema';
 
 export type TupleSchema = SborSchema<unknown>[];
 
@@ -16,68 +13,67 @@ export class OrderedTupleSchema<T extends TupleSchema> extends SborSchema<{
     this.schemas = schemas;
   }
 
-  validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    if (
-      !value ||
-      typeof value !== 'object' ||
-      !('kind' in value) ||
-      value.kind !== 'Tuple'
-    ) {
-      throw new SborError('The object is not a tuple', path);
+  validate(value: unknown, path: string[]) {
+    if (!isSborKind(value, 'Tuple')) {
+      return sborFail('The object is not a tuple', path);
     }
 
-    const tupleValue = value as ProgrammaticScryptoSborValueTuple;
-    const fields = tupleValue.fields;
+    const fields = value.fields;
 
     if (fields.length !== this.schemas.length) {
-      throw new SborError(
+      return sborFail(
         `Expected ${this.schemas.length} fields, got ${fields.length}`,
         path,
       );
     }
 
-    return this.schemas.every((schema, index) => {
+    return Effect.forEach(this.schemas, (schema, index) => {
       const field = fields[index];
-      if (!field) return false;
+      if (!field)
+        return sborFail(`Missing field at index ${index}`, [
+          ...path,
+          index.toString(),
+        ]);
       if (!schema) {
-        throw new SborError(`Schema not found for field at index ${index}`, [
+        return sborFail(`Schema not found for field at index ${index}`, [
           ...path,
           index.toString(),
         ]);
       }
 
       if (!schema.kinds.includes(field.kind)) {
-        throw new SborError(
-          `Expected kind ${schema.kinds}, got ${field.kind}`,
-          [...path, index.toString()],
-        );
-      }
-
-      return schema.validate(field, [...path, index.toString()]);
-    });
-  }
-
-  parse(
-    value: ProgrammaticScryptoSborValue,
-    path: string[],
-  ): {
-    [K in keyof T]: T[K] extends SborSchema<infer U> ? U : never;
-  } {
-    this.validate(value, path);
-    const tupleValue = value as ProgrammaticScryptoSborValueTuple;
-    const fields = tupleValue.fields;
-
-    return fields.map((field, index) => {
-      const schema = this.schemas[index];
-      if (!schema) {
-        throw new SborError(`Schema not found for field at index ${index}`, [
+        return sborFail(`Expected kind ${schema.kinds}, got ${field.kind}`, [
           ...path,
           index.toString(),
         ]);
       }
-      return schema.parse(field, [...path, index.toString()]);
-    }) as {
-      [K in keyof T]: T[K] extends SborSchema<infer U> ? U : never;
-    };
+
+      return schema.validate(field, [...path, index.toString()]);
+    }).pipe(Effect.asVoid);
+  }
+
+  parse(value: unknown, path: string[]) {
+    const self = this;
+    return Effect.gen(function* () {
+      yield* self.validate(value, path);
+      if (!isSborKind(value, 'Tuple')) {
+        return yield* sborFail('The object is not a tuple', path);
+      }
+
+      const parsed = yield* Effect.forEach(value.fields, (field, index) => {
+        const schema = self.schemas[index];
+        if (!schema) {
+          return sborFail(`Schema not found for field at index ${index}`, [
+            ...path,
+            index.toString(),
+          ]);
+        }
+        return schema.parse(field, [...path, index.toString()]);
+      });
+
+      return parsed as {
+        [K in keyof T]: T[K] extends SborSchema<infer U> ? U : never;
+      };
+    });
   }
 }

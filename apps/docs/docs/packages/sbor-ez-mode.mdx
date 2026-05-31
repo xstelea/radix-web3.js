@@ -19,6 +19,7 @@ npm install sbor-ez-mode
 ## Basic Usage
 
 ```ts
+import { Effect } from 'effect';
 import s from 'sbor-ez-mode';
 
 const swapEventSchema = s.struct({
@@ -29,17 +30,16 @@ const swapEventSchema = s.struct({
   is_success: s.bool(),
 });
 
-const result = swapEventSchema.safeParse(programmaticSborValue);
-
-if (result.isOk()) {
-  console.log(result.value.input_amount);
-} else {
-  console.error(result.error.message, result.error.path);
-}
+const program = Effect.gen(function* () {
+  const parsed = yield* swapEventSchema.safeParse(programmaticSborValue);
+  console.log(parsed.input_amount);
+});
 ```
 
-`safeParse` returns a `neverthrow` `Result`. Successful parses return the typed
-value; failures return `SborError` with a message and path.
+`safeParse` returns an `Effect.Effect` whose success channel is the typed parsed
+value. Failures are schema-backed `SborError` values with a message and path.
+Each `SborSchema` also exposes `effectSchema`, an Effect Schema transform for
+decoding unknown Gateway SBOR input into the parsed value shape.
 
 ## Schema Factory
 
@@ -49,6 +49,7 @@ value; failures return `SborError` with a message and path.
 | `s.decimal()` | `Decimal` and `PreciseDecimal` as strings. |
 | `s.string()` | SBOR string values. |
 | `s.bool()` | Boolean values. |
+| `s.bytes()` | SBOR bytes as a hex string. |
 | `s.number()` | Integer and numeric SBOR values as numbers. |
 | `s.instant()` | Radix `Instant` values as `Date`. |
 | `s.address()` | Referenced addresses such as account, component, or resource addresses. |
@@ -120,5 +121,5 @@ const balanceChange = s.enum([
 const maybeName = s.option(s.string());
 ```
 
-Enum parses return `{ variant, value }`. Option parses return the parsed value
-or `null`, depending on the SBOR variant.
+Enum parses return `{ variant, value }`. Option parses return
+`{ variant: 'Some', value }` or `{ variant: 'None' }`.

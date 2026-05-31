@@ -1,4 +1,5 @@
 import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
+import { Effect } from 'effect';
 import { SborSchema, kinds } from '../sborSchema';
 
 // Primitive schemas
@@ -7,11 +8,11 @@ export class ValueSchema extends SborSchema<ProgrammaticScryptoSborValue> {
     super(kinds);
   }
 
-  validate(): boolean {
-    return true;
+  validate() {
+    return Effect.void;
   }
 
-  parse(value: ProgrammaticScryptoSborValue): ProgrammaticScryptoSborValue {
-    return value;
+  parse(value: unknown) {
+    return Effect.succeed(value as ProgrammaticScryptoSborValue);
   }
 }

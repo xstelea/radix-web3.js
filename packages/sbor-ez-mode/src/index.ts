@@ -1,5 +1,6 @@
 import { s } from './factory';
 export default s;
+export * from './native';
 export { SborSchema } from './sborSchema';
 export { SborError } from './sborSchema';
 export { StructSchema } from './schemas/struct';

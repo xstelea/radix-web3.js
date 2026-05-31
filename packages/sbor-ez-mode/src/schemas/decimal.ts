@@ -1,9 +1,5 @@
-import type {
-  ProgrammaticScryptoSborValue,
-  ProgrammaticScryptoSborValueDecimal,
-  ProgrammaticScryptoSborValuePreciseDecimal,
-} from '@radixdlt/babylon-gateway-api-sdk';
-import { SborError, SborSchema } from '../sborSchema';
+import { Effect } from 'effect';
+import { isSborKind, sborFail, SborSchema } from '../sborSchema';
 
 // Primitive schemas
 export class DecimalSchema extends SborSchema<string> {
@@ -11,21 +7,30 @@ export class DecimalSchema extends SborSchema<string> {
     super(['Decimal', 'PreciseDecimal']);
   }
 
-  validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    if (value.kind !== 'Decimal' && value.kind !== 'PreciseDecimal') {
-      throw new SborError(
+  validate(value: unknown, path: string[]) {
+    if (!isSborKind(value, 'Decimal') && !isSborKind(value, 'PreciseDecimal')) {
+      return sborFail(
         'The Kind of this value is not Decimal or PreciseDecimal',
         path,
       );
     }
-    return true;
+    return Effect.void;
   }
 
-  parse(value: ProgrammaticScryptoSborValue, path: string[]): string {
-    this.validate(value, path);
-    const valueDecimal = value as
-      | ProgrammaticScryptoSborValueDecimal
-      | ProgrammaticScryptoSborValuePreciseDecimal;
-    return valueDecimal.value;
+  parse(value: unknown, path: string[]) {
+    const self = this;
+    return Effect.gen(function* () {
+      yield* self.validate(value, path);
+      if (
+        !isSborKind(value, 'Decimal') &&
+        !isSborKind(value, 'PreciseDecimal')
+      ) {
+        return yield* sborFail(
+          'The Kind of this value is not Decimal or PreciseDecimal',
+          path,
+        );
+      }
+      return value.value;
+    });
   }
 }

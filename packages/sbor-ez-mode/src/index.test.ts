@@ -1,5 +1,5 @@
 import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
-import type { Result } from 'neverthrow';
+import { Effect } from 'effect';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { s } from './factory';
 import type { SborError, SborSchema } from './sborSchema';
@@ -9,13 +9,9 @@ function evaluateResultHelper<T, E>(
   example: ProgrammaticScryptoSborValue,
   expectedParsedValue: E,
 ): T {
-  const result = schema.safeParse(example);
-  if (result.isOk()) {
-    expect(result.value).toEqual(expectedParsedValue);
-    return result.value;
-  }
-  console.error(result.error);
-  throw new Error('Failed to parse');
+  const result = Effect.runSync(schema.safeParse(example));
+  expect(result).toEqual(expectedParsedValue);
+  return result;
 }
 
 describe('sbor', () => {
@@ -499,7 +495,9 @@ describe('sbor', () => {
 
     boingEvents.forEach((event) => {
       const result = schema.safeParse(event);
-      expectTypeOf(result).toEqualTypeOf<Result<expectedType, SborError>>();
+      expectTypeOf(result).toMatchTypeOf<
+        Effect.Effect<expectedType, SborError>
+      >();
     });
   });
 
@@ -823,7 +821,7 @@ describe('sbor', () => {
 
     examples.forEach((example, i) => {
       const result = evaluateResultHelper(schema, example, parsed[i]);
-      expectTypeOf(result).toEqualTypeOf<expectedType>();
+      expectTypeOf(result).toMatchTypeOf<expectedType>();
     });
   });
 
@@ -1660,7 +1658,10 @@ describe('sbor', () => {
       oracle: Oracle,
     });
 
-    const result = PrecisionPool.safeParse(example);
-    console.log(result);
+    const result = Effect.runSync(PrecisionPool.safeParse(example));
+    expect(result).toMatchObject({
+      pool_address:
+        'component_rdx1cp6fus3tmgfddxvfksn9ng8nh7rd0zqyarl3pgvatzfcwdzuq4nvst',
+    });
   });
 });

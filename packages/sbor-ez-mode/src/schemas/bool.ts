@@ -1,5 +1,5 @@
-import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
-import { SborError, SborSchema } from '../sborSchema';
+import { Effect } from 'effect';
+import { isSborKind, sborFail, SborSchema } from '../sborSchema';
 
 // Primitive schemas
 export class BoolSchema extends SborSchema<boolean> {
@@ -7,21 +7,24 @@ export class BoolSchema extends SborSchema<boolean> {
     super(['Bool']);
   }
 
-  validate(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    if (value.kind !== 'Bool') {
-      throw new SborError('Invalid boolean', path);
+  validate(value: unknown, path: string[]) {
+    if (!isSborKind(value, 'Bool')) {
+      return sborFail('Invalid boolean', path);
     }
     if (typeof value.value !== 'boolean') {
-      throw new SborError('Invalid boolean value', path);
+      return sborFail('Invalid boolean value', path);
     }
-    return true;
+    return Effect.void;
   }
 
-  parse(value: ProgrammaticScryptoSborValue, path: string[]): boolean {
-    this.validate(value, path);
-    if (value.kind !== 'Bool') {
-      throw new SborError('Invalid decimal', path);
-    }
-    return value.value;
+  parse(value: unknown, path: string[]) {
+    const self = this;
+    return Effect.gen(function* () {
+      yield* self.validate(value, path);
+      if (!isSborKind(value, 'Bool')) {
+        return yield* sborFail('Invalid boolean', path);
+      }
+      return value.value;
+    });
   }
 }

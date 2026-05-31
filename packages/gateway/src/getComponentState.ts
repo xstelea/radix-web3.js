@@ -54,21 +54,19 @@ export class GetComponentStateService extends Effect.Service<GetComponentStateSe
               const componentState =
                 componentDetails.state as ProgrammaticScryptoSborValue;
 
-              const parsed = input.schema.safeParse(componentState);
-
-              if (parsed.isErr()) {
-                return yield* Effect.fail(
-                  new InvalidComponentStateError(parsed.error),
+              const parsed = yield* input.schema
+                .safeParse(componentState)
+                .pipe(
+                  Effect.mapError(
+                    (error) => new InvalidComponentStateError(error),
+                  ),
                 );
-              }
 
-              if (parsed.isOk()) {
-                results.push({
-                  address: item.address,
-                  state: parsed.value,
-                  details: item,
-                });
-              }
+              results.push({
+                address: item.address,
+                state: parsed,
+                details: item,
+              });
             }
           }
 

@@ -4,8 +4,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "build": "tsdown"
   },
   "devDependencies": {
@@ -13,10 +21,13 @@
     "tsdown": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@vitest/coverage-v8": "catalog:"
   },
   "dependencies": {
+    "@radix-effects/shared": "workspace:*",
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
-    "neverthrow": "catalog:"
+    "bignumber.js": "catalog:",
+    "effect": "catalog:"
   }
 }
