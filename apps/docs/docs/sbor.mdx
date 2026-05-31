@@ -245,6 +245,10 @@ const program = Effect.gen(function* () {
 
 ### `preciseDecimal`
 
+`preciseDecimal` also decodes to `BigNumber`. Use decimal strings as the stable
+serialization format and avoid `toNumber()`, which can lose precision for both
+`Decimal` and `PreciseDecimal`.
+
 ```ts
 import { BigNumber } from 'bignumber.js';
 import { Effect, Schema } from 'effect';
@@ -259,6 +263,49 @@ const program = Effect.gen(function* () {
   const encoded = yield* Schema.encode(preciseDecimal)(new BigNumber(value));
 });
 ```
+
+### Decimal Arithmetic
+
+`BigNumber` is the numeric type used by `decimal`, `preciseDecimal`, and the
+generic `number` schema. It is suitable for exact decimal string parsing,
+comparison, addition, subtraction, multiplication, and formatting back to a
+string.
+
+Arithmetic that can introduce rounding should make the rounding policy
+explicit. Keep decoded values as `BigNumber`, never convert ledger values to
+JavaScript `number`, and re-encode through the matching schema after arithmetic
+so the SBOR kind is preserved.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { preciseDecimal } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const left = yield* Schema.decodeUnknown(preciseDecimal)({
+    kind: 'PreciseDecimal',
+    value: '1.000000000000000000000000000000000001',
+  });
+
+  const right = yield* Schema.decodeUnknown(preciseDecimal)({
+    kind: 'PreciseDecimal',
+    value: '2.5',
+  });
+
+  const sum = left.plus(right);
+  const share = sum.dividedBy(new BigNumber(3)).decimalPlaces(
+    36,
+    BigNumber.ROUND_DOWN,
+  );
+
+  const encoded = yield* Schema.encode(preciseDecimal)(share);
+});
+```
+
+`decimal.js` is not required for this package. The important invariant is not
+which decimal library is used internally, but that callers preserve decimal
+strings at boundaries, avoid `toNumber()`, and choose explicit rounding for
+division or other rounding-sensitive arithmetic.
 
 ### `number` And `numeric`
 
