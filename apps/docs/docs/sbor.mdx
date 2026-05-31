@@ -90,6 +90,8 @@ const program = Effect.gen(function* () {
 | `option(item)` | Function | Rust-style `Option` enum to `{ variant: "Some", value }` or `{ variant: "None" }`. |
 | `map({ key, value })` | Function | SBOR map entries to `ReadonlyMap<Key, Value>`. |
 | `enumeration(variants)` | Function | Rust-style enum variants to `{ variant, value }`. |
+| `decode(schema)` | Function | Curried alias for `Schema.decodeUnknown(schema)`. |
+| `encode(schema)` | Function | Curried alias for `Schema.encode(schema)`. |
 | `s` | Namespace | Object containing every schema and builder, with `s.enum` as an alias of `enumeration`. |
 | `default` | Namespace | Default export of `s`. |
 | `SborKind` | Type | Union of supported Gateway SBOR `kind` strings. |
@@ -613,12 +615,41 @@ const program = Effect.gen(function* () {
 });
 ```
 
+### `decode(schema)` And `encode(schema)`
+
+`decode` and `encode` are small migration helpers for old `safeParse` adapter
+code. They keep the package API discoverable while still returning ordinary
+Effect Schema effects.
+
+```ts
+import {
+  decimal,
+  decode,
+  encode,
+  resourceAddress,
+  struct,
+  type Infer,
+} from '@radix-effects/sbor';
+
+const NftData = struct({
+  resource: resourceAddress,
+  amount: decimal,
+});
+
+const parseNftData = (item: { readonly sbor: unknown }) =>
+  decode(NftData)(item.sbor);
+
+const encodeNftData = (value: Infer<typeof NftData>) =>
+  encode(NftData)(value);
+```
+
 ## Namespace Exports
 
 ### `s`
 
 `s` is a namespace-style object containing all schema exports and builders. It
-also exposes `s.enum` as the namespace alias for `enumeration`.
+also exposes `s.enum` as the namespace alias for `enumeration`, plus `s.decode`
+and `s.encode` for migration adapters.
 
 ```ts
 import { s } from '@radix-effects/sbor';
@@ -631,6 +662,14 @@ const Schema = s.struct({
 const Event = s.enum([
   { variant: 'Named', schema: s.struct({ name: s.string }) },
 ]);
+
+const decoded = s.decode(Schema)({
+  kind: 'Tuple',
+  fields: [
+    { kind: 'String', field_name: 'name', value: 'epoch' },
+    { kind: 'U64', field_name: 'count', value: '1' },
+  ],
+});
 ```
 
 ### Default Export

@@ -19,7 +19,9 @@ import {
   bool,
   bytes,
   componentAddress,
+  decode as decodeSbor,
   decimal,
+  encode as encodeSbor,
   enumeration,
   i128,
   i16,
@@ -71,6 +73,49 @@ const encodeFailure = <S extends Schema.Schema.AnyNoContext>(
 ) => Effect.either(encode(schema, input));
 
 describe('native SBOR Effect schemas', () => {
+  it.effect('exposes curried decode and encode helpers for migration adapters', () =>
+    Effect.gen(function* () {
+      const Event = struct({
+        resource: resourceAddress,
+        amount: decimal,
+      });
+
+      const parsed = yield* decodeSbor(Event)({
+        kind: 'Tuple',
+        fields: [
+          {
+            kind: 'Reference',
+            type_name: 'ResourceAddress',
+            field_name: 'resource',
+            value: 'resource_rdx1...',
+          },
+          {
+            kind: 'Decimal',
+            field_name: 'amount',
+            value: '10',
+          },
+        ],
+      });
+
+      expect(parsed.amount.toString()).toBe('10');
+      expect(yield* encodeSbor(Event)(parsed)).toEqual({
+        kind: 'Tuple',
+        fields: [
+          {
+            kind: 'Reference',
+            type_name: 'ResourceAddress',
+            field_name: 'resource',
+            value: 'resource_rdx1...',
+          },
+          {
+            kind: 'Decimal',
+            field_name: 'amount',
+            value: '10',
+          },
+        ],
+      });
+    }));
+
   it.effect('round trips primitive scalar schemas', () =>
     Effect.gen(function* () {
       const raw = { kind: 'String', value: 'raw' };

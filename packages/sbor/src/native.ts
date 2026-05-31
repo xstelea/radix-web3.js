@@ -788,6 +788,16 @@ export const enumeration = <const Variants extends ReadonlyArray<{
     'Enum',
   );
 
+export const decode =
+  <S extends AnyNativeSborSchema>(schema: S) =>
+  (input: unknown) =>
+    Schema.decodeUnknown(schema)(input);
+
+export const encode =
+  <S extends AnyNativeSborSchema>(schema: S) =>
+  (input: Schema.Schema.Type<S>) =>
+    Schema.encode(schema)(input);
+
 export const s = {
   value,
   string,
@@ -823,4 +833,6 @@ export const s = {
   option,
   map,
   enum: enumeration,
+  decode,
+  encode,
 };
