@@ -1,18 +1,17 @@
-import { it } from '@effect/vitest';
+import { layer } from '@effect/vitest';
 import { Effect, Layer } from 'effect';
 import { GatewayApiClient } from './gatewayApiClient';
 import { GetResourceHoldersService } from './getResourceHolders';
 
-describe('getResourceHolders', () => {
+const testLayer = GetResourceHoldersService.Default.pipe(
+  Layer.provide(GatewayApiClient.Default),
+);
+
+layer(testLayer)('getResourceHolders', (it) => {
   it.effect(
     'should get the resource holders',
     Effect.fn(function* () {
-      const getResourceHolders = yield* Effect.provide(
-        GetResourceHoldersService,
-        GetResourceHoldersService.Default.pipe(
-          Layer.provide(GatewayApiClient.Default),
-        ),
-      );
+      const getResourceHolders = yield* GetResourceHoldersService;
 
       const result = yield* getResourceHolders({
         resourceAddress:

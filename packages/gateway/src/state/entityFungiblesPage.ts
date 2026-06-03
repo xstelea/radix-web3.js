@@ -14,7 +14,6 @@ type EntityFungiblesPageInput = Omit<
 export class EntityFungiblesPage extends Effect.Service<EntityFungiblesPage>()(
   'EntityFungiblesPage',
   {
-    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(

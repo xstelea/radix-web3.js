@@ -7,7 +7,6 @@ import type { AtLedgerState } from '../schemas';
 export class NonFungibleData extends Effect.Service<NonFungibleData>()(
   'NonFungibleData',
   {
-    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(

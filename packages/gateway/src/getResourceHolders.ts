@@ -5,7 +5,6 @@ import { GatewayApiClient } from './gatewayApiClient';
 export class GetResourceHoldersService extends Effect.Service<GetResourceHoldersService>()(
   'GetResourceHoldersService',
   {
-    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
 

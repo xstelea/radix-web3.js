@@ -17,7 +17,6 @@ export type GetEntityDetailsState =
 export class GetEntityDetailsVaultAggregated extends Effect.Service<GetEntityDetailsVaultAggregated>()(
   'GetEntityDetailsVaultAggregated',
   {
-    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(

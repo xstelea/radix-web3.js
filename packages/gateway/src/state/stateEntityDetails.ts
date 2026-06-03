@@ -12,7 +12,6 @@ export type StateEntityDetailsInput =
 export class StateEntityDetails extends Effect.Service<StateEntityDetails>()(
   'StateEntityDetails',
   {
-    dependencies: [GatewayApiClient.Default],
     effect: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
 

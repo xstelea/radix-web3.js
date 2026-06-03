@@ -1,5 +1,5 @@
 import { layer } from '@effect/vitest';
-import { Effect } from 'effect';
+import { Effect, Layer } from 'effect';
 import { GatewayApiClient } from './gatewayApiClient';
 import { GetFungibleBalance } from './getFungibleBalance';
 
@@ -10,15 +10,17 @@ const ACCOUNT_ADDRESSES = [
   'account_rdx168fjn9fcts5h59k3z64acp8xszz8sf2a66hnw050vdnkurullz9rge',
 ];
 
-layer(GetFungibleBalance.Default)('GetFungibleBalance', (it) => {
+const testLayer = Layer.merge(
+  GatewayApiClient.Default,
+  GetFungibleBalance.Default.pipe(Layer.provide(GatewayApiClient.Default)),
+);
+
+layer(testLayer)('GetFungibleBalance', (it) => {
   it.effect(
     'should get account balance',
     Effect.fnUntraced(function* () {
       const getFungibleBalance = yield* GetFungibleBalance;
-      const gatewayApiClient = yield* Effect.provide(
-        GatewayApiClient,
-        GatewayApiClient.Default,
-      );
+      const gatewayApiClient = yield* GatewayApiClient;
 
       const ledgerState =
         yield* gatewayApiClient.stream.innerClient.streamTransactions({
