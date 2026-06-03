@@ -789,13 +789,13 @@ export const enumeration = <const Variants extends ReadonlyArray<{
   );
 
 export const decode =
-  <S extends AnyNativeSborSchema>(schema: S) =>
+  <Decoded, Encoded>(schema: NativeSborSchema<Decoded, Encoded>) =>
   (input: unknown) =>
     Schema.decodeUnknown(schema)(input);
 
 export const encode =
-  <S extends AnyNativeSborSchema>(schema: S) =>
-  (input: Schema.Schema.Type<S>) =>
+  <Decoded, Encoded>(schema: NativeSborSchema<Decoded, Encoded>) =>
+  (input: Decoded) =>
     Schema.encode(schema)(input);
 
 export const s = {

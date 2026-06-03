@@ -97,6 +97,11 @@ describe('native SBOR Effect schemas', () => {
         ],
       });
 
+      expectTypeOf(parsed).not.toBeAny();
+      expectTypeOf(parsed).toEqualTypeOf<{
+        readonly resource: ResourceAddress;
+        readonly amount: BigNumber;
+      }>();
       expect(parsed.amount.toString()).toBe('10');
       expect(yield* encodeSbor(Event)(parsed)).toEqual({
         kind: 'Tuple',
