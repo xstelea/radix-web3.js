@@ -33,6 +33,8 @@ tooling.
 ## Tribute
 
 `@radix-effects/sbor` continues the work started by @daan_xrd on Telegram, the
-original creator of `sbor-ez-mode`. The new scoped package keeps the spirit of
-that developer-friendly SBOR decoding API while rebuilding it around Effect
-Schema, branded Radix domain types, and explicit encode/decode transforms.
+original creator of `sbor-ez-mode` and
+[`gateway-ez-mode`](https://github.com/CalamariRadix/gateway-ez-mode). The new
+scoped package keeps the spirit of that developer-friendly SBOR decoding API
+while rebuilding it around Effect Schema, branded Radix domain types, and
+explicit encode/decode transforms.
