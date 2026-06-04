@@ -23,17 +23,16 @@ tooling.
 | `@radix-effects/sbor`               | [packages/sbor](./packages/sbor)                         | Small schema builder for parsing and working with Radix SBOR-shaped values.                                              |
 | `@radix-effects/shared`             | [packages/shared](./packages/shared)                         | Shared Effect schemas and branded types used by the Radix Effects packages.                                              |
 
-
-## Tribute
-
-`@radix-effects/sbor` continues the work started by Alex Stelea, the original
-creator of `sbor-ez-mode`. The new scoped package keeps the spirit of that
-developer-friendly SBOR decoding API while rebuilding it around Effect Schema,
-branded Radix domain types, and explicit encode/decode transforms.
-
 ## Apps
 
 
 | App  | Path                     | Description                                       |
 | ---- | ------------------------ | ------------------------------------------------- |
 | Docs | [apps/docs](./apps/docs) | Docusaurus documentation site for the repository. |
+
+## Tribute
+
+`@radix-effects/sbor` continues the work started by @daan_xrd on Telegram, the
+original creator of `sbor-ez-mode`. The new scoped package keeps the spirit of
+that developer-friendly SBOR decoding API while rebuilding it around Effect
+Schema, branded Radix domain types, and explicit encode/decode transforms.
