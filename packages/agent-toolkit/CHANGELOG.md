@@ -1,5 +1,14 @@
 # radix-agent-toolkit
 
+## 0.1.9
+
+### Patch Changes
+
+- 6ad81bc: Add package homepage and repository metadata.
+- Updated dependencies [6ad81bc]
+  - radix-connect@0.3.1
+  - radix-web3.js@0.6.1
+
 ## 0.1.8
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # radix-connect
 
+## 0.3.1
+
+### Patch Changes
+
+- 6ad81bc: Add package homepage and repository metadata.
+
 ## 0.3.0
 
 ### Minor Changes
