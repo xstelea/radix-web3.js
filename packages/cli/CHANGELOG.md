@@ -1,14 +1,5 @@
 # rdx-cli
 
-## 0.2.2
-
-### Patch Changes
-
-- Add package homepage and repository metadata.
-- Updated dependencies
-  - @radix-effects/gateway@0.6.2
-  - @radix-effects/shared@0.0.3
-
 ## 0.2.1
 
 ### Patch Changes
