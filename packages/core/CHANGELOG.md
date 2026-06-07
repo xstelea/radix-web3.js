@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.6.1
+
+### Patch Changes
+
+- Add package homepage metadata.
+
 ## 0.6.0
 
 ### Minor Changes
