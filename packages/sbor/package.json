@@ -30,5 +30,10 @@
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
     "bignumber.js": "catalog:",
     "effect": "catalog:"
+  },
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
   }
 }

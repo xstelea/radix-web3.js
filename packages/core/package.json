@@ -18,6 +18,7 @@
     "build": "tsup"
   },
   "license": "MIT",
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

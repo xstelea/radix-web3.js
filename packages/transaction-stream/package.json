@@ -9,6 +9,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xstelea/radix-web3.js.git"
