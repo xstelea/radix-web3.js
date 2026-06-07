@@ -1,11 +1,6 @@
 {
   "name": "radix-web3.js",
   "private": true,
-  "homepage": "https://xstelea.github.io/radix-web3.js/",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xstelea/radix-web3.js.git"
-  },
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
