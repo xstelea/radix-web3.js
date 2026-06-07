@@ -7,8 +7,10 @@ The package gives agents and applications a typed language for turning raw Gatew
 ## Installation
 
 ```bash
-npm install @radix-effects/sbor effect bignumber.js
+npm install @radix-effects/sbor
 ```
+
+`effect` and `bignumber.js` are package dependencies. Add `effect` to your application dependencies too if your application imports from `effect` directly.
 
 ## Usage
 
