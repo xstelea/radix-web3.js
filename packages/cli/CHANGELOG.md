@@ -1,5 +1,13 @@
 # rdx-cli
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [10a80da]
+  - @radix-effects/gateway@0.6.1
+  - @radix-effects/shared@0.0.2
+
 ## 0.2.0
 
 ### Minor Changes
