@@ -1,6 +1,6 @@
 {
   "name": "@radix-effects/tx-tool",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",

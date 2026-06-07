@@ -1,5 +1,13 @@
 # @radix-effects/gateway
 
+## 0.6.3
+
+### Patch Changes
+
+- c76f14b: Release the pnpm 11, audit remediation, and CI updates across all publishable packages.
+- Updated dependencies [c76f14b]
+  - @radix-effects/sbor@0.3.2
+
 ## 0.6.2
 
 ### Patch Changes

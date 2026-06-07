@@ -1,5 +1,11 @@
 # radix-web3.js
 
+## 0.6.2
+
+### Patch Changes
+
+- c76f14b: Release the pnpm 11, audit remediation, and CI updates across all publishable packages.
+
 ## 0.6.1
 
 ### Patch Changes
