@@ -1,8 +1,13 @@
 import { it, layer } from '@effect/vitest';
-import { Effect } from 'effect';
+import { Effect, Layer } from 'effect';
+import { GatewayApiClient } from './gatewayApiClient';
 import { GetKeyValueStoreService } from './getKeyValueStore';
 
-layer(GetKeyValueStoreService.Default)('GetKeyValueStoreService', (it) => {
+const testLayer = GetKeyValueStoreService.Default.pipe(
+  Layer.provide(GatewayApiClient.Default),
+);
+
+layer(testLayer)('GetKeyValueStoreService', (it) => {
   it.effect(
     'should get key value store',
     Effect.fn(function* () {

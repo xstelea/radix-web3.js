@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run",
     "check-types": "tsc --noEmit",
     "build": "tsdown"
   },

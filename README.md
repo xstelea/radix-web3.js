@@ -20,9 +20,8 @@ tooling.
 | `@radix-effects/transaction-stream` | [packages/transaction-stream](./packages/transaction-stream) | Effect stream utilities for polling and processing Radix Gateway transaction history.                                    |
 | `rdx-cli`                           | [packages/cli](./packages/cli)                               | Agent-first CLI for Transaction Manifest V2 workflows, subintents, out-of-band signing, and transaction status tracking. |
 | `radix-agent-toolkit`               | [packages/agent-toolkit](./packages/agent-toolkit)           | GOAT SDK wallet integration for exposing Radix account and transaction tools to agents.                                  |
-| `sbor-ez-mode`                      | [packages/sbor-ez-mode](./packages/sbor-ez-mode)             | Small schema builder for parsing and working with Radix SBOR-shaped values.                                              |
+| `@radix-effects/sbor`               | [packages/sbor](./packages/sbor)                         | Small schema builder for parsing and working with Radix SBOR-shaped values.                                              |
 | `@radix-effects/shared`             | [packages/shared](./packages/shared)                         | Shared Effect schemas and branded types used by the Radix Effects packages.                                              |
-
 
 ## Apps
 
@@ -31,4 +30,11 @@ tooling.
 | ---- | ------------------------ | ------------------------------------------------- |
 | Docs | [apps/docs](./apps/docs) | Docusaurus documentation site for the repository. |
 
+## Tribute
 
+`@radix-effects/sbor` continues the work started by @daan_xrd on Telegram, the
+original creator of `sbor-ez-mode` and
+[`gateway-ez-mode`](https://github.com/CalamariRadix/gateway-ez-mode). The new
+scoped package keeps the spirit of that developer-friendly SBOR decoding API
+while rebuilding it around Effect Schema, branded Radix domain types, and
+explicit encode/decode transforms.

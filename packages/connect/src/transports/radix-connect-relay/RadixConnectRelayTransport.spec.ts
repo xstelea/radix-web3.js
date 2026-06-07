@@ -1,23 +1,34 @@
 import { createRadixConnectRelayTransport } from '.'
-import { describe, it } from 'vitest'
-import qrcode from 'qrcode-terminal'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { toHex } from '../../crypto/helpers/toHex'
 
 describe('RadixConnectRelay', () => {
-  describe('sendRequest', () => {
-    it(
-      'should send request and return response',
-      { timeout: 300_000 },
-      async () => {
-        const transport = createRadixConnectRelayTransport({
-          handleRequest: async ({ deepLink }) => {
-            console.log(deepLink)
-            qrcode.setErrorLevel('L')
-            qrcode.generate(deepLink, { small: true })
-          },
-        })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
-        const response = await transport.sendRequest({
+  describe('sendRequest', () => {
+    it('should send request and return relay errors', async () => {
+      const handleRequest = vi.fn()
+
+      vi.stubGlobal(
+        'fetch',
+        async () =>
+          Response.json([
+            {
+              sessionId: 'session-1',
+              error: 'wallet rejected',
+            },
+          ]),
+      )
+
+      const transport = createRadixConnectRelayTransport({
+        sessionId: 'session-1',
+        handleRequest,
+      })
+
+      await expect(
+        transport.sendRequest({
           interactionId: crypto.randomUUID(),
           metadata: {
             version: 2,
@@ -33,10 +44,13 @@ describe('RadixConnectRelay', () => {
               challenge: toHex(crypto.getRandomValues(new Uint8Array(32))),
             },
           },
-        })
+        }),
+      ).rejects.toThrow('wallet rejected')
 
-        console.log(JSON.stringify(response, null, 2))
-      },
-    )
+      expect(handleRequest).toHaveBeenCalledOnce()
+      expect(handleRequest.mock.calls[0]?.[0].deepLink).toContain(
+        'sessionId=session-1',
+      )
+    })
   })
 })

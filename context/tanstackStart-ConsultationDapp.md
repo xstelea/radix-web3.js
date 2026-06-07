@@ -302,7 +302,7 @@ Accessed via `@radix-effects/gateway` services:
 - Component state (TC count, proposal count, KV store addresses, governance parameters)
 - KV store data (individual TCs, proposals, per-account votes)
 - Account resource balances (for admin badge check)
-- SBOR decoding via `sbor-ez-mode` + schemas in `packages/shared`
+- SBOR decoding via `@radix-effects/sbor` + schemas in `packages/shared`
 
 ### Vote Collector API (via VoteClient)
 

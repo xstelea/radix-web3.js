@@ -1,0 +1,828 @@
+---
+title: "@radix-effects/sbor"
+sidebar_position: 10
+---
+
+# @radix-effects/sbor
+
+`@radix-effects/sbor` provides Effect Schema transforms for Gateway
+`ProgrammaticScryptoSborValue` objects. Use it when Gateway returns
+programmatic SBOR for events, component state, key-value store values, or
+non-fungible data and you want decoded values with Radix meaning preserved.
+
+Every exported schema is an ordinary Effect schema. Decode Gateway SBOR with
+`Schema.decodeUnknown(schema)` and encode decoded values back with
+`Schema.encode(schema)`.
+
+## Install
+
+```bash
+npm install @radix-effects/sbor
+```
+
+## Basic Usage
+
+```ts
+import { Effect, Schema } from 'effect';
+import { bool, decimal, resourceAddress, struct } from '@radix-effects/sbor';
+
+const SwapEvent = struct({
+  input_address: resourceAddress,
+  input_amount: decimal,
+  output_address: resourceAddress,
+  output_amount: decimal,
+  is_success: bool,
+});
+
+const program = Effect.gen(function* () {
+  const parsed = yield* Schema.decodeUnknown(SwapEvent)(programmaticSborValue);
+
+  console.log(parsed.input_amount.toString());
+});
+```
+
+## Decoding And Encoding
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { u32 } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(u32)({
+    kind: 'U32',
+    value: '7',
+  });
+
+  const encoded = yield* Schema.encode(u32)(new BigNumber(7));
+
+  console.log(decoded.toString(), encoded);
+});
+```
+
+## Export Overview
+
+| Export | Kind | Description |
+| --- | --- | --- |
+| `value` | Schema | Raw Gateway SBOR fallback schema. |
+| `string` | Schema | SBOR `String` to `string`. |
+| `bool` | Schema | SBOR `Bool` to `boolean`. |
+| `bytes` | Schema | SBOR `Bytes<U8>` to hex `string`. |
+| `u8`, `u16`, `u32`, `u64`, `u128` | Schema | Explicit unsigned integers to `BigNumber`. |
+| `i8`, `i16`, `i32`, `i64`, `i128` | Schema | Explicit signed integers to `BigNumber`. |
+| `decimal` | Schema | SBOR `Decimal` to `BigNumber`. |
+| `preciseDecimal` | Schema | SBOR `PreciseDecimal` to `BigNumber`. |
+| `number` | Schema | Any numeric SBOR value to `{ type, value }`. |
+| `numeric` | Schema alias | Alias of `number`. |
+| `instant` | Schema | SBOR `I64` with `type_name: "Instant"` to `Date`. |
+| `resourceAddress` | Schema | `Reference<ResourceAddress>` to shared branded `ResourceAddress`. |
+| `componentAddress` | Schema | `Reference<ComponentAddress>` to shared branded `ComponentAddress`. |
+| `accountAddress` | Schema | `Reference<AccountAddress>` to shared branded `AccountAddress`. |
+| `packageAddress` | Schema | `Reference<PackageAddress>` to shared branded `PackageAddress`. |
+| `nonFungibleResourceAddress` | Schema | `Reference<NonFungibleResourceAddress>` to shared branded `NonFungibleResourceAddress`. |
+| `internalAddress` | Schema | `Own<InternalAddress>` to shared branded `InternalAddress`. |
+| `vaultAddress` | Schema | `Own<Vault>` to shared branded `VaultAddress`. |
+| `keyValueStoreAddress` | Schema | `Own<KeyValueStore>` to shared branded `KeyValueStoreAddress`. |
+| `nonFungibleLocalId` | Schema | SBOR `NonFungibleLocalId` to shared branded `NonFungibleLocalId`. |
+| `struct(fields)` | Function | Named SBOR tuple fields to a typed object. |
+| `tuple(items)` | Function | Ordered SBOR tuple fields to a typed tuple. |
+| `array(item)` | Function | SBOR array elements to a readonly array. |
+| `option(item)` | Function | Rust-style `Option` enum to `{ variant: "Some", value }` or `{ variant: "None" }`. |
+| `map({ key, value })` | Function | SBOR map entries to `ReadonlyMap<Key, Value>`. |
+| `enumeration(variants)` | Function | Rust-style enum variants to `{ variant, value }`. |
+| `decode(schema)` | Function | Curried alias for `Schema.decodeUnknown(schema)`. |
+| `encode(schema)` | Function | Curried alias for `Schema.encode(schema)`. |
+| `s` | Namespace | Object containing every schema and builder, with `s.enum` as an alias of `enumeration`. |
+| `default` | Namespace | Default export of `s`. |
+| `SborKind` | Type | Union of supported Gateway SBOR `kind` strings. |
+| `ProgrammaticScryptoSborValueNumber` | Type | Gateway numeric integer value union. |
+| `IntegerKind` | Type | Numeric integer `kind` union derived from Gateway integer values. |
+| `DecimalKind` | Type | `"Decimal" | "PreciseDecimal"`. |
+| `NumericKind` | Type | `IntegerKind | DecimalKind`. |
+| `GenericNumeric` | Type | Decoded generic numeric shape. |
+| `NativeSborSchema<Decoded, Encoded>` | Type | Effect schema with SBOR metadata. |
+| `Infer<S>` | Type | Alias for `Schema.Schema.Type<S>`. |
+
+## Primitive Schemas
+
+### `value`
+
+`value` accepts and returns unknown input. Use it only as a fallback when a
+subtree should be preserved exactly instead of decoded.
+
+```ts
+import { Effect, Schema } from 'effect';
+import { value } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const raw = { kind: 'String', value: 'unchanged' };
+  const decoded = yield* Schema.decodeUnknown(value)(raw);
+  const encoded = yield* Schema.encode(value)(decoded);
+});
+```
+
+### `string`
+
+```ts
+import { Effect, Schema } from 'effect';
+import { string } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(string)({
+    kind: 'String',
+    value: 'hello',
+  });
+
+  const encoded = yield* Schema.encode(string)(decoded);
+});
+```
+
+### `bool`
+
+```ts
+import { Effect, Schema } from 'effect';
+import { bool } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(bool)({
+    kind: 'Bool',
+    value: true,
+  });
+
+  const encoded = yield* Schema.encode(bool)(decoded);
+});
+```
+
+### `bytes`
+
+`bytes` expects Gateway bytes with `element_kind: "U8"` and decodes the `hex`
+field.
+
+```ts
+import { Effect, Schema } from 'effect';
+import { bytes } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(bytes)({
+    kind: 'Bytes',
+    element_kind: 'U8',
+    hex: 'deadbeef',
+  });
+
+  const encoded = yield* Schema.encode(bytes)(decoded);
+});
+```
+
+## Numeric Schemas
+
+### `u8`, `u16`, `u32`, `u64`, `u128`
+
+Each unsigned integer schema decodes only its matching Scrypto numeric kind.
+Decoded values are `BigNumber`, and encode validates the value fits the exact
+Scrypto range.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { u8, u16, u32, u64, u128 } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const count = yield* Schema.decodeUnknown(u32)({
+    kind: 'U32',
+    value: '4294967295',
+  });
+
+  yield* Schema.encode(u8)(new BigNumber(255));
+  yield* Schema.encode(u16)(new BigNumber(65535));
+  yield* Schema.encode(u32)(count);
+  yield* Schema.encode(u64)(new BigNumber('18446744073709551615'));
+  yield* Schema.encode(u128)(
+    new BigNumber('340282366920938463463374607431768211455'),
+  );
+});
+```
+
+### `i8`, `i16`, `i32`, `i64`, `i128`
+
+Signed integer schemas also decode to `BigNumber` and validate exact Scrypto
+ranges.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { i8, i16, i32, i64, i128 } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  yield* Schema.decodeUnknown(i8)({ kind: 'I8', value: '-128' });
+  yield* Schema.decodeUnknown(i16)({ kind: 'I16', value: '-32768' });
+  yield* Schema.decodeUnknown(i32)({ kind: 'I32', value: '-2147483648' });
+  yield* Schema.decodeUnknown(i64)({
+    kind: 'I64',
+    value: '-9223372036854775808',
+  });
+  yield* Schema.encode(i128)(
+    new BigNumber('-170141183460469231731687303715884105728'),
+  );
+});
+```
+
+### `decimal`
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { decimal } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const amount = yield* Schema.decodeUnknown(decimal)({
+    kind: 'Decimal',
+    value: '522.23800528105807128',
+  });
+
+  const encoded = yield* Schema.encode(decimal)(new BigNumber(amount));
+});
+```
+
+### `preciseDecimal`
+
+`preciseDecimal` also decodes to `BigNumber`. Use decimal strings as the stable
+serialization format and avoid `toNumber()`, which can lose precision for both
+`Decimal` and `PreciseDecimal`.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { preciseDecimal } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const value = yield* Schema.decodeUnknown(preciseDecimal)({
+    kind: 'PreciseDecimal',
+    value: '1.23456789',
+  });
+
+  const encoded = yield* Schema.encode(preciseDecimal)(new BigNumber(value));
+});
+```
+
+### Decimal Arithmetic
+
+`BigNumber` is the numeric type used by `decimal`, `preciseDecimal`, and the
+generic `number` schema. It is suitable for exact decimal string parsing,
+comparison, addition, subtraction, multiplication, and formatting back to a
+string.
+
+Arithmetic that can introduce rounding should make the rounding policy
+explicit. Keep decoded values as `BigNumber`, never convert ledger values to
+JavaScript `number`, and re-encode through the matching schema after arithmetic
+so the SBOR kind is preserved.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { preciseDecimal } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const left = yield* Schema.decodeUnknown(preciseDecimal)({
+    kind: 'PreciseDecimal',
+    value: '1.000000000000000000000000000000000001',
+  });
+
+  const right = yield* Schema.decodeUnknown(preciseDecimal)({
+    kind: 'PreciseDecimal',
+    value: '2.5',
+  });
+
+  const sum = left.plus(right);
+  const share = sum.dividedBy(new BigNumber(3)).decimalPlaces(
+    36,
+    BigNumber.ROUND_DOWN,
+  );
+
+  const encoded = yield* Schema.encode(preciseDecimal)(share);
+});
+```
+
+`decimal.js` is not required for this package. The important invariant is not
+which decimal library is used internally, but that callers preserve decimal
+strings at boundaries, avoid `toNumber()`, and choose explicit rounding for
+division or other rounding-sensitive arithmetic.
+
+### `number` And `numeric`
+
+`number` accepts any explicit integer or decimal SBOR value and preserves the
+Scrypto kind in the decoded result. `numeric` is an alias of `number`.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Effect, Schema } from 'effect';
+import { number, numeric } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(number)({
+    kind: 'U64',
+    value: '7',
+  });
+
+  if (decoded.type === 'U64') {
+    console.log(decoded.value.toString());
+  }
+
+  const encoded = yield* Schema.encode(numeric)({
+    type: 'U128',
+    value: new BigNumber('7'),
+  });
+});
+```
+
+## Semantic Scalar Schemas
+
+### `instant`
+
+`instant` decodes Gateway `I64` values with `type_name: "Instant"` into a
+JavaScript `Date`.
+
+```ts
+import { Effect, Schema } from 'effect';
+import { instant } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const occurredAt = yield* Schema.decodeUnknown(instant)({
+    kind: 'I64',
+    type_name: 'Instant',
+    value: '1741712929',
+  });
+
+  const encoded = yield* Schema.encode(instant)(occurredAt);
+});
+```
+
+### Address Schemas
+
+Address schemas decode Gateway `Reference` or `Own` values to branded string
+types from `@radix-effects/shared`.
+
+```ts
+import { Schema } from 'effect';
+import {
+  accountAddress,
+  componentAddress,
+  internalAddress,
+  keyValueStoreAddress,
+  nonFungibleResourceAddress,
+  packageAddress,
+  resourceAddress,
+  vaultAddress,
+} from '@radix-effects/sbor';
+
+type Resource = Schema.Schema.Type<typeof resourceAddress>;
+type Component = Schema.Schema.Type<typeof componentAddress>;
+type Account = Schema.Schema.Type<typeof accountAddress>;
+type Package = Schema.Schema.Type<typeof packageAddress>;
+type NonFungibleResource = Schema.Schema.Type<typeof nonFungibleResourceAddress>;
+type Internal = Schema.Schema.Type<typeof internalAddress>;
+type Vault = Schema.Schema.Type<typeof vaultAddress>;
+type KeyValueStore = Schema.Schema.Type<typeof keyValueStoreAddress>;
+```
+
+Decode and encode examples:
+
+```ts
+import { Effect, Schema } from 'effect';
+import {
+  accountAddress,
+  componentAddress,
+  keyValueStoreAddress,
+  resourceAddress,
+  vaultAddress,
+} from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const resource = yield* Schema.decodeUnknown(resourceAddress)({
+    kind: 'Reference',
+    type_name: 'ResourceAddress',
+    value: 'resource_rdx1...',
+  });
+
+  yield* Schema.decodeUnknown(componentAddress)({
+    kind: 'Reference',
+    type_name: 'ComponentAddress',
+    value: 'component_rdx1...',
+  });
+
+  yield* Schema.decodeUnknown(accountAddress)({
+    kind: 'Reference',
+    type_name: 'AccountAddress',
+    value: 'account_rdx1...',
+  });
+
+  yield* Schema.decodeUnknown(vaultAddress)({
+    kind: 'Own',
+    type_name: 'Vault',
+    value: 'internal_vault_rdx1...',
+  });
+
+  yield* Schema.decodeUnknown(keyValueStoreAddress)({
+    kind: 'Own',
+    type_name: 'KeyValueStore',
+    value: 'internal_keyvaluestore_rdx1...',
+  });
+
+  const encoded = yield* Schema.encode(resourceAddress)(resource);
+});
+```
+
+### `nonFungibleLocalId`
+
+```ts
+import { Effect, Schema } from 'effect';
+import { nonFungibleLocalId } from '@radix-effects/sbor';
+
+const program = Effect.gen(function* () {
+  const id = yield* Schema.decodeUnknown(nonFungibleLocalId)({
+    kind: 'NonFungibleLocalId',
+    value: '#1#',
+  });
+
+  const encoded = yield* Schema.encode(nonFungibleLocalId)(id);
+});
+```
+
+## Compound Schemas
+
+### `struct(fields)`
+
+`struct` decodes a Gateway `Tuple` whose child fields carry `field_name`
+metadata. It returns a typed object.
+
+```ts
+import { Schema } from 'effect';
+import { decimal, resourceAddress, struct } from '@radix-effects/sbor';
+
+const BalanceChange = struct({
+  resource_address: resourceAddress,
+  amount: decimal,
+});
+
+type BalanceChange = Schema.Schema.Type<typeof BalanceChange>;
+```
+
+```ts
+import { Effect, Schema } from 'effect';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(BalanceChange)({
+    kind: 'Tuple',
+    fields: [
+      {
+        kind: 'Reference',
+        type_name: 'ResourceAddress',
+        field_name: 'resource_address',
+        value: 'resource_rdx1...',
+      },
+      {
+        kind: 'Decimal',
+        field_name: 'amount',
+        value: '10',
+      },
+    ],
+  });
+
+  const encoded = yield* Schema.encode(BalanceChange)(decoded);
+});
+```
+
+### `tuple(items)`
+
+`tuple` decodes a Gateway `Tuple` by position.
+
+```ts
+import { Schema } from 'effect';
+import { string, tuple, u64 } from '@radix-effects/sbor';
+
+const Pair = tuple([string, u64]);
+type Pair = Schema.Schema.Type<typeof Pair>;
+```
+
+```ts
+import { Effect, Schema } from 'effect';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(Pair)({
+    kind: 'Tuple',
+    fields: [
+      { kind: 'String', value: 'epoch' },
+      { kind: 'U64', value: '1' },
+    ],
+  });
+
+  const encoded = yield* Schema.encode(Pair)(decoded);
+});
+```
+
+### `array(item)`
+
+```ts
+import { Schema } from 'effect';
+import { array, nonFungibleLocalId } from '@radix-effects/sbor';
+
+const LocalIds = array(nonFungibleLocalId);
+type LocalIds = Schema.Schema.Type<typeof LocalIds>;
+```
+
+```ts
+import { Effect, Schema } from 'effect';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(LocalIds)({
+    kind: 'Array',
+    element_kind: 'NonFungibleLocalId',
+    elements: [
+      { kind: 'NonFungibleLocalId', value: '#1#' },
+      { kind: 'NonFungibleLocalId', value: '#2#' },
+    ],
+  });
+
+  const encoded = yield* Schema.encode(LocalIds)(decoded);
+});
+```
+
+### `option(item)`
+
+`option` decodes Gateway enum values using the Rust `Option` shape.
+
+```ts
+import { Schema } from 'effect';
+import { option, string } from '@radix-effects/sbor';
+
+const MaybeName = option(string);
+type MaybeName = Schema.Schema.Type<typeof MaybeName>;
+```
+
+```ts
+import { Effect, Schema } from 'effect';
+
+const program = Effect.gen(function* () {
+  const some = yield* Schema.decodeUnknown(MaybeName)({
+    kind: 'Enum',
+    type_name: 'Option',
+    variant_id: '1',
+    variant_name: 'Some',
+    fields: [{ kind: 'String', value: 'Alice' }],
+  });
+
+  const none = yield* Schema.encode(MaybeName)({ variant: 'None' });
+});
+```
+
+### `map({ key, value })`
+
+`map` preserves concrete decoded key and value types.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import { Schema } from 'effect';
+import { map, resourceAddress, u128 } from '@radix-effects/sbor';
+import type { ResourceAddress } from '@radix-effects/shared';
+
+const ResourceAmounts = map({ key: resourceAddress, value: u128 });
+
+type ResourceAmounts = Schema.Schema.Type<typeof ResourceAmounts>;
+type Expected = ReadonlyMap<ResourceAddress, BigNumber>;
+```
+
+```ts
+import { Effect, Schema } from 'effect';
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(ResourceAmounts)({
+    kind: 'Map',
+    key_kind: 'Reference',
+    key_type_name: 'ResourceAddress',
+    value_kind: 'U128',
+    entries: [
+      {
+        key: {
+          kind: 'Reference',
+          type_name: 'ResourceAddress',
+          value: 'resource_rdx1...',
+        },
+        value: {
+          kind: 'U128',
+          value: '100',
+        },
+      },
+    ],
+  });
+
+  const encoded = yield* Schema.encode(ResourceAmounts)(decoded);
+});
+```
+
+### `enumeration(variants)`
+
+`enumeration` decodes Rust-style enum variants. The decoded `value` is the
+variant tuple payload, so pass it to the variant schema if you want a typed
+payload object.
+
+```ts
+import { Effect, Schema } from 'effect';
+import {
+  array,
+  decimal,
+  enumeration,
+  nonFungibleLocalId,
+  resourceAddress,
+  struct,
+  tuple,
+} from '@radix-effects/sbor';
+
+const BalanceChange = enumeration([
+  {
+    variant: 'NonFungible',
+    schema: struct({
+      ids: array(nonFungibleLocalId),
+      resource_address: resourceAddress,
+    }),
+  },
+  {
+    variant: 'Fungible',
+    schema: tuple([decimal]),
+  },
+]);
+
+const program = Effect.gen(function* () {
+  const decoded = yield* Schema.decodeUnknown(BalanceChange)({
+    kind: 'Enum',
+    variant_id: '1',
+    variant_name: 'Fungible',
+    fields: [{ kind: 'Decimal', value: '10' }],
+  });
+
+  const encoded = yield* Schema.encode(BalanceChange)(decoded);
+});
+```
+
+### `decode(schema)` And `encode(schema)`
+
+`decode` and `encode` are small migration helpers for old `safeParse` adapter
+code. They keep the package API discoverable while still returning ordinary
+Effect Schema effects.
+
+```ts
+import {
+  decimal,
+  decode,
+  encode,
+  resourceAddress,
+  struct,
+  type Infer,
+} from '@radix-effects/sbor';
+
+const NftData = struct({
+  resource: resourceAddress,
+  amount: decimal,
+});
+
+const parseNftData = (item: { readonly sbor: unknown }) =>
+  decode(NftData)(item.sbor);
+
+const encodeNftData = (value: Infer<typeof NftData>) =>
+  encode(NftData)(value);
+```
+
+## Namespace Exports
+
+### `s`
+
+`s` is a namespace-style object containing all schema exports and builders. It
+also exposes `s.enum` as the namespace alias for `enumeration`, plus `s.decode`
+and `s.encode` for migration adapters.
+
+```ts
+import { s } from '@radix-effects/sbor';
+
+const Schema = s.struct({
+  name: s.string,
+  count: s.u64,
+});
+
+const Event = s.enum([
+  { variant: 'Named', schema: s.struct({ name: s.string }) },
+]);
+
+const decoded = s.decode(Schema)({
+  kind: 'Tuple',
+  fields: [
+    { kind: 'String', field_name: 'name', value: 'epoch' },
+    { kind: 'U64', field_name: 'count', value: '1' },
+  ],
+});
+```
+
+### Default Export
+
+The default export is the same `s` namespace.
+
+```ts
+// default export
+import sbor from '@radix-effects/sbor';
+
+const Schema = sbor.struct({
+  resource: sbor.resourceAddress,
+  amount: sbor.decimal,
+});
+```
+
+## Types
+
+### `SborKind`
+
+`SborKind` is the union of SBOR `kind` strings handled by this package.
+
+```ts
+import type { SborKind } from '@radix-effects/sbor';
+
+const kind: SborKind = 'Tuple';
+```
+
+### `ProgrammaticScryptoSborValueNumber`
+
+`ProgrammaticScryptoSborValueNumber` is the Gateway integer value union used to
+derive integer kind names without duplicating the SDK's value shapes.
+
+```ts
+import type { ProgrammaticScryptoSborValueNumber } from '@radix-effects/sbor';
+
+const value: ProgrammaticScryptoSborValueNumber = {
+  kind: 'U32',
+  value: '7',
+};
+```
+
+### `IntegerKind`
+
+```ts
+import type { IntegerKind } from '@radix-effects/sbor';
+
+const kind: IntegerKind = 'U128';
+```
+
+### `DecimalKind`
+
+```ts
+import type { DecimalKind } from '@radix-effects/sbor';
+
+const kind: DecimalKind = 'PreciseDecimal';
+```
+
+### `NumericKind`
+
+```ts
+import type { NumericKind } from '@radix-effects/sbor';
+
+const kind: NumericKind = 'I64';
+```
+
+### `GenericNumeric`
+
+`GenericNumeric` is the decoded output of `number` and `numeric`.
+
+```ts
+import { BigNumber } from 'bignumber.js';
+import type { GenericNumeric } from '@radix-effects/sbor';
+
+const amount: GenericNumeric = {
+  type: 'U64',
+  value: new BigNumber('7'),
+};
+```
+
+### `NativeSborSchema<Decoded, Encoded>`
+
+`NativeSborSchema` is an Effect schema with SBOR metadata attached. It is useful
+when writing helpers that accept only SBOR schemas.
+
+```ts
+import { Schema } from 'effect';
+import type { NativeSborSchema } from '@radix-effects/sbor';
+
+const decodeSbor =
+  <Decoded, Encoded>(schema: NativeSborSchema<Decoded, Encoded>) =>
+  (input: unknown) =>
+    Schema.decodeUnknown(schema)(input);
+```
+
+### `Infer<S>`
+
+`Infer<S>` is a convenience alias for `Schema.Schema.Type<S>`.
+
+```ts
+import { decimal, Infer, resourceAddress, struct } from '@radix-effects/sbor';
+
+const Holding = struct({
+  resource: resourceAddress,
+  amount: decimal,
+});
+
+type Holding = Infer<typeof Holding>;
+```

@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "test": "vitest",
+    "test": "vitest run",
     "build": "tsup"
   },
   "devDependencies": {
