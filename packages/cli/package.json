@@ -3,12 +3,12 @@
   "version": "0.2.2",
   "type": "module",
   "bin": {
-    "rdx": "./dist/bin/rdx.js"
+    "rdx": "./dist/bin/rdx.mjs"
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     }
   },
   "scripts": {

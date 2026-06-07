@@ -6,10 +6,7 @@ export default defineConfig({
     environment: 'node',
     pool: 'forks',
     fileParallelism: false,
-    poolOptions: {
-      forks: {
-        singleFork: true, // Run all tests in a single fork (sequential)
-      },
-    },
+    maxWorkers: 1,
+    isolate: false,
   },
 });

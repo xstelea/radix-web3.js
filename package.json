@@ -13,15 +13,21 @@
     "check-types": "biome check --write ./packages/**/**/*.ts"
   },
   "devDependencies": {
-    "@ai-hero/sandcastle": "^0.5.10",
+    "@ai-hero/sandcastle": "^0.7.0",
     "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.29.8",
+    "@effect/cluster": "^0.59.0",
+    "@effect/experimental": "^0.60.0",
+    "@effect/rpc": "^0.75.1",
+    "@effect/sql": "^0.51.1",
+    "@effect/typeclass": "^0.40.0",
+    "@effect/workflow": "^0.18.2",
     "prettier": "^3.7.4",
-    "turbo": "^2.6.2",
+    "turbo": "^2.9.16",
     "typescript": "5.5.4",
     "wrangler": "^4.94.0"
   },
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@11.5.2",
   "engines": {
     "node": ">=20"
   }

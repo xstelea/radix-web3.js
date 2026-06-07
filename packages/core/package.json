@@ -28,11 +28,11 @@
     "url": "git+https://github.com/xstelea/radix-web3.js.git"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "tsup": "^8.0.2",
+    "@types/node": "^22.13.14",
+    "tsup": "^8.5.1",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.1"
+    "vitest": "^4.1.8"
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",

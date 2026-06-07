@@ -2,8 +2,14 @@
   "name": "@radix-effects/shared",
   "version": "0.0.3",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
   "license": "MIT",
   "homepage": "https://xstelea.github.io/radix-web3.js/",
   "publishConfig": {

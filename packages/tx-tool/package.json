@@ -2,8 +2,14 @@
   "name": "@radix-effects/tx-tool",
   "version": "0.2.2",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
   "scripts": {
     "test": "vitest run",
     "check-types": "tsc --noEmit",
