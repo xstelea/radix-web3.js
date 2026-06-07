@@ -1,5 +1,14 @@
-import { BigNumber } from 'bignumber.js';
-import { Data, Effect, flow, Option, ParseResult, pipe, Schema } from 'effect';
+import {
+  AccountAddress,
+  ComponentAddress,
+  InternalAddress,
+  KeyValueStoreAddress,
+  NonFungibleLocalId,
+  NonFungibleResourceAddress,
+  PackageAddress,
+  ResourceAddress,
+  VaultAddress,
+} from '@radix-effects/shared';
 import type {
   ProgrammaticScryptoSborValueI8,
   ProgrammaticScryptoSborValueI16,
@@ -12,17 +21,8 @@ import type {
   ProgrammaticScryptoSborValueU64,
   ProgrammaticScryptoSborValueU128,
 } from '@radixdlt/babylon-gateway-api-sdk';
-import {
-  AccountAddress,
-  ComponentAddress,
-  InternalAddress,
-  KeyValueStoreAddress,
-  NonFungibleLocalId,
-  NonFungibleResourceAddress,
-  PackageAddress,
-  ResourceAddress,
-  VaultAddress,
-} from '@radix-effects/shared';
+import { BigNumber } from 'bignumber.js';
+import { Data, Effect, Option, ParseResult, Schema, flow, pipe } from 'effect';
 
 export type SborKind =
   | 'Bool'
@@ -79,10 +79,11 @@ type SborInfo = {
   readonly typeName: Option.Option<string>;
 };
 
-export type NativeSborSchema<
+export type NativeSborSchema<Decoded, Encoded = Decoded> = Schema.Schema<
   Decoded,
-  Encoded = Decoded,
-> = Schema.Schema<Decoded, Encoded, never> & {
+  Encoded,
+  never
+> & {
   readonly sbor: SborInfo;
 };
 
@@ -117,9 +118,7 @@ const fail = (
   message: string,
   path: readonly string[] = [],
 ): Effect.Effect<never, ParseResult.Type> =>
-  Effect.fail(
-    pipe({ message, path }, SborDecodeIssue, parseIssue(ast, input)),
-  );
+  Effect.fail(pipe({ message, path }, SborDecodeIssue, parseIssue(ast, input)));
 
 const withSbor = <S extends Schema.Schema.All>(
   schema: S,
@@ -399,12 +398,14 @@ export const bytes = withSbor(
         ? Effect.succeed(input.hex)
         : fail(ast, input, 'Bytes element kind must be U8'),
     encode: (input) =>
-      Effect.succeed(Data.struct({
-        kind: 'Bytes',
-        element_kind: 'U8',
-        element_type_name: 'U8',
-        hex: input,
-      })),
+      Effect.succeed(
+        Data.struct({
+          kind: 'Bytes',
+          element_kind: 'U8',
+          element_type_name: 'U8',
+          hex: input,
+        }),
+      ),
   }),
   'Bytes',
 );
@@ -466,10 +467,12 @@ export const number = withSbor(
     encode: (input, _options, ast) =>
       isIntegerKind(input.type)
         ? encodedInteger(input.type, input.value, ast)
-        : Effect.succeed(Data.struct({
-            kind: input.type,
-            value: input.value.toString(10),
-          })),
+        : Effect.succeed(
+            Data.struct({
+              kind: input.type,
+              value: input.value.toString(10),
+            }),
+          ),
   }),
   'Decimal',
 );
@@ -485,11 +488,13 @@ export const instant = withSbor(
         Effect.map((seconds) => new Date(seconds.toNumber() * 1000)),
       ),
     encode: (input) =>
-      Effect.succeed(Data.struct({
-        kind: 'I64',
-        type_name: 'Instant',
-        value: Math.floor(input.getTime() / 1000).toString(),
-      })),
+      Effect.succeed(
+        Data.struct({
+          kind: 'I64',
+          type_name: 'Instant',
+          value: Math.floor(input.getTime() / 1000).toString(),
+        }),
+      ),
   }),
   'I64',
   Option.some('Instant'),
@@ -547,10 +552,7 @@ export const nonFungibleResourceAddress = reference(
 );
 export const internalAddress = own('InternalAddress', InternalAddress);
 export const vaultAddress = own('Vault', VaultAddress);
-export const keyValueStoreAddress = own(
-  'KeyValueStore',
-  KeyValueStoreAddress,
-);
+export const keyValueStoreAddress = own('KeyValueStore', KeyValueStoreAddress);
 
 export const nonFungibleLocalId = withSbor(
   Schema.transformOrFail(
@@ -572,7 +574,9 @@ export const nonFungibleLocalId = withSbor(
   'NonFungibleLocalId',
 );
 
-export const struct = <const Fields extends Record<string, AnyNativeSborSchema>>(
+export const struct = <
+  const Fields extends Record<string, AnyNativeSborSchema>,
+>(
   fields: Fields,
 ) =>
   withSbor(
@@ -581,11 +585,13 @@ export const struct = <const Fields extends Record<string, AnyNativeSborSchema>>
       decode: (input, _options, ast) =>
         pipe(
           Object.keys(fields),
+          // biome-ignore lint/complexity/noForEach: we need to iterate over the fields
           Effect.forEach((name) =>
             pipe(
               fieldByName(input.fields, name),
               Option.match({
-                onNone: () => fail(ast, input, `Missing required field ${name}`),
+                onNone: () =>
+                  fail(ast, input, `Missing required field ${name}`),
                 onSome: (field) => Effect.succeed([name, field]),
               }),
             ),
@@ -660,7 +666,8 @@ export const option = <Item extends AnyNativeSborSchema>(item: Item) =>
           pipe(
             getProperty(input, 'variant'),
             Option.match({
-              onNone: () => fail(ast, input, 'Option encode input must have a variant'),
+              onNone: () =>
+                fail(ast, input, 'Option encode input must have a variant'),
               onSome: (variant) =>
                 variant === 'None'
                   ? Effect.succeed({
@@ -684,7 +691,11 @@ export const option = <Item extends AnyNativeSborSchema>(item: Item) =>
                           }),
                         ),
                       })
-                    : fail(ast, input, 'Option encode input must be None or Some'),
+                    : fail(
+                        ast,
+                        input,
+                        'Option encode input must be None or Some',
+                      ),
             }),
           ),
       },
@@ -730,10 +741,12 @@ export const map = <
     'Map',
   );
 
-export const enumeration = <const Variants extends ReadonlyArray<{
-  readonly variant: string;
-  readonly schema: AnyNativeSborSchema;
-}>>(
+export const enumeration = <
+  const Variants extends ReadonlyArray<{
+    readonly variant: string;
+    readonly schema: AnyNativeSborSchema;
+  }>,
+>(
   variants: Variants,
 ) =>
   withSbor(
@@ -753,8 +766,7 @@ export const enumeration = <const Variants extends ReadonlyArray<{
               ),
             ),
             Option.match({
-              onNone: () =>
-                fail(ast, input, 'Unknown or missing enum variant'),
+              onNone: () => fail(ast, input, 'Unknown or missing enum variant'),
               onSome: (variant) =>
                 Effect.succeed({
                   variant: variant.variant,
@@ -777,9 +789,10 @@ export const enumeration = <const Variants extends ReadonlyArray<{
                   kind: 'Enum',
                   variant_id: variants.indexOf(variant).toString(),
                   variant_name: input.variant,
-                  fields: isRecord(input.value) && Array.isArray(input.value.fields)
-                    ? input.value.fields
-                    : [],
+                  fields:
+                    isRecord(input.value) && Array.isArray(input.value.fields)
+                      ? input.value.fields
+                      : [],
                 }),
             }),
           ),

@@ -4,6 +4,22 @@
 
 ## Language
 
+**Raw programmatic SBOR value**:
+A Gateway-style JSON representation of a Scrypto value, including envelope metadata such as `kind`, `type_name`, `field_name`, `variant_id`, `element_kind`, and map key/value kinds.
+_Avoid_: decoded value, manifest argument
+
+**Decoded Scrypto value**:
+The agent-readable JavaScript representation of a Scrypto value after schema decoding. It preserves Scrypto value meaning, but does not preserve every field from the raw programmatic SBOR envelope.
+_Avoid_: raw SBOR, lossless SBOR
+
+**Canonical encoded SBOR value**:
+A programmatic SBOR value produced from a decoded Scrypto value and a schema. It may regenerate schema-derived metadata and normalize the raw shape while preserving Scrypto value meaning.
+_Avoid_: lossless re-encoding, original SBOR
+
+**Semantic round trip**:
+The guarantee that decoding a canonical encoded SBOR value yields the same decoded Scrypto value. `encode(decode(raw))` is allowed to differ from `raw` when the difference is non-semantic envelope metadata.
+_Avoid_: structural round trip, byte-for-byte round trip
+
 **Explicit numeric schema**:
 A schema for one concrete Scrypto numeric type, such as `U32`, `U128`, `I64`, `Decimal`, or `PreciseDecimal`. It decodes to `BigNumber`; the Scrypto numeric type is carried by the schema, not by the decoded value.
 _Avoid_: loose number, generic numeric parser
@@ -45,3 +61,7 @@ Domain expert: "Yes. `u32` is an explicit numeric schema, so the schema carries 
 Dev: "What about a schema that accepts both `U32` and `U128`?"
 
 Domain expert: "That is a generic numeric schema. It must return both the decoded numeric value and the Scrypto numeric type."
+
+Dev: "Should `encode(decode(raw))` produce the exact same programmatic SBOR object?"
+
+Domain expert: "No. The SBOR language promises a semantic round trip: agents decode raw programmatic SBOR into decoded Scrypto values for reasoning, then encode canonical SBOR from a schema when needed. Keep the raw programmatic SBOR value separately when exact envelope preservation is required."
