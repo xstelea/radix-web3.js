@@ -1,5 +1,14 @@
 # @radix-effects/tx-tool
 
+## 0.2.3
+
+### Patch Changes
+
+- c76f14b: Release the pnpm 11, audit remediation, and CI updates across all publishable packages.
+- Updated dependencies [c76f14b]
+  - @radix-effects/gateway@0.6.3
+  - @radix-effects/shared@0.0.4
+
 ## 0.2.2
 
 ### Patch Changes

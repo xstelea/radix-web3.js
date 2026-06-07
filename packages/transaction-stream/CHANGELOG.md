@@ -1,5 +1,13 @@
 # @radix-effects/transaction-stream
 
+## 0.1.10
+
+### Patch Changes
+
+- c76f14b: Release the pnpm 11, audit remediation, and CI updates across all publishable packages.
+- Updated dependencies [c76f14b]
+  - @radix-effects/gateway@0.6.3
+
 ## 0.1.9
 
 ### Patch Changes

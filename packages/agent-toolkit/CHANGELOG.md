@@ -1,5 +1,14 @@
 # radix-agent-toolkit
 
+## 0.1.10
+
+### Patch Changes
+
+- c76f14b: Release the pnpm 11, audit remediation, and CI updates across all publishable packages.
+- Updated dependencies [c76f14b]
+  - radix-connect@0.3.2
+  - radix-web3.js@0.6.2
+
 ## 0.1.9
 
 ### Patch Changes

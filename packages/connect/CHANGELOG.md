@@ -1,5 +1,11 @@
 # radix-connect
 
+## 0.3.2
+
+### Patch Changes
+
+- c76f14b: Release the pnpm 11, audit remediation, and CI updates across all publishable packages.
+
 ## 0.3.1
 
 ### Patch Changes

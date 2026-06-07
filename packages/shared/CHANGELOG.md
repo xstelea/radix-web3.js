@@ -1,5 +1,11 @@
 # @radix-effects/shared
 
+## 0.0.4
+
+### Patch Changes
+
+- c76f14b: Release the pnpm 11, audit remediation, and CI updates across all publishable packages.
+
 ## 0.0.3
 
 ### Patch Changes
