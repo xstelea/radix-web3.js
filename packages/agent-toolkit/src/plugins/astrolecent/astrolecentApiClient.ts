@@ -1,11 +1,14 @@
-import type { SwapInput, SwapResponse, TokenData } from './types';
-
-import type { ResourceAddress } from './types';
+import type {
+  ResourceAddress,
+  SwapInput,
+  SwapResponse,
+  TokenData,
+} from './types';
 
 const API_KEY = 'radix-web3';
 const BASE_API_URL = `https://api.astrolescent.com/partner/${API_KEY}`;
 
-const callApi = async <T = any>(path: string, options: RequestInit = {}) => {
+const callApi = async <T = unknown>(path: string, options: RequestInit = {}) => {
   return fetch(`${BASE_API_URL}${path}`, {
     headers: {
       Accept: 'application/json',

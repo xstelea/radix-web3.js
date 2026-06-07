@@ -112,11 +112,11 @@ export const createRadixNetworkClient = (input: {
           batch.map((item) => item.resource_address),
         );
 
-      response.forEach((item) => {
+      for (const item of response) {
         if (item.details?.type === 'FungibleResource') {
           divisibilityMap.set(item.address, item.details.divisibility);
         }
-      });
+      }
     }
 
     return resources
@@ -129,11 +129,11 @@ export const createRadixNetworkClient = (input: {
             symbol: string;
           }>(
             (acc, metadata) => {
-              if (metadata.value.typed.type === 'String') {
-                return {
-                  ...acc,
-                  [metadata.key]: metadata.value.typed.value,
-                };
+              if (
+                metadata.value.typed.type === 'String' &&
+                (metadata.key === 'name' || metadata.key === 'symbol')
+              ) {
+                acc[metadata.key] = metadata.value.typed.value;
               }
               return acc;
             },

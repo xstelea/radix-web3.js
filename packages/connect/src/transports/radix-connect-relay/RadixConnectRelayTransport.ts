@@ -52,9 +52,9 @@ export const createRadixConnectRelayTransport = (
   const createDeepLink = (values: Record<string, string>) => {
     const outboundUrl = new URL(walletUrl);
 
-    Object.entries(values).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(values)) {
       outboundUrl.searchParams.append(key, value);
-    });
+    }
 
     return outboundUrl.toString();
   };

@@ -22,42 +22,48 @@ export const pollTransactionStatusFactory =
       delayFn = (retry: number) => Math.min(baseDelay * 2 ** retry, maxDelay),
     } = options || {};
 
-    return new Promise<TransactionStatusResponse>(async (resolve, reject) => {
-      let response: TransactionStatusResponse | undefined;
-      let retry = 0;
+    return new Promise<TransactionStatusResponse>((resolve, reject) => {
+      void (async () => {
+        let response: TransactionStatusResponse | undefined;
+        let retry = 0;
 
-      if (abortSignal?.aborted) {
-        reject(new Error('Transaction polling was aborted'));
-        return;
-      }
-
-      abortSignal?.addEventListener(
-        'abort',
-        () => {
+        if (abortSignal?.aborted) {
           reject(new Error('Transaction polling was aborted'));
-        },
-        { once: true },
-      );
-
-      while (!response && retry < maxRetries) {
-        const result =
-          await gatewayApiClient.transaction.getStatus(transactionId);
-
-        if (result.intent_status !== 'Pending') {
-          response = result;
-          break;
+          return;
         }
 
-        const delay = delayFn(retry);
-        retry = retry + 1;
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
+        abortSignal?.addEventListener(
+          'abort',
+          () => {
+            reject(new Error('Transaction polling was aborted'));
+          },
+          { once: true },
+        );
 
-      if (!response) {
-        reject(new Error('Transaction polling timed out'));
-        return;
-      }
+        try {
+          while (!response && retry < maxRetries) {
+            const result =
+              await gatewayApiClient.transaction.getStatus(transactionId);
 
-      resolve(response);
+            if (result.intent_status !== 'Pending') {
+              response = result;
+              break;
+            }
+
+            const delay = delayFn(retry);
+            retry = retry + 1;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+
+          if (!response) {
+            reject(new Error('Transaction polling timed out'));
+            return;
+          }
+
+          resolve(response);
+        } catch (error) {
+          reject(error);
+        }
+      })();
     });
   };

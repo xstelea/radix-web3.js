@@ -37,6 +37,7 @@ const web3Client = createRadixWeb3Client({
 describe('RadixWeb3Client', () => {
   describe(
     'buildTransaction',
+    { timeout: 30000 },
     () => {
       it('should build, sign, notarize, and submit a transaction', async () => {
         const { response } = await web3Client.submitTransaction(
@@ -75,6 +76,5 @@ describe('RadixWeb3Client', () => {
         expect(response.status).toBe('CommittedSuccess')
       })
     },
-    { timeout: 30000 },
   )
 })
