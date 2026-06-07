@@ -21,8 +21,7 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-      - name: Setup npmrc
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+          registry-url: https://registry.npmjs.org
       - name: install dependencies
         run: pnpm install
       - name: create and publish versions
@@ -35,3 +34,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
