@@ -70,6 +70,18 @@ const program = Effect.gen(function* () {
 });
 ```
 
+## Why Effect?
+
+The first version of this package used `neverthrow` for fallible decoding and a small Zod-like schema layer for describing SBOR shapes. That worked for local parsing, but SBOR needs one contract to describe both directions:
+
+- decode raw Gateway programmatic SBOR into domain-friendly JavaScript values
+- encode those decoded values back into canonical programmatic SBOR
+- keep precise input, output, and error types through nested structs, tuples, maps, options, and enums
+
+Effect Schema fits that model directly. A schema is not only a validator; it is a typed boundary between an encoded representation and a decoded representation. The exported SBOR schemas use that boundary to preserve Radix meaning while still composing with the rest of the Effect ecosystem.
+
+The public `decode` and `encode` helpers return `Effect` values, so callers can run them directly, compose them with Gateway requests, or convert failures at the application edge.
+
 ## Schema Helpers
 
 Primitive schemas are exported as values:
