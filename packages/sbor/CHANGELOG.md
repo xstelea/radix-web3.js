@@ -1,5 +1,13 @@
 # @radix-effects/sbor
 
+## 0.3.1
+
+### Patch Changes
+
+- Add package homepage and repository metadata.
+- Updated dependencies
+  - @radix-effects/shared@0.0.3
+
 ## 0.3.0
 
 ### Minor Changes

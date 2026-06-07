@@ -1,5 +1,13 @@
 # @radix-effects/gateway
 
+## 0.6.2
+
+### Patch Changes
+
+- Add package homepage and repository metadata.
+- Updated dependencies
+  - @radix-effects/sbor@0.3.1
+
 ## 0.6.1
 
 ### Patch Changes

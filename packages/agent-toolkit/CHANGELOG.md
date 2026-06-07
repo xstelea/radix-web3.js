@@ -1,5 +1,13 @@
 # radix-agent-toolkit
 
+## 0.1.10
+
+### Patch Changes
+
+- Add package homepage and repository metadata.
+- Updated dependencies
+  - radix-connect@0.3.1
+
 ## 0.1.9
 
 ### Patch Changes

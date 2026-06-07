@@ -1,5 +1,11 @@
 # @radix-effects/shared
 
+## 0.0.3
+
+### Patch Changes
+
+- Add package homepage and repository metadata.
+
 ## 0.0.2
 
 ### Patch Changes

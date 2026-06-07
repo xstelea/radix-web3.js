@@ -1,5 +1,13 @@
 # @radix-effects/transaction-stream
 
+## 0.1.9
+
+### Patch Changes
+
+- Add package homepage and repository metadata.
+- Updated dependencies
+  - @radix-effects/gateway@0.6.2
+
 ## 0.1.8
 
 ### Patch Changes

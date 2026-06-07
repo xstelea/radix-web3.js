@@ -1,10 +1,11 @@
 {
   "name": "@radix-effects/shared",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "license": "MIT",
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

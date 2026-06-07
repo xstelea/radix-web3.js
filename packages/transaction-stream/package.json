@@ -1,6 +1,6 @@
 {
   "name": "@radix-effects/transaction-stream",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -9,6 +9,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xstelea/radix-web3.js.git"
