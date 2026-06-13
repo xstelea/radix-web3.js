@@ -4,7 +4,6 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
-    "prepare": "./scripts/prepare-effect.sh",
     "test": "turbo test",
     "publish-packages": "turbo run build && changeset version && changeset publish",
     "ci:version": "changeset version",
