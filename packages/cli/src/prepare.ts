@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { basename, join } from 'node:path';
+
 import {
   Convert,
   PublicKey,
@@ -9,6 +10,7 @@ import {
   TransactionV2Builder,
 } from '@steleaio/radix-engine-toolkit';
 import { Data, Effect, Schema } from 'effect';
+
 import { createTransactionArtifactDirectory } from './artifacts';
 import type { Network, ResolvedRdxConfig } from './config';
 import { gatewayErrorMessage } from './gatewayHttp';
@@ -475,7 +477,7 @@ export const prepareTransactionArtifacts = (input: {
       },
     });
 
-    const signingRequestPaths = yield* Effect.all(
+    yield* Effect.all(
       generated.requests.map((request) =>
         writeWorkflowFile(artifactPath, request.path, request.file),
       ),

@@ -1,5 +1,6 @@
 import bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
+
 import { toHex } from './helpers';
 import { secureRandom } from './secureRandom';
 

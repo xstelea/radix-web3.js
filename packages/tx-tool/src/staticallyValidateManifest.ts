@@ -1,7 +1,7 @@
-import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-
-import { Data, Effect } from 'effect';
 import type { NetworkId } from '@radix-effects/shared';
+import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
+import { Data, Effect } from 'effect';
+
 import type { Manifest } from './schemas';
 
 export class FailedToStaticallyValidateManifestError extends Data.TaggedError(

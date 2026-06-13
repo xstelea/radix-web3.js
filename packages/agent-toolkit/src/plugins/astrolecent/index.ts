@@ -1,6 +1,8 @@
-import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
 import type { createTool } from '@goat-sdk/core';
 import { PluginBase } from '@goat-sdk/core';
+
+import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
+
 import { getTokenPricesTool } from './tools/getTokenPricesTool';
 import { swapTokensTool } from './tools/swapTool';
 

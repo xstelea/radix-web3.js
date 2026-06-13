@@ -1,6 +1,5 @@
 # rdx-cli
 
-
 <p align="center">
   <img src="./assets/agent-mascot.png" alt="rdx mascot" width="220">
 </p>

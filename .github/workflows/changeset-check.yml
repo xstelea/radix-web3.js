@@ -13,8 +13,8 @@ permissions:
 env:
   CI: true
   NPM_TOKEN: unused
-  FORCE_COLOR: "0"
-  NO_COLOR: "1"
+  FORCE_COLOR: '0'
+  NO_COLOR: '1'
 
 jobs:
   changeset:
@@ -61,7 +61,7 @@ jobs:
             const status = process.env.CHANGESET_STATUS;
             const rawOutput = process.env.CHANGESET_OUTPUT ?? "";
             const plainOutput = rawOutput.replace(
-              // biome-ignore lint/suspicious/noControlCharactersInRegex: strips ANSI escape codes from command output before posting a PR comment.
+              // Strip ANSI escape codes from command output before posting a PR comment.
               /[\u001b\u009b][[\]()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g,
               "",
             );

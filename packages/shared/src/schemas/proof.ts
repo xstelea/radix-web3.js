@@ -1,4 +1,5 @@
 import { Schema } from 'effect';
+
 import { HexString } from '../brandedTypes';
 
 export const ProofSchema = Schema.Struct({

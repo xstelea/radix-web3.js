@@ -1,7 +1,7 @@
-import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { Effect } from 'effect';
 import type { AccountAddress } from '@radix-effects/shared';
 import { TransactionManifestString } from '@radix-effects/shared';
+import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
+import { Effect } from 'effect';
 
 export const faucet = (accountAddress: AccountAddress) =>
   Effect.gen(function* () {

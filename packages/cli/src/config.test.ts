@@ -1,9 +1,11 @@
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { it } from '@effect/vitest';
 import { Effect } from 'effect';
 import { describe, expect } from 'vitest';
+
 import { resolveRdxConfig } from './config';
 
 const makeTempDir = (name: string) =>

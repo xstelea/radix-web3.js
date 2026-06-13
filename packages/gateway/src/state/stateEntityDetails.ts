@@ -1,4 +1,5 @@
 import { Config, Effect } from 'effect';
+
 import { GatewayApiClient } from '../gatewayApiClient';
 import { chunker } from '../helpers/chunker';
 

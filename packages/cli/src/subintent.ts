@@ -1,4 +1,5 @@
 import { basename, dirname, join } from 'node:path';
+
 import {
   Convert,
   RadixEngineToolkit,
@@ -7,6 +8,7 @@ import {
   type SubintentV2,
 } from '@steleaio/radix-engine-toolkit';
 import { Data, Effect, Schema } from 'effect';
+
 import { createTransactionArtifactDirectory } from './artifacts';
 import {
   makeDirectory,
@@ -88,10 +90,7 @@ const messageFromHeaderFile = (
 const signatureEntryToRet = (entry: SignatureEntry) =>
   new SignatureWithPublicKey.Ed25519(entry.signature.hex, entry.publicKey.hex);
 
-const buildRootSubintent = (input: {
-  manifest: string;
-  headerPath: string;
-}) =>
+const buildRootSubintent = (input: { manifest: string; headerPath: string }) =>
   readJsonFile(input.headerPath, (reason) => reason).pipe(
     Effect.flatMap(Schema.decodeUnknown(SubintentHeaderFileSchema)),
     Effect.map(

@@ -1,9 +1,11 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+
 import { it } from '@effect/vitest';
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect, Schema } from 'effect';
 import { describe, expect } from 'vitest';
+
 import { notarizeTransactionArtifact } from './notarize';
 import {
   SignatureTemplateSchema,

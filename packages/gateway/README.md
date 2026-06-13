@@ -16,20 +16,22 @@ This package provides Effect-based wrappers around the Radix Gateway API, with f
 
 ```typescript
 import { Effect } from 'effect';
-import { GatewayApiClientService, getEntityDetails } from '@radix-effects/gateway';
+import {
+  GatewayApiClientService,
+  getEntityDetails,
+} from '@radix-effects/gateway';
 
 const program = Effect.gen(function* () {
   const entityDetails = yield* getEntityDetails({
-    address: 'account_rdx12example123456789abcdef123456789abcdef123456789abcdef'
+    address:
+      'account_rdx12example123456789abcdef123456789abcdef123456789abcdef',
   });
-  
+
   return entityDetails;
 });
 
 const result = await Effect.runPromise(
-  program.pipe(
-    Effect.provide(GatewayApiClientService.Default)
-  )
+  program.pipe(Effect.provide(GatewayApiClientService.Default)),
 );
 ```
 
@@ -54,30 +56,32 @@ import { Effect, ConfigProvider, Layer } from 'effect';
 import { GatewayApiClientService } from '@radix-effects/gateway';
 
 // Create a configuration provider with your settings
-const browserConfig = ConfigProvider.fromMap(new Map([
-  ['NETWORK_ID', '2'], // Testnet
-  ['GATEWAY_URL', 'https://testnet.radixdlt.com'],
-  ['APPLICATION_NAME', 'my-dapp'],
-  ['GATEWAY_RETRY_ATTEMPTS', '3']
-]));
+const browserConfig = ConfigProvider.fromMap(
+  new Map([
+    ['NETWORK_ID', '2'], // Testnet
+    ['GATEWAY_URL', 'https://testnet.radixdlt.com'],
+    ['APPLICATION_NAME', 'my-dapp'],
+    ['GATEWAY_RETRY_ATTEMPTS', '3'],
+  ]),
+);
 
 // Create a layer with the config provider
 const BrowserGatewayLayer = Layer.provide(
   GatewayApiClientService.Default,
-  Layer.setConfigProvider(browserConfig)
+  Layer.setConfigProvider(browserConfig),
 );
 
 // Use in your application
 const program = Effect.gen(function* () {
-  const details = yield* getEntityDetails({ 
-    address: 'account_rdx1...' 
+  const details = yield* getEntityDetails({
+    address: 'account_rdx1...',
   });
   return details;
 });
 
 // Run with browser configuration
 const result = await Effect.runPromise(
-  program.pipe(Effect.provide(BrowserGatewayLayer))
+  program.pipe(Effect.provide(BrowserGatewayLayer)),
 );
 ```
 

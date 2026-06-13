@@ -1,6 +1,7 @@
+import type { HexString } from '@radix-effects/shared';
 import { Convert, type PublicKey } from '@steleaio/radix-engine-toolkit';
 import { Context, Data, Effect, Layer, Redacted, Schema } from 'effect';
-import type { HexString } from '@radix-effects/shared';
+
 import {
   Ed25519PrivateKeySchema,
   type Ed25519SignatureWithPublicKey,

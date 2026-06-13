@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
-import { GatewayApiClient } from './gatewayApiClient';
 
+import { GatewayApiClient } from './gatewayApiClient';
 import type { AtLedgerState } from './schemas';
 
 export type GetLedgerStateInput = {

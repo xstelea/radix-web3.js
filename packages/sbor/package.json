@@ -1,6 +1,11 @@
 {
   "name": "@radix-effects/sbor",
   "version": "0.3.2",
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  },
   "type": "module",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -16,24 +21,19 @@
     "test:coverage": "vitest run --coverage",
     "build": "tsdown"
   },
-  "devDependencies": {
-    "@effect/vitest": "catalog:",
-    "@types/node": "catalog:",
-    "tsdown": "catalog:",
-    "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@vitest/coverage-v8": "catalog:"
-  },
   "dependencies": {
     "@radix-effects/shared": "workspace:*",
     "@radixdlt/babylon-gateway-api-sdk": "catalog:",
     "bignumber.js": "catalog:",
     "effect": "catalog:"
   },
-  "homepage": "https://xstelea.github.io/radix-web3.js/",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

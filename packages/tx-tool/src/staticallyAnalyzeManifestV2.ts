@@ -1,6 +1,6 @@
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-
 import { Data, Effect } from 'effect';
+
 import type { TransactionIntentV2 } from './schemas';
 
 export class FailedToStaticallyAnalyzeManifestV2Error extends Data.TaggedError(

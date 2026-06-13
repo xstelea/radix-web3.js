@@ -4,9 +4,9 @@ import type {
 } from '@radixdlt/babylon-gateway-api-sdk';
 import { BigNumber } from 'bignumber.js';
 import { Config, Effect } from 'effect';
-import { EntityFungiblesPage } from './state/entityFungiblesPage';
 
 import type { AtLedgerState } from './schemas';
+import { EntityFungiblesPage } from './state/entityFungiblesPage';
 import { StateEntityDetails } from './state/stateEntityDetails';
 
 export type GetFungibleBalanceOutput = Effect.Effect.Success<
@@ -58,7 +58,7 @@ export class GetFungibleBalance extends Effect.Service<GetFungibleBalance>()(
         const fungibleResources = allFungibleResources
           .map((item) => {
             if (item.aggregation_level === 'Global') {
-              const { aggregation_level, amount, ...rest } = item;
+              const { amount, ...rest } = item;
 
               return {
                 ...rest,

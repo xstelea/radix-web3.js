@@ -1,4 +1,5 @@
 import { Option, Duration, Context, Ref } from 'effect';
+
 import { type Config, TransactionDetailsOptInsSchema } from './schemas';
 
 export class ConfigService extends Context.Tag('Config')<

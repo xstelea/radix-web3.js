@@ -1,5 +1,6 @@
-import { it, layer } from '@effect/vitest';
+import { layer } from '@effect/vitest';
 import { Effect, Layer } from 'effect';
+
 import { GatewayApiClient } from './gatewayApiClient';
 import { GetKeyValueStoreService } from './getKeyValueStore';
 

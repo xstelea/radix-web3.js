@@ -4,12 +4,12 @@ import type {
   StateEntityDetailsResponseItem,
 } from '@radixdlt/babylon-gateway-api-sdk';
 import { Config, Effect } from 'effect';
+
 import { GatewayApiClient } from './gatewayApiClient';
 import { chunker } from './helpers/chunker';
-import { EntityNonFungiblesPage } from './state/entityNonFungiblesPage';
-
 import type { AtLedgerState } from './schemas';
 import { EntityNonFungibleIdsPage } from './state/entityNonFungibleIdsPage';
+import { EntityNonFungiblesPage } from './state/entityNonFungiblesPage';
 
 type GetNftResourceManagersInput = {
   addresses: string[];

@@ -1,6 +1,15 @@
 {
   "name": "@radix-effects/shared",
   "version": "0.0.4",
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -10,28 +19,19 @@
       "import": "./dist/index.mjs"
     }
   },
-  "license": "MIT",
-  "homepage": "https://xstelea.github.io/radix-web3.js/",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xstelea/radix-web3.js.git"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
     "build": "tsdown"
   },
   "dependencies": {
-    "effect": "catalog:",
-    "bignumber.js": "catalog:"
+    "bignumber.js": "catalog:",
+    "effect": "catalog:"
   },
   "devDependencies": {
     "tsdown": "catalog:"
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }

@@ -49,45 +49,45 @@ export const previewTransactionFactory =
     networkId: number;
     gatewayApiClient: GatewayApiClient;
   }) =>
-    async ({
-      intent,
-      signerPublicKeys,
-      blobsHex = [],
-    }: {
-      intent: Intent;
-      signerPublicKeys: PublicKey[];
-      blobsHex?: string[];
-    }) => {
-      // Translate the RET models to the gateway models for preview.
-      const request: TransactionPreviewOperationRequest = {
-        transactionPreviewRequest: {
-          manifest: await RadixEngineToolkit.Instructions.convert(
-            intent.manifest.instructions,
-            networkId,
-            'String',
-          ).then((instructions) => instructions.value as string),
-          blobs_hex: blobsHex,
-          start_epoch_inclusive: intent.header.startEpochInclusive,
-          end_epoch_exclusive: intent.header.endEpochExclusive,
-          notary_public_key: retPublicKeyToGatewayPublicKey(
-            intent.header.notaryPublicKey,
-          ),
-          notary_is_signatory: intent.header.notaryIsSignatory,
-          tip_percentage: intent.header.tipPercentage,
-          nonce: intent.header.nonce,
-          signer_public_keys: signerPublicKeys.map(
-            retPublicKeyToGatewayPublicKey,
-          ),
-          // TODO: Add message
-          flags: {
-            assume_all_signature_proofs: false,
-            skip_epoch_check: false,
-            use_free_credit: false,
-          },
+  async ({
+    intent,
+    signerPublicKeys,
+    blobsHex = [],
+  }: {
+    intent: Intent;
+    signerPublicKeys: PublicKey[];
+    blobsHex?: string[];
+  }) => {
+    // Translate the RET models to the gateway models for preview.
+    const request: TransactionPreviewOperationRequest = {
+      transactionPreviewRequest: {
+        manifest: await RadixEngineToolkit.Instructions.convert(
+          intent.manifest.instructions,
+          networkId,
+          'String',
+        ).then((instructions) => instructions.value as string),
+        blobs_hex: blobsHex,
+        start_epoch_inclusive: intent.header.startEpochInclusive,
+        end_epoch_exclusive: intent.header.endEpochExclusive,
+        notary_public_key: retPublicKeyToGatewayPublicKey(
+          intent.header.notaryPublicKey,
+        ),
+        notary_is_signatory: intent.header.notaryIsSignatory,
+        tip_percentage: intent.header.tipPercentage,
+        nonce: intent.header.nonce,
+        signer_public_keys: signerPublicKeys.map(
+          retPublicKeyToGatewayPublicKey,
+        ),
+        // TODO: Add message
+        flags: {
+          assume_all_signature_proofs: false,
+          skip_epoch_check: false,
+          use_free_credit: false,
         },
-      };
-
-      return gatewayApiClient.transaction.innerClient
-        .transactionPreview(request)
-        .then((response) => response as PartialTransactionPreviewResponse);
+      },
     };
+
+    return gatewayApiClient.transaction.innerClient
+      .transactionPreview(request)
+      .then((response) => response as PartialTransactionPreviewResponse);
+  };

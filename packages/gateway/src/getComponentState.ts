@@ -1,7 +1,6 @@
-import type {
-  StateEntityDetailsVaultResponseItem,
-} from '@radixdlt/babylon-gateway-api-sdk';
+import type { StateEntityDetailsVaultResponseItem } from '@radixdlt/babylon-gateway-api-sdk';
 import { Effect, Schema } from 'effect';
+
 import type { AtLedgerState } from './schemas';
 import {
   type GetEntityDetailsOptions,

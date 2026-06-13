@@ -1,6 +1,7 @@
 import { FileSystem } from '@effect/platform';
 import { NodeFileSystem } from '@effect/platform-node';
 import { Effect, Schema } from 'effect';
+
 import { renderJson } from './json';
 
 type FileErrorMapper<E> = (reason: unknown) => E;

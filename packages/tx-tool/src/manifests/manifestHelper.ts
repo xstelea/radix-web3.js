@@ -1,7 +1,7 @@
-import { Effect } from 'effect';
 import type { Amount } from '@radix-effects/shared';
 import { TransactionManifestString } from '@radix-effects/shared';
 import type { Account } from '@radix-effects/shared';
+import { Effect } from 'effect';
 
 export class ManifestHelper extends Effect.Service<ManifestHelper>()(
   'ManifestHelper',
@@ -9,7 +9,6 @@ export class ManifestHelper extends Effect.Service<ManifestHelper>()(
     effect: Effect.gen(function* () {
       return {
         addFeePayer: (input: { account: Account; amount: Amount }) =>
-          // biome-ignore lint/correctness/useYield: <explanation>
           Effect.gen(function* () {
             if (input.account.type === 'unsecurifiedAccount') {
               return TransactionManifestString.make(`

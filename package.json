@@ -8,13 +8,12 @@
     "publish-packages": "turbo run build && changeset version && changeset publish",
     "ci:version": "changeset version",
     "ci:publish": "pnpm run build && changeset publish",
-    "format": "biome format --write ./packages/**/**/*.ts",
-    "lint": "biome lint --write ./packages/**/**/*.ts",
-    "check-types": "biome check --write ./packages/**/**/*.ts"
+    "format": "oxfmt --write ./packages",
+    "lint": "oxlint ./packages",
+    "check-types": "pnpm format && pnpm lint"
   },
   "devDependencies": {
     "@ai-hero/sandcastle": "^0.7.0",
-    "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.29.8",
     "@effect/cluster": "^0.59.0",
     "@effect/experimental": "^0.60.0",
@@ -22,13 +21,14 @@
     "@effect/sql": "^0.51.1",
     "@effect/typeclass": "^0.40.0",
     "@effect/workflow": "^0.18.2",
-    "prettier": "^3.7.4",
+    "oxfmt": "0.53.0",
+    "oxlint": "1.68.0",
     "turbo": "^2.9.16",
     "typescript": "5.5.4",
     "wrangler": "^4.94.0"
   },
-  "packageManager": "pnpm@11.5.2",
   "engines": {
     "node": ">=20"
-  }
+  },
+  "packageManager": "pnpm@11.5.2"
 }

@@ -1,20 +1,6 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
-import {
-  Effect,
-  Layer,
-  Logger,
-  ManagedRuntime,
-  Option,
-  pipe,
-  Stream,
-  Array as A,
-  Duration,
-  Context,
-  Ref,
-  Schema,
-  Order,
-  ConfigProvider,
-} from 'effect';
+import { Array as A, Effect, Option, Order, pipe, Ref, Stream } from 'effect';
+
 import { ConfigService } from './config';
 
 export class TransactionStreamService extends Effect.Service<TransactionStreamService>()(

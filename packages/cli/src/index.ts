@@ -1,6 +1,8 @@
 import { dirname, join } from 'node:path';
+
 import { AccountAddress, TransactionId } from '@radix-effects/shared';
 import { Data, Effect, Schema } from 'effect';
+
 import {
   deriveVirtualAccountAddress,
   gatewayAccountDetails,
@@ -166,9 +168,9 @@ const takeRepeatedOption = (argv: string[], name: string) => {
 };
 
 type ParsedRdxCommand = Data.TaggedEnum<{
-  // biome-ignore lint/complexity/noBannedTypes: Effect's taggedEnum uses `{}` for nullary variants.
+  // Effect's taggedEnum uses `{}` for nullary variants.
   ConfigShow: {};
-  // biome-ignore lint/complexity/noBannedTypes: Effect's taggedEnum uses `{}` for nullary variants.
+  // Effect's taggedEnum uses `{}` for nullary variants.
   Llm: {};
   AccountFungibles: { accountAddress: AccountAddress };
   AccountNfts: { accountAddress: AccountAddress };

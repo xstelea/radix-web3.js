@@ -1,5 +1,6 @@
 import { Epoch, type NetworkId } from '@radix-effects/shared';
 import { Effect, Option } from 'effect';
+
 import { EpochService } from './epoch';
 import { NotaryKeyPair } from './notaryKeyPair';
 import {

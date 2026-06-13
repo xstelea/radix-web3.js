@@ -1,4 +1,5 @@
 import { Schema } from 'effect';
+
 import { AccountAddress } from '../brandedTypes';
 
 export const WalletAccountSchema = Schema.Struct({

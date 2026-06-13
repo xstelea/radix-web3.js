@@ -1,11 +1,12 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
-import { Effect, Option, Schema } from 'effect';
 import {
   Epoch,
   NetworkId,
   TransactionManifestString,
   TransactionMessageString,
 } from '@radix-effects/shared';
+import { Effect, Option, Schema } from 'effect';
+
 import {
   ManifestSchema,
   TransactionIntentSchema,

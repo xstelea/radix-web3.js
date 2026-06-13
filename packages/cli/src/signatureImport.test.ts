@@ -2,6 +2,7 @@ import { it } from '@effect/vitest';
 import { ed25519 } from '@noble/curves/ed25519';
 import { Effect } from 'effect';
 import { describe, expect } from 'vitest';
+
 import {
   PLACEHOLDER_PUBLIC_KEY_HEX,
   PLACEHOLDER_SIGNATURE_HEX,

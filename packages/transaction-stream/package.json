@@ -1,6 +1,15 @@
 {
   "name": "@radix-effects/transaction-stream",
   "version": "0.1.10",
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -15,18 +24,14 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "homepage": "https://xstelea.github.io/radix-web3.js/",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xstelea/radix-web3.js.git"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "dev:debug": "tsx --inspect-brk --watch src/index.ts",
     "build": "tsdown"
+  },
+  "dependencies": {
+    "@radix-effects/gateway": "workspace:*",
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",
@@ -34,10 +39,5 @@
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  },
-  "dependencies": {
-    "effect": "catalog:",
-    "@radix-effects/gateway": "workspace:*"
-  },
-  "license": "MIT"
+  }
 }

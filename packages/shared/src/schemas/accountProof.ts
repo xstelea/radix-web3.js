@@ -1,4 +1,5 @@
 import { Schema } from 'effect';
+
 import { AccountAddress, HexString } from '../brandedTypes';
 
 const ProofSchema = Schema.Struct({

@@ -1,5 +1,6 @@
 import type { NonFungibleDataRequest } from '@radixdlt/babylon-gateway-api-sdk';
 import { Config, Effect } from 'effect';
+
 import { GatewayApiClient } from '../gatewayApiClient';
 import { chunker } from '../helpers/chunker';
 import type { AtLedgerState } from '../schemas';

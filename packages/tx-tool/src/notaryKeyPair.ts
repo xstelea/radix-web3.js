@@ -1,6 +1,7 @@
+import type { HexString } from '@radix-effects/shared';
 import { Signature } from '@steleaio/radix-engine-toolkit';
 import { Array as A, Effect, flow, Option } from 'effect';
-import type { HexString } from '@radix-effects/shared';
+
 import { Signer } from './signer/signer';
 
 export class NotaryKeyPair extends Effect.Service<NotaryKeyPair>()(

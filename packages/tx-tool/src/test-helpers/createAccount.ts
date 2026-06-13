@@ -1,8 +1,8 @@
 import { ed25519 } from '@noble/curves/ed25519';
 import { hexToBytes } from '@noble/hashes/utils';
+import { AccountAddress } from '@radix-effects/shared';
 import { PrivateKey, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect } from 'effect';
-import { AccountAddress } from '@radix-effects/shared';
 
 export const createAccount = (
   input?: Partial<{

@@ -1,5 +1,6 @@
 import { createTool } from '@goat-sdk/core';
 import { z } from 'zod';
+
 import { astrolecentApiClient } from '../astrolecentApiClient';
 
 export const swapTokensToolDefinition = {
@@ -38,7 +39,7 @@ export const swapTokensMethod = async (
         fromAddress,
       })
       .then((data) => JSON.stringify(data));
-  } catch (error) {
+  } catch {
     return 'Error executing swap';
   }
 };

@@ -1,5 +1,6 @@
 import type { ResourceHoldersCollectionItem } from '@radixdlt/babylon-gateway-api-sdk';
 import { Effect } from 'effect';
+
 import { GatewayApiClient } from './gatewayApiClient';
 
 export class GetResourceHoldersService extends Effect.Service<GetResourceHoldersService>()(

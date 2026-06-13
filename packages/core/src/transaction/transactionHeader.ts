@@ -3,6 +3,7 @@ import {
   type TransactionHeader as TransactionHeaderType,
   generateRandomNonce,
 } from '@steleaio/radix-engine-toolkit';
+
 import type { RadixNetworkClient } from '../network';
 
 export const createTransactionHeader = (

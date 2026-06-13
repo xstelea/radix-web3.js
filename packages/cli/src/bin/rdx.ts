@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { ValidationError } from '@effect/cli';
-import { NodeContext, NodeRuntime } from '@effect/platform-node';
 import { FileSystem, Path } from '@effect/platform';
+import { NodeContext, NodeRuntime } from '@effect/platform-node';
 import {
   Terminal,
   type Terminal as TerminalService,
 } from '@effect/platform/Terminal';
 import { Console, Data, Effect, Option, Schema } from 'effect';
+
 import { cli } from '../cli';
 import { renderJson } from '../json';
 

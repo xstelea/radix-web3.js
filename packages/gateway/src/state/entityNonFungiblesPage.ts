@@ -1,5 +1,6 @@
 import type { EntityNonFungiblesPageRequest } from '@radixdlt/babylon-gateway-api-sdk';
 import { Config, Effect } from 'effect';
+
 import { GatewayApiClient } from '../gatewayApiClient';
 import type { AtLedgerState } from '../schemas';
 
