@@ -585,7 +585,6 @@ export const struct = <
       decode: (input, _options, ast) =>
         pipe(
           Object.keys(fields),
-          // biome-ignore lint/complexity/noForEach: we need to iterate over the fields
           Effect.forEach((name) =>
             pipe(
               fieldByName(input.fields, name),

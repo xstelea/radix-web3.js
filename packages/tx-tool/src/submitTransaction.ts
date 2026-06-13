@@ -1,7 +1,7 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
+import { HexString } from '@radix-effects/shared';
 import { Convert } from '@steleaio/radix-engine-toolkit';
 import { Effect, pipe } from 'effect';
-import { HexString } from '@radix-effects/shared';
 
 export class SubmitTransaction extends Effect.Service<SubmitTransaction>()(
   '@radix-effects/tx-tool/SubmitTransaction',

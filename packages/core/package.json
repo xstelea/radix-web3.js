@@ -1,6 +1,15 @@
 {
   "name": "radix-web3.js",
   "version": "0.6.2",
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -12,20 +21,18 @@
       "import": "./dist/index.js"
     }
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "build": "tsup"
   },
-  "license": "MIT",
-  "homepage": "https://xstelea.github.io/radix-web3.js/",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  "dependencies": {
+    "@radixdlt/babylon-gateway-api-sdk": "catalog:",
+    "@steleaio/radix-engine-toolkit": "catalog:"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",
@@ -33,12 +40,5 @@
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
     "vitest": "^4.1.8"
-  },
-  "dependencies": {
-    "@radixdlt/babylon-gateway-api-sdk": "catalog:",
-    "@steleaio/radix-engine-toolkit": "catalog:"
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }

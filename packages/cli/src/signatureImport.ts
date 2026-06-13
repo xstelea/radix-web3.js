@@ -1,5 +1,6 @@
 import { ed25519 } from '@noble/curves/ed25519';
 import { Data, Effect, Schema } from 'effect';
+
 import { type SignatureImportResult, normalizeSignatures } from './artifacts';
 import {
   BatchSignatureFileSchema,

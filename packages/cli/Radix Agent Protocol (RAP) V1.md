@@ -87,17 +87,17 @@ DraftInputs
 
 Network status observation is an overlay. Observation MUST NOT advance the main signing, notarization, or submission state.
 
-| State | Meaning | May Be Derived |
-| --- | --- | --- |
-| `DraftInputs` | Transaction inputs exist, but no canonical transaction ID exists. | No |
-| `Prepared` | Transaction ID, intent, analysis, and signing requests exist. | No |
-| `IntentSigning` | Intent/subintent signatures are being collected. | Yes |
-| `IntentSignaturesComplete` | All pre-notary signing requests are satisfied. | Yes |
-| `NotaryRequested` | Signed intent has been built and notary signing request exists. | No |
-| `NotarySigning` | Notary signature is being collected. | Yes |
-| `NotarySignatureComplete` | All signing requests, including notary, are satisfied. | Yes |
-| `Submitted` | A notarized transaction payload has been submitted and recorded. | No |
-| `Observed` | Gateway status has been observed without advancing the main workflow. | Yes |
+| State                      | Meaning                                                               | May Be Derived |
+| -------------------------- | --------------------------------------------------------------------- | -------------- |
+| `DraftInputs`              | Transaction inputs exist, but no canonical transaction ID exists.     | No             |
+| `Prepared`                 | Transaction ID, intent, analysis, and signing requests exist.         | No             |
+| `IntentSigning`            | Intent/subintent signatures are being collected.                      | Yes            |
+| `IntentSignaturesComplete` | All pre-notary signing requests are satisfied.                        | Yes            |
+| `NotaryRequested`          | Signed intent has been built and notary signing request exists.       | No             |
+| `NotarySigning`            | Notary signature is being collected.                                  | Yes            |
+| `NotarySignatureComplete`  | All signing requests, including notary, are satisfied.                | Yes            |
+| `Submitted`                | A notarized transaction payload has been submitted and recorded.      | No             |
+| `Observed`                 | Gateway status has been observed without advancing the main workflow. | Yes            |
 
 Adapters MAY derive the derived states from canonical signature state rather than persisting separate state payloads.
 
@@ -136,19 +136,19 @@ stateDiagram-v2
 ## 5. Common Types
 
 ```ts
-type Network = "mainnet" | "stokenet";
+type Network = 'mainnet' | 'stokenet';
 
 type TransactionId = string;
 
 type HexString = string;
 
 type PublicKey = {
-  curve: "Ed25519";
+  curve: 'Ed25519';
   hex: HexString; // 64 hex characters
 };
 
 type SignatureValue = {
-  curve: "Ed25519";
+  curve: 'Ed25519';
   hex: HexString; // 128 hex characters
 };
 
@@ -160,10 +160,10 @@ type Hash = {
 type SubintentId = string; // ^[A-Za-z][A-Za-z0-9_-]{0,63}$
 
 type SigningScope =
-  | { kind: "rootIntent" }
-  | { kind: "subintent"; subintentId: SubintentId }
-  | { kind: "notarySignatory" }
-  | { kind: "notary" };
+  | { kind: 'rootIntent' }
+  | { kind: 'subintent'; subintentId: SubintentId }
+  | { kind: 'notarySignatory' }
+  | { kind: 'notary' };
 ```
 
 `Hash.id` MUST be non-null in RAP/1. Adapter fallback behavior for missing hash IDs is outside valid protocol state.
@@ -176,7 +176,7 @@ type SigningScope =
 
 ```ts
 type DraftInputsState = {
-  state: "DraftInputs";
+  state: 'DraftInputs';
   network: Network;
   rootManifest: RootManifestInput;
   subintents?: SubintentsInput;
@@ -184,13 +184,13 @@ type DraftInputsState = {
 };
 
 type RootManifestInput = {
-  kind: "rootManifest";
+  kind: 'rootManifest';
   sourceName?: string;
   rtm: string;
 };
 
 type SubintentsInput = {
-  type: "subintents";
+  type: 'subintents';
   version: 1;
   subintents: Record<
     SubintentId,
@@ -201,7 +201,7 @@ type SubintentsInput = {
 };
 
 type NotaryInput = {
-  type: "notary";
+  type: 'notary';
   version: 1;
   publicKey: PublicKey;
   notaryIsSignatory?: boolean;
@@ -224,7 +224,7 @@ Requirements:
 
 ```ts
 type PreparedState = {
-  state: "Prepared";
+  state: 'Prepared';
   prepared: PreparedTransaction;
   transactionIntent: TransactionIntentArtifact;
   staticAnalysis: StaticAnalysisArtifact;
@@ -234,7 +234,7 @@ type PreparedState = {
 };
 
 type PreparedTransaction = {
-  type: "preparedTransaction";
+  type: 'preparedTransaction';
   version: 1;
   transactionId: TransactionId;
   network: Network;
@@ -256,11 +256,11 @@ type CopiedManifestSet = {
 
 ```ts
 type TransactionIntentArtifact = {
-  type: "transactionIntent";
+  type: 'transactionIntent';
   version: 1;
   transactionId: TransactionId;
   encoded: {
-    kind: "transactionIntentV2";
+    kind: 'transactionIntentV2';
     value: TransactionIntentV2Stored;
     compiledHex: HexString;
   };
@@ -303,7 +303,7 @@ type AuthorizationAnalysis = {
 };
 
 type StaticAnalysisArtifact = {
-  type: "staticAnalysis";
+  type: 'staticAnalysis';
   version: 1;
   transactionId: TransactionId;
   authorization: AuthorizationAnalysis;
@@ -317,7 +317,7 @@ type StaticAnalysisArtifact = {
 
 ```ts
 type SigningRequest = {
-  type: "signingRequest";
+  type: 'signingRequest';
   version: 1;
   transactionId: TransactionId;
   scope: SigningScope;
@@ -326,7 +326,7 @@ type SigningRequest = {
 };
 
 type SignatureTemplate = {
-  type: "signatureTemplate";
+  type: 'signatureTemplate';
   version: 1;
   transactionId: TransactionId;
   scope: SigningScope;
@@ -365,7 +365,7 @@ Account invariants:
 
 ```ts
 type IntentSigningState = {
-  state: "IntentSigning";
+  state: 'IntentSigning';
   prepared: PreparedTransaction;
   transactionIntent: TransactionIntentArtifact;
   signingRequests: SigningRequest[];
@@ -374,7 +374,7 @@ type IntentSigningState = {
 };
 
 type SignatureFile = {
-  type: "signatureFile";
+  type: 'signatureFile';
   version: 1;
   transactionId: TransactionId;
   signatures: SignatureEntry[];
@@ -420,7 +420,7 @@ Multisig:
 
 ```ts
 type IntentSignaturesCompleteState = {
-  state: "IntentSignaturesComplete";
+  state: 'IntentSignaturesComplete';
   prepared: PreparedTransaction;
   transactionIntent: TransactionIntentArtifact;
   signatures: SignatureFile;
@@ -435,27 +435,27 @@ Adapters MAY derive this state from signature completeness.
 
 ```ts
 type NotaryRequestedState = {
-  state: "NotaryRequested";
+  state: 'NotaryRequested';
   prepared: PreparedTransaction;
   transactionIntent: TransactionIntentArtifact;
   signedTransactionIntent: SignedTransactionIntentArtifact;
   signatures: SignatureFile;
   notarySigningRequest: SigningRequest & {
-    scope: { kind: "notary" };
+    scope: { kind: 'notary' };
     account: null;
   };
   notarySignatureTemplate: SignatureTemplate & {
-    scope: { kind: "notary" };
+    scope: { kind: 'notary' };
     account: null;
   };
 };
 
 type SignedTransactionIntentArtifact = {
-  type: "signedTransactionIntent";
+  type: 'signedTransactionIntent';
   version: 1;
   transactionId: TransactionId;
   encoded: {
-    kind: "signedTransactionIntentV2";
+    kind: 'signedTransactionIntentV2';
     compiledHex: HexString;
   };
 };
@@ -467,13 +467,13 @@ The notary signing request signs the signed transaction intent hash. It MUST NOT
 
 ```ts
 type NotarySigningState = {
-  state: "NotarySigning";
+  state: 'NotarySigning';
   prepared: PreparedTransaction;
   transactionIntent: TransactionIntentArtifact;
   signedTransactionIntent: SignedTransactionIntentArtifact;
   signatures: SignatureFile;
   notarySigningRequest: SigningRequest & {
-    scope: { kind: "notary" };
+    scope: { kind: 'notary' };
     account: null;
   };
   completeness: SignatureCompleteness;
@@ -486,7 +486,7 @@ The signature import rules from `IntentSigning` apply. The required request set 
 
 ```ts
 type NotarySignatureCompleteState = {
-  state: "NotarySignatureComplete";
+  state: 'NotarySignatureComplete';
   prepared: PreparedTransaction;
   transactionIntent: TransactionIntentArtifact;
   signedTransactionIntent: SignedTransactionIntentArtifact;
@@ -502,21 +502,21 @@ Adapters MAY derive this state from signature completeness.
 
 ```ts
 type SubmittedState = {
-  state: "Submitted";
+  state: 'Submitted';
   prepared: PreparedTransaction;
   notarizedTransaction: NotarizedTransactionArtifact;
   submitResult: SubmitResult;
 };
 
 type NotarizedTransactionArtifact = {
-  type: "notarizedTransaction";
+  type: 'notarizedTransaction';
   version: 1;
   transactionId: TransactionId;
   compiledHex: HexString;
 };
 
 type SubmitResult = {
-  type: "submitResult";
+  type: 'submitResult';
   version: 1;
   transactionId: TransactionId;
   networkStatus: NetworkTransactionStatus;
@@ -551,7 +551,7 @@ If a workflow has a prior `CommittedSuccess` submit result, an implementation MU
 
 ```ts
 type ObservedState = {
-  state: "Observed";
+  state: 'Observed';
   transactionId: TransactionId;
   localWorkflow?:
     | PreparedState
@@ -587,13 +587,13 @@ type RapTransitionEvent =
   | ObserveTransactionEvent;
 
 type PrepareTransactionEvent = {
-  event: "PrepareTransaction";
+  event: 'PrepareTransaction';
   input: DraftInputsState;
   output: PreparedState;
 };
 
 type ImportIntentSignaturesEvent = {
-  event: "ImportIntentSignatures";
+  event: 'ImportIntentSignatures';
   input: {
     state: PreparedState | IntentSigningState;
     signatures: SignatureTemplate | SignatureFile;
@@ -602,13 +602,13 @@ type ImportIntentSignaturesEvent = {
 };
 
 type RequestNotarySignatureEvent = {
-  event: "RequestNotarySignature";
+  event: 'RequestNotarySignature';
   input: IntentSignaturesCompleteState;
   output: NotaryRequestedState;
 };
 
 type ImportNotarySignatureEvent = {
-  event: "ImportNotarySignature";
+  event: 'ImportNotarySignature';
   input: {
     state: NotaryRequestedState | NotarySigningState;
     signatures: SignatureTemplate | SignatureFile;
@@ -617,13 +617,13 @@ type ImportNotarySignatureEvent = {
 };
 
 type SubmitTransactionEvent = {
-  event: "SubmitTransaction";
+  event: 'SubmitTransaction';
   input: NotarySignatureCompleteState;
   output: SubmittedState;
 };
 
 type ObserveTransactionEvent = {
-  event: "ObserveTransaction";
+  event: 'ObserveTransaction';
   input: {
     transactionId: TransactionId;
     localWorkflow?:
@@ -719,10 +719,10 @@ flowchart TD
 
 RAP/1 has two preview gates:
 
-| Transition | Preview Input | Signature Proof Assumption | Effect |
-| --- | --- | --- | --- |
-| `PrepareTransaction` | Unsigned Transaction Intent V2 preview | Assume all signature proofs | Reject invalid draft transaction state before signing requests are emitted. |
-| `RequestNotarySignature` | Signed Transaction Intent V2 preview | Use real signer public keys | Reject invalid signed intent state before the notary signs. |
+| Transition               | Preview Input                          | Signature Proof Assumption  | Effect                                                                      |
+| ------------------------ | -------------------------------------- | --------------------------- | --------------------------------------------------------------------------- |
+| `PrepareTransaction`     | Unsigned Transaction Intent V2 preview | Assume all signature proofs | Reject invalid draft transaction state before signing requests are emitted. |
+| `RequestNotarySignature` | Signed Transaction Intent V2 preview   | Use real signer public keys | Reject invalid signed intent state before the notary signs.                 |
 
 Preview success allows the transition to continue. Preview failure rejects the transition.
 
@@ -735,46 +735,46 @@ Failed transitions return protocol errors at the RAP boundary:
 ```ts
 type RapTransitionError =
   | {
-      type: "rapError";
-      code: "InvalidState";
+      type: 'rapError';
+      code: 'InvalidState';
       message: string;
       state?: string;
     }
   | {
-      type: "rapError";
-      code: "InvalidPayload";
+      type: 'rapError';
+      code: 'InvalidPayload';
       message: string;
       details?: unknown;
     }
   | {
-      type: "rapError";
-      code: "PreviewRejected";
+      type: 'rapError';
+      code: 'PreviewRejected';
       message: string;
-      phase: "PrepareTransaction" | "RequestNotarySignature";
+      phase: 'PrepareTransaction' | 'RequestNotarySignature';
       details?: unknown;
     }
   | {
-      type: "rapError";
-      code: "MissingSignature";
+      type: 'rapError';
+      code: 'MissingSignature';
       message: string;
       request: SigningRequest;
     }
   | {
-      type: "rapError";
-      code: "InvalidSignature";
+      type: 'rapError';
+      code: 'InvalidSignature';
       message: string;
       signature: SignatureEntry;
     }
   | {
-      type: "rapError";
-      code: "SubmissionRejected";
+      type: 'rapError';
+      code: 'SubmissionRejected';
       message: string;
       transactionId: TransactionId;
       details?: unknown;
     }
   | {
-      type: "rapError";
-      code: "ObservationFailed";
+      type: 'rapError';
+      code: 'ObservationFailed';
       message: string;
       transactionId: TransactionId;
       details?: unknown;
@@ -789,17 +789,17 @@ The current `rdx` CLI is a RAP/1 adapter. Its commands, flags, default output re
 
 Current adapter persistence mapping:
 
-| RAP shape | Current persisted representation |
-| --- | --- |
-| `PreparedTransaction` | `prepared.json` |
-| `TransactionIntentArtifact` | `transactionIntent.json` |
-| `StaticAnalysisArtifact` | `staticAnalysis.json`; current adapter stores full toolkit analysis and derives authorization into `prepared.json` |
-| `SigningRequest[]` | `signing-requests/...` |
-| `SignatureTemplate[]` | `signature-templates/...` |
-| `SignatureFile` | `signatures.json` |
-| `SignedTransactionIntentArtifact` | `signedTransactionIntent.json` |
-| `NotarizedTransactionArtifact` | `notarizedTransaction.hex` raw adapter encoding |
-| `SubmitResult` | `submitResult.json` |
+| RAP shape                         | Current persisted representation                                                                                   |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `PreparedTransaction`             | `prepared.json`                                                                                                    |
+| `TransactionIntentArtifact`       | `transactionIntent.json`                                                                                           |
+| `StaticAnalysisArtifact`          | `staticAnalysis.json`; current adapter stores full toolkit analysis and derives authorization into `prepared.json` |
+| `SigningRequest[]`                | `signing-requests/...`                                                                                             |
+| `SignatureTemplate[]`             | `signature-templates/...`                                                                                          |
+| `SignatureFile`                   | `signatures.json`                                                                                                  |
+| `SignedTransactionIntentArtifact` | `signedTransactionIntent.json`                                                                                     |
+| `NotarizedTransactionArtifact`    | `notarizedTransaction.hex` raw adapter encoding                                                                    |
+| `SubmitResult`                    | `submitResult.json`                                                                                                |
 
 Current adapter-only fields include:
 

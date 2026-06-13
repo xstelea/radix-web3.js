@@ -1,4 +1,5 @@
 import { Effect, Schema } from 'effect';
+
 import { AccessControllerAddress, AccountAddress } from '../brandedTypes';
 
 export const UnsecurifiedAccountDecodedSchema = Schema.Struct({

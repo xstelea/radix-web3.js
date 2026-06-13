@@ -1,9 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+
 import { it } from '@effect/vitest';
 import { ed25519 } from '@noble/curves/ed25519';
 import { Effect, Schema } from 'effect';
 import { describe, expect } from 'vitest';
+
 import { addSignaturesToArtifact } from './addSignatures';
 import { SignatureFileSchema, type SigningRequest } from './schemas';
 import { makeTempDir } from './test-helpers';

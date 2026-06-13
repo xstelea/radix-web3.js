@@ -54,12 +54,12 @@ const program = Effect.gen(function* () {
 
 The `ConfigService` allows you to configure the transaction stream:
 
-| Option         | Type                        | Default             | Description                                   |
-| -------------- | --------------------------- | ------------------- | --------------------------------------------- |
-| `stateVersion` | `Option<number>`            | `Option.none()`     | Starting state version (none = current)       |
-| `limitPerPage` | `number`                    | `100`               | Number of transactions per page               |
-| `waitTime`     | `Duration`                  | `Duration.seconds(60)` | Wait time when no new transactions available |
-| `optIns`       | `TransactionDetailsOptIns`  | See below           | Optional data to include in response          |
+| Option         | Type                       | Default                | Description                                  |
+| -------------- | -------------------------- | ---------------------- | -------------------------------------------- |
+| `stateVersion` | `Option<number>`           | `Option.none()`        | Starting state version (none = current)      |
+| `limitPerPage` | `number`                   | `100`                  | Number of transactions per page              |
+| `waitTime`     | `Duration`                 | `Duration.seconds(60)` | Wait time when no new transactions available |
+| `optIns`       | `TransactionDetailsOptIns` | See below              | Optional data to include in response         |
 
 ### Opt-ins
 
@@ -67,18 +67,18 @@ Control what data is included in the transaction response:
 
 ```typescript
 TransactionDetailsOptInsSchema.make({
-  raw_hex: false,                  // Raw transaction hex
-  receipt_state_changes: false,    // State changes in receipt
-  receipt_fee_summary: false,      // Fee summary in receipt
-  receipt_fee_source: false,       // Fee source in receipt
-  receipt_fee_destination: false,  // Fee destination in receipt
+  raw_hex: false, // Raw transaction hex
+  receipt_state_changes: false, // State changes in receipt
+  receipt_fee_summary: false, // Fee summary in receipt
+  receipt_fee_source: false, // Fee source in receipt
+  receipt_fee_destination: false, // Fee destination in receipt
   receipt_costing_parameters: false, // Costing parameters in receipt
-  receipt_events: false,           // Events in receipt (deprecated)
-  detailed_events: false,          // Detailed events object
-  receipt_output: true,            // Transaction receipt output
+  receipt_events: false, // Events in receipt (deprecated)
+  detailed_events: false, // Detailed events object
+  receipt_output: true, // Transaction receipt output
   affected_global_entities: false, // Affected global entities
-  manifest_instructions: false,    // Manifest instructions
-  balance_changes: false,          // Fungible/non-fungible balance changes
+  manifest_instructions: false, // Manifest instructions
+  balance_changes: false, // Fungible/non-fungible balance changes
 });
 ```
 
@@ -108,13 +108,17 @@ const program = Effect.gen(function* () {
   // Run both streams concurrently
   const stokenetFiber = yield* Effect.fork(
     Stream.runForEach(stokenetStream, processTransactions).pipe(
-      Effect.provide(Layer.effect(ConfigService, Effect.succeed(stokenetConfigRef))),
+      Effect.provide(
+        Layer.effect(ConfigService, Effect.succeed(stokenetConfigRef)),
+      ),
     ),
   );
 
   const mainnetFiber = yield* Effect.fork(
     Stream.runForEach(mainnetStream, processTransactions).pipe(
-      Effect.provide(Layer.effect(ConfigService, Effect.succeed(mainnetConfigRef))),
+      Effect.provide(
+        Layer.effect(ConfigService, Effect.succeed(mainnetConfigRef)),
+      ),
     ),
   );
 

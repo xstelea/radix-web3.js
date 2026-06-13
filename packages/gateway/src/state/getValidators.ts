@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import { z } from 'zod';
+
 import { GatewayApiClient } from '../gatewayApiClient';
 
 export const ValidatorSchema = z.object({

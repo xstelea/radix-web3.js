@@ -13,8 +13,8 @@ permissions:
 
 env:
   CI: true
-  FORCE_COLOR: "0"
-  NO_COLOR: "1"
+  FORCE_COLOR: '0'
+  NO_COLOR: '1'
 
 jobs:
   checks:
@@ -34,7 +34,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm exec biome lint ./packages/**/**/*.ts
+        run: pnpm lint
 
       - name: Test
         run: pnpm test

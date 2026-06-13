@@ -16,18 +16,18 @@ npm install radix-connect
 import {
   createRadixConnectClient,
   createRadixConnectRelayTransport,
-} from 'radix-connect'
+} from 'radix-connect';
 
 // Create transport
 const transport = createRadixConnectRelayTransport({
   handleRequest: async ({ deepLink }) => {
     // Handle the deeplink (e.g. show QR code)
-    console.log(deepLink)
+    console.log(deepLink);
   },
-})
+});
 
 // Create client
-const client = createRadixConnectClient({ transport })
+const client = createRadixConnectClient({ transport });
 
 // Send request to wallet
 const response = await client.sendRequest({
@@ -45,7 +45,7 @@ const response = await client.sendRequest({
       challenge: '...',
     },
   },
-})
+});
 ```
 
 ### API

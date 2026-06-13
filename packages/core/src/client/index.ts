@@ -1,15 +1,3 @@
-import type { WithManifestHelper } from '@/manifests/types';
-import { createRadixNetworkClient } from '@/network';
-import { RadixNetworkId } from '@/network/getRadixGatewayBaseUrl';
-import type { PollTransactionStatusOptions } from '@/network/pollTransactionStatus';
-import {
-  type TransactionNotarizer,
-  type TransactionSigner,
-  createTransactionHelper,
-} from '@/transaction';
-import { createTransactionHeader } from '@/transaction/transactionHeader';
-import { createStringMessage } from '@/transaction/transactionMessage';
-import { transformStringManifest } from '@/transaction/transformStringManifest';
 import type {
   GatewayApiClient,
   TransactionStatusResponse as TransactionStatusResponseType,
@@ -22,6 +10,19 @@ import type {
   TransactionHeader,
   TransactionManifest,
 } from '@steleaio/radix-engine-toolkit';
+
+import type { WithManifestHelper } from '@/manifests/types';
+import { createRadixNetworkClient } from '@/network';
+import { RadixNetworkId } from '@/network/getRadixGatewayBaseUrl';
+import type { PollTransactionStatusOptions } from '@/network/pollTransactionStatus';
+import {
+  type TransactionNotarizer,
+  type TransactionSigner,
+  createTransactionHelper,
+} from '@/transaction';
+import { createTransactionHeader } from '@/transaction/transactionHeader';
+import { createStringMessage } from '@/transaction/transactionMessage';
+import { transformStringManifest } from '@/transaction/transformStringManifest';
 
 export type Manifest = TransactionManifest | string | WithManifestHelper;
 export type TransactionStatusResponse = TransactionStatusResponseType;
@@ -82,8 +83,8 @@ export const createRadixWeb3Client = (options?: CreateWeb3ClientOptions) => {
     transactionHeader
       ? Promise.resolve(transactionHeader)
       : createTransactionHeader(notaryPublicKey ?? getDefaultNotaryPublicKey())(
-        radixNetworkClient,
-      );
+          radixNetworkClient,
+        );
 
   const createTransactionIntentMessage = (value?: Message | string) => {
     const defaultMessage: Message = { kind: 'None' };

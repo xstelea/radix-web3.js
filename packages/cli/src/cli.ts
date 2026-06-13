@@ -1,6 +1,8 @@
 import { dirname, join } from 'node:path';
+
 import { Args, Command, Options } from '@effect/cli';
 import { Console, Effect, Option, Schema } from 'effect';
+
 import {
   deriveVirtualAccountAddress,
   gatewayAccountDetails,

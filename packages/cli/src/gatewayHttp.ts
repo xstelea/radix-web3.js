@@ -1,4 +1,5 @@
 import { Effect } from 'effect';
+
 import { renderJson } from './json';
 
 const parseResponseBody = (text: string): unknown => {

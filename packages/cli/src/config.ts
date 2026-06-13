@@ -1,6 +1,8 @@
 import { homedir } from 'node:os';
 import { dirname, join, parse, resolve } from 'node:path';
+
 import { Data, Effect, Schema } from 'effect';
+
 import { fileExists, readJsonFile } from './platformIo';
 import {
   type ArtifactScope,
@@ -133,9 +135,9 @@ export const resolveRdxConfig = (input: {
 
     const config = {
       ...defaultConfig,
-      ...(globalConfig?.[1] ?? {}),
-      ...(projectConfig?.[1] ?? {}),
-      ...(input.overrides ?? {}),
+      ...globalConfig?.[1],
+      ...projectConfig?.[1],
+      ...input.overrides,
     };
 
     return {

@@ -1,7 +1,7 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
+import type { TransactionId } from '@radix-effects/shared';
 import type { TransactionStatusResponse } from '@radixdlt/babylon-gateway-api-sdk';
 import { Config, Data, Duration, Effect, Schedule } from 'effect';
-import type { TransactionId } from '@radix-effects/shared';
 
 export class TransactionNotResolvedError extends Data.TaggedError(
   'TransactionNotResolvedError',

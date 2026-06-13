@@ -1,6 +1,7 @@
 import { GetLedgerStateService } from '@radix-effects/gateway';
 import { Epoch, type TransactionId } from '@radix-effects/shared';
 import { Data, Effect } from 'effect';
+
 import type { TransactionIntent, TransactionIntentV2 } from './schemas';
 
 export class InvalidEndEpochError extends Data.TaggedError(

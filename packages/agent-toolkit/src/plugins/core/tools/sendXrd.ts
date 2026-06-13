@@ -1,7 +1,7 @@
-import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
-import { Chain, PluginBase, createTool } from '@goat-sdk/core';
 import { manifests } from 'radix-web3.js';
 import { z } from 'zod';
+
+import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
 
 export const sendXRDParametersSchema = z.object({
   to: z.string().describe("The recipient's address"),

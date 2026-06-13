@@ -1,4 +1,5 @@
 import { Config, Effect } from 'effect';
+
 import { GatewayApiClient } from '../gatewayApiClient';
 import type { AtLedgerState } from '../schemas';
 
@@ -19,7 +20,10 @@ export class EntityNonFungibleIdsPage extends Effect.Service<EntityNonFungibleId
         'GatewayApi__Endpoint__StateEntityDetailsPageSize',
       ).pipe(Config.withDefault(100));
       return Effect.fn(function* (input: GetNonFungibleIdsInput) {
-        const makeRequest = (cursor?: string, at_ledger_state?: AtLedgerState) =>
+        const makeRequest = (
+          cursor?: string,
+          at_ledger_state?: AtLedgerState,
+        ) =>
           gatewayClient.state.innerClient.entityNonFungibleIdsPage({
             stateEntityNonFungibleIdsPageRequest: {
               resource_address: input.resourceAddress,

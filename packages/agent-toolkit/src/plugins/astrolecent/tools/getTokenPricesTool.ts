@@ -1,5 +1,6 @@
 import { createTool } from '@goat-sdk/core';
 import { z } from 'zod';
+
 import { astrolecentApiClient } from '../astrolecentApiClient';
 
 export const getTokenPricesParametersSchema = z.object({

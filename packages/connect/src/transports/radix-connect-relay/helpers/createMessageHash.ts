@@ -1,4 +1,5 @@
 import { concatBytes } from '@noble/hashes/utils';
+
 import { blake2b } from '../../../crypto/blake2b';
 
 export const createMessageHash = ({

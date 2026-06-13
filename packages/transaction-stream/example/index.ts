@@ -1,23 +1,22 @@
+import { ScryptoSborValueSchema } from '@radix-effects/gateway';
 import {
+  ConfigProvider,
+  Duration,
   Effect,
+  Fiber,
   Layer,
   Logger,
   ManagedRuntime,
   Option,
   pipe,
-  Stream,
-  Array as A,
-  Duration,
-  Context,
   Ref,
   Schema,
-  Fiber,
-  ConfigProvider,
+  Stream,
 } from 'effect';
-import { TransactionStreamService } from '../src/streamer';
+
 import { ConfigService } from '../src/config';
 import { TransactionDetailsOptInsSchema } from '../src/schemas';
-import { ScryptoSborValueSchema } from '@radix-effects/gateway';
+import { TransactionStreamService } from '../src/streamer';
 
 const runtime = ManagedRuntime.make(Layer.mergeAll(Logger.pretty));
 
@@ -59,7 +58,7 @@ const runnable = Effect.gen(function* () {
   });
 
   const stokenetStreamFiber = yield* Effect.fork(
-    Stream.runForEach(stokenetStream, (res) =>
+    Stream.runForEach(stokenetStream, (_res) =>
       Effect.gen(function* () {
         // yield* Effect.log(res);
         // yield* Effect.sleep(Duration.seconds(60));
@@ -83,7 +82,7 @@ const runnable = Effect.gen(function* () {
         Effect.gen(function* () {
           yield* Effect.forEach(res, (tx) =>
             Effect.gen(function* () {
-              const detailedEvents = yield* pipe(
+              yield* pipe(
                 Option.fromNullable(tx.receipt),
                 Option.flatMap((receipt) =>
                   Option.fromNullable(receipt.detailed_events),

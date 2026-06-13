@@ -1,6 +1,7 @@
 import { HexString, TransactionId } from '@radix-effects/shared';
 import { Convert, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Data, Effect, pipe } from 'effect';
+
 import type { TransactionIntent, TransactionIntentV2 } from './schemas';
 
 export class FailedToCreateIntentHashError extends Data.TaggedError(

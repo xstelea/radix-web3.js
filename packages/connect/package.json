@@ -1,6 +1,15 @@
 {
   "name": "radix-connect",
   "version": "0.3.2",
+  "homepage": "https://xstelea.github.io/radix-web3.js/",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -12,19 +21,14 @@
       "import": "./dist/index.js"
     }
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "build": "tsup"
-  },
-  "devDependencies": {
-    "@types/node": "catalog:",
-    "@types/qrcode-terminal": "^0.12.2",
-    "qrcode-terminal": "^0.12.0",
-    "tsup": "catalog:",
-    "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
   },
   "dependencies": {
     "@noble/curves": "catalog:",
@@ -35,18 +39,14 @@
     "ed25519-hd-key": "catalog:",
     "zod": "catalog:"
   },
-  "files": [
-    "dist"
-  ],
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "homepage": "https://xstelea.github.io/radix-web3.js/",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xstelea/radix-web3.js.git"
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/qrcode-terminal": "^0.12.2",
+    "qrcode-terminal": "^0.12.0",
+    "tsup": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "tags": [
     "radix",

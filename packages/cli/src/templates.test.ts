@@ -1,6 +1,7 @@
 import { it } from '@effect/vitest';
 import { Effect, Schema } from 'effect';
 import { describe, expect } from 'vitest';
+
 import {
   SignatureFileSchema,
   SignatureTemplateSchema,

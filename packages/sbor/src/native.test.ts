@@ -13,6 +13,7 @@ import {
 import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
 import { BigNumber } from 'bignumber.js';
 import { Effect, Either, type Schema } from 'effect';
+
 import {
   type NativeSborSchema,
   accountAddress,

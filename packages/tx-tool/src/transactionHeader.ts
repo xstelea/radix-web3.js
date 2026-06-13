@@ -1,7 +1,8 @@
 import { GetLedgerStateService } from '@radix-effects/gateway';
+import { Epoch, type NetworkId, Nonce } from '@radix-effects/shared';
 import { generateRandomNonce } from '@steleaio/radix-engine-toolkit';
 import { Data, Effect, Option, pipe } from 'effect';
-import { Epoch, type NetworkId, Nonce } from '@radix-effects/shared';
+
 import { EpochService } from './epoch';
 import { NotaryKeyPair } from './notaryKeyPair';
 import { TransactionHeaderSchema } from './schemas';

@@ -1,7 +1,9 @@
-import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
 import { PluginBase, createTool } from '@goat-sdk/core';
 import type { Metadata, createRadixConnectClient } from 'radix-connect';
 import type { z } from 'zod';
+
+import type { RadixWalletClient } from '@/wallet/RadixWalletClient';
+
 import {
   getAccountMethod,
   getAccountParametersSchema,
@@ -44,7 +46,7 @@ export class RadixCorePlugin extends PluginBase<RadixWalletClient> {
         description: 'Get account from radix wallet.',
         parameters: getAccountParametersSchema,
       },
-      (parameters: z.infer<typeof getAccountParametersSchema>) =>
+      (_parameters: z.infer<typeof getAccountParametersSchema>) =>
         getAccountMethod(this.radixConnectClient, this.metadata),
     );
 
