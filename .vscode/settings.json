@@ -4,15 +4,15 @@
       "mode": "auto"
     }
   ],
-  "typescript.preferences.autoImportFileExcludePatterns": ["repos/**"],
-  "javascript.preferences.autoImportFileExcludePatterns": ["repos/**"],
+  "typescript.preferences.autoImportFileExcludePatterns": [".repos/**"],
+  "javascript.preferences.autoImportFileExcludePatterns": [".repos/**"],
   "files.exclude": {
-    "repos/**": true
+    ".repos/**": true
   },
   "files.watcherExclude": {
-    "repos/**": true
+    ".repos/**": true
   },
   "search.exclude": {
-    "repos/**": true
+    ".repos/**": true
   }
 }
