@@ -1,4 +1,4 @@
-import { Schema, SchemaGetter } from 'effect';
+import { Effect, Schema, SchemaGetter } from 'effect';
 
 import { AccessControllerAddress, AccountAddress } from '../brandedTypes';
 
@@ -12,14 +12,18 @@ export const UnsecurifiedAccountSchema = Schema.Struct({
   address: Schema.String,
 }).pipe(
   Schema.decodeTo(UnsecurifiedAccountDecodedSchema, {
-    decode: SchemaGetter.transform((value) => ({
-      type: 'unsecurifiedAccount' as const,
-      address: AccountAddress.make(value.address),
-    })),
-    encode: SchemaGetter.transform((value) => ({
-      type: 'unsecurifiedAccount' as const,
-      address: value.address,
-    })),
+    decode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'unsecurifiedAccount' as const,
+        address: AccountAddress.make(value.address),
+      }),
+    ),
+    encode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'unsecurifiedAccount' as const,
+        address: value.address,
+      }),
+    ),
   }),
 );
 
@@ -35,24 +39,28 @@ export const SecurifiedAccountSchema = Schema.Struct({
   accessControllerAddress: Schema.String,
 }).pipe(
   Schema.decodeTo(SecurifiedAccountDecodedSchema, {
-    decode: SchemaGetter.transform((value) => ({
-      type: 'securifiedAccount' as const,
-      address: AccountAddress.make(value.address),
-      accessControllerAddress: AccessControllerAddress.make(
-        value.accessControllerAddress,
-      ),
-    })),
-    encode: SchemaGetter.transform((value) => ({
-      type: 'securifiedAccount' as const,
-      address: value.address,
-      accessControllerAddress: value.accessControllerAddress,
-    })),
+    decode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'securifiedAccount' as const,
+        address: AccountAddress.make(value.address),
+        accessControllerAddress: AccessControllerAddress.make(
+          value.accessControllerAddress,
+        ),
+      }),
+    ),
+    encode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'securifiedAccount' as const,
+        address: value.address,
+        accessControllerAddress: value.accessControllerAddress,
+      }),
+    ),
   }),
 );
 
 export const AccountSchema = Schema.Union([
-  UnsecurifiedAccountSchema,
   SecurifiedAccountSchema,
+  UnsecurifiedAccountSchema,
 ]);
 
 export type UnsecurifiedAccount = typeof UnsecurifiedAccountSchema.Type;

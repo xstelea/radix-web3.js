@@ -33,16 +33,25 @@ const inspectSignature = (signature: {
   curve: string;
   signature: Uint8Array;
   publicKey: Uint8Array | undefined;
-}): InspectedSignature => {
+}): Effect.Effect<
+  InspectedSignature,
+  FailedToInspectSignedPartialTransactionError
+> => {
   if (signature.curve !== 'Ed25519' || signature.publicKey === undefined) {
-    throw new Error('Only Ed25519 signatures with public keys are supported');
+    return Effect.fail(
+      new FailedToInspectSignedPartialTransactionError({
+        error: new Error(
+          'Only Ed25519 signatures with public keys are supported',
+        ),
+      }),
+    );
   }
 
-  return {
+  return Effect.succeed({
     curve: 'Ed25519',
     signature: Convert.Uint8Array.toHexString(signature.signature),
     publicKey: Convert.Uint8Array.toHexString(signature.publicKey),
-  };
+  });
 };
 
 export const inspectSignedPartialTransaction = (input: {
@@ -70,6 +79,11 @@ export const inspectSignedPartialTransaction = (input: {
         new FailedToInspectSignedPartialTransactionError({ error }),
     });
 
+    const rootSubintentSignatures = yield* Effect.forEach(
+      signedPartialTransaction.rootSubintentSignatures,
+      inspectSignature,
+    );
+
     return {
       signedPartialTransaction,
       rootSubintent,
@@ -77,8 +91,7 @@ export const inspectSignedPartialTransaction = (input: {
         id: hash.id,
         hex: Convert.Uint8Array.toHexString(hash.hash),
       },
-      rootSubintentSignatures:
-        signedPartialTransaction.rootSubintentSignatures.map(inspectSignature),
+      rootSubintentSignatures,
       nonRootSubintentCount:
         signedPartialTransaction.partialTransaction.nonRootSubintents.length,
     };

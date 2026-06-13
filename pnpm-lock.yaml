@@ -471,9 +471,15 @@ importers:
         specifier: 4.0.0-beta.83
         version: 4.0.0-beta.83
     devDependencies:
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.0.0-beta.83(effect@4.0.0-beta.83)(vitest@4.1.8)
       tsdown:
         specifier: 'catalog:'
         version: 0.22.2(tsx@4.19.2)(typescript@5.8.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@22.19.20)(@vitest/coverage-v8@4.1.8)(vite@8.0.16(@types/node@22.19.20)(esbuild@0.27.3)(jiti@2.5.1)(terser@5.37.0)(tsx@4.19.2)(yaml@2.9.0))
 
   packages/transaction-stream:
     dependencies:

@@ -1,7 +1,17 @@
-import type {
-  GatewayApiClient,
+import type { TransactionStatusResponse } from '@radixdlt/babylon-gateway-api-sdk';
+
+type TransactionStatusResponseLike = Pick<
   TransactionStatusResponse,
-} from '@radixdlt/babylon-gateway-api-sdk';
+  'intent_status'
+>;
+
+export type TransactionStatusGateway<
+  TStatus extends TransactionStatusResponseLike = TransactionStatusResponse,
+> = {
+  transaction: {
+    getStatus: (transactionId: string) => Promise<TStatus>;
+  };
+};
 
 export type PollTransactionStatusOptions = Partial<{
   abortSignal: AbortSignal;
@@ -11,9 +21,38 @@ export type PollTransactionStatusOptions = Partial<{
   delayFn: (retry: number) => number;
 }>;
 
+const pollingAbortedError = () => new Error('Transaction polling was aborted');
+
+const sleep = (
+  delay: number,
+  abortSignal: AbortSignal | undefined,
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (abortSignal?.aborted) {
+      reject(pollingAbortedError());
+      return;
+    }
+
+    const timeout = setTimeout(resolve, delay);
+
+    abortSignal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timeout);
+        reject(pollingAbortedError());
+      },
+      { once: true },
+    );
+  });
+
 export const pollTransactionStatusFactory =
-  (gatewayApiClient: GatewayApiClient) =>
-  (transactionId: string, options?: PollTransactionStatusOptions) => {
+  <TStatus extends TransactionStatusResponseLike = TransactionStatusResponse>(
+    gatewayApiClient: TransactionStatusGateway<TStatus>,
+  ) =>
+  async (
+    transactionId: string,
+    options?: PollTransactionStatusOptions,
+  ): Promise<TStatus> => {
     const {
       abortSignal,
       baseDelay = 1000,
@@ -22,48 +61,24 @@ export const pollTransactionStatusFactory =
       delayFn = (retry: number) => Math.min(baseDelay * 2 ** retry, maxDelay),
     } = options || {};
 
-    return new Promise<TransactionStatusResponse>((resolve, reject) => {
-      void (async () => {
-        let response: TransactionStatusResponse | undefined;
-        let retry = 0;
+    if (abortSignal?.aborted) {
+      throw pollingAbortedError();
+    }
 
-        if (abortSignal?.aborted) {
-          reject(new Error('Transaction polling was aborted'));
-          return;
-        }
+    let retry = 0;
 
-        abortSignal?.addEventListener(
-          'abort',
-          () => {
-            reject(new Error('Transaction polling was aborted'));
-          },
-          { once: true },
-        );
+    while (retry < maxRetries) {
+      const response =
+        await gatewayApiClient.transaction.getStatus(transactionId);
 
-        try {
-          while (!response && retry < maxRetries) {
-            const result =
-              await gatewayApiClient.transaction.getStatus(transactionId);
+      if (response.intent_status !== 'Pending') {
+        return response;
+      }
 
-            if (result.intent_status !== 'Pending') {
-              response = result;
-              break;
-            }
+      const delay = delayFn(retry);
+      retry = retry + 1;
+      await sleep(delay, abortSignal);
+    }
 
-            const delay = delayFn(retry);
-            retry = retry + 1;
-            await new Promise((resolve) => setTimeout(resolve, delay));
-          }
-
-          if (!response) {
-            reject(new Error('Transaction polling timed out'));
-            return;
-          }
-
-          resolve(response);
-        } catch (error) {
-          reject(error);
-        }
-      })();
-    });
+    throw new Error('Transaction polling timed out');
   };

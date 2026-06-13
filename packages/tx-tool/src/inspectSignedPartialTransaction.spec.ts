@@ -6,7 +6,7 @@ import {
   type SubintentV2,
 } from '@steleaio/radix-engine-toolkit';
 import { assert, describe, it } from '@effect/vitest';
-import { Effect } from 'effect';
+import { Effect, Result } from 'effect';
 import { inspectSignedPartialTransaction } from './inspectSignedPartialTransaction';
 
 const publicKeyHex =
@@ -88,6 +88,25 @@ describe('Signed Partial Transaction Inspection', () => {
         },
       ]);
       assert.strictEqual(inspection.nonRootSubintentCount, 0);
+    }),
+  );
+
+  it.effect('returns a tagged inspection error for invalid signed partial transaction bytes', () =>
+    Effect.gen(function* () {
+      const result = yield* Effect.result(
+        inspectSignedPartialTransaction({
+          networkId: 1,
+          signedPartialTransactionHex: 'not-hex',
+        }),
+      );
+
+      assert.isTrue(Result.isFailure(result));
+      if (Result.isFailure(result)) {
+        assert.strictEqual(
+          result.failure._tag,
+          'FailedToInspectSignedPartialTransactionError',
+        );
+      }
     }),
   );
 });

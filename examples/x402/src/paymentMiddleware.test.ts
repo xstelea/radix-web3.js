@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@effect/vitest';
+import { assert, describe, expect, it } from '@effect/vitest';
 import { Effect } from 'effect';
 import { Hono } from 'hono';
 
@@ -94,6 +94,44 @@ describe('x402 Payment Middleware', () => {
       error: 'invalid_payment_payload',
     });
   });
+
+  it.effect(
+    'keeps the Protected Route Surface locked when settlement throws before returning an Effect',
+    () =>
+      Effect.gen(function* () {
+        const app = new Hono();
+
+        app.get(
+          '/protected/reference.md',
+          createX402PaymentMiddleware({
+            requirements,
+            settlePayment: () => {
+              throw new Error('settlement backend unavailable');
+            },
+          }),
+          (context) => context.text('paid resource'),
+        );
+
+        const response = yield* Effect.tryPromise(() =>
+          Promise.resolve(
+            app.request('/protected/reference.md', {
+              headers: {
+                'X-PAYMENT': JSON.stringify({
+                  x402Version: 2,
+                  payload: { transaction: 'signed-partial-transaction-hex' },
+                }),
+              },
+            }),
+          ),
+        );
+
+        assert.strictEqual(response.status, 402);
+        assert.deepEqual(yield* Effect.tryPromise(() => response.json()), {
+          error: 'payment_not_settled',
+          paymentStatus: 'SettlementFailed',
+        });
+      }),
+  );
 
   it('reuses in-memory Settlement Records after CommittedSuccess', async () => {
     const app = new Hono();

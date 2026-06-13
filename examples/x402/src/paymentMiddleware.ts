@@ -74,11 +74,18 @@ export const createX402PaymentMiddleware = ({
             ? Effect.succeed({
                 status: 'MissingSettlementHandler',
               } satisfies SettlementResult)
-            : settlePayment({
-                signedPartialTransactionHex: parsedPaymentPayload.transaction,
-                requirements,
-                resourceUrl: requirements.resourceUrl,
-              }).pipe(
+            : Effect.suspend(() =>
+                settlePayment({
+                  signedPartialTransactionHex: parsedPaymentPayload.transaction,
+                  requirements,
+                  resourceUrl: requirements.resourceUrl,
+                }),
+              ).pipe(
+                Effect.catchDefect(() =>
+                  Effect.succeed({
+                    status: 'SettlementFailed',
+                  } satisfies SettlementResult),
+                ),
                 Effect.catch(() =>
                   Effect.succeed({
                     status: 'SettlementFailed',
