@@ -1,41 +1,41 @@
 import type { EntityFungiblesPageRequest } from '@radixdlt/babylon-gateway-api-sdk';
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from '../gatewayApiClient';
 import type { AtLedgerState } from '../schemas';
 
-type EntityFungiblesPageInput = Omit<
+export type EntityFungiblesPageInput = Omit<
   EntityFungiblesPageRequest['stateEntityFungiblesPageRequest'],
   'at_ledger_state'
 > & {
   at_ledger_state?: AtLedgerState;
 };
 
-export class EntityFungiblesPage extends Effect.Service<EntityFungiblesPage>()(
+export class EntityFungiblesPage extends Context.Service<EntityFungiblesPage>()(
   'EntityFungiblesPage',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(
         'GatewayApi__Endpoint__MaxPageSize',
       ).pipe(Config.withDefault(100));
 
-      const entityFungiblesPage = Effect.fnUntraced(function* (
-        input: EntityFungiblesPageInput,
-      ) {
-        const result =
-          yield* gatewayClient.state.innerClient.entityFungiblesPage({
-            stateEntityFungiblesPageRequest: {
-              ...input,
-              limit_per_page: pageSize,
-            },
-          });
-        return result;
-      });
+      const entityFungiblesPage = Effect.fn('EntityFungiblesPage.getPage')(
+        function* (input: EntityFungiblesPageInput) {
+          const result =
+            yield* gatewayClient.state.innerClient.entityFungiblesPage({
+              stateEntityFungiblesPageRequest: {
+                ...input,
+                limit_per_page: pageSize,
+              },
+            });
+          return result;
+        },
+      );
 
-      const entityFungiblePageExhaustive = Effect.fnUntraced(function* (
-        input: EntityFungiblesPageInput,
-      ) {
+      const entityFungiblePageExhaustive = Effect.fn(
+        'EntityFungiblesPage.exhaustive',
+      )(function* (input: EntityFungiblesPageInput) {
         const result = yield* entityFungiblesPage(input);
         const paginationState = {
           state_version: result.ledger_state.state_version,
@@ -60,4 +60,9 @@ export class EntityFungiblesPage extends Effect.Service<EntityFungiblesPage>()(
       return entityFungiblePageExhaustive;
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

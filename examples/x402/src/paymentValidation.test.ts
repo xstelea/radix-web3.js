@@ -1,5 +1,6 @@
+import { assert, describe, it } from '@effect/vitest';
 import { Effect } from 'effect';
-import { describe, expect, it } from 'vitest';
+
 import { paymentSubintentManifest } from './exactRadix';
 import type { PaymentRequirements } from './paymentRequirements';
 import {
@@ -52,44 +53,48 @@ const inspection: PaymentSubintentInspection = {
 };
 
 describe('Exact Payment Subintent validation', () => {
-  it('accepts the exact sponsored payment Subintent shape and derives payer details', async () => {
-    const result = await Effect.runPromise(
-      validateExactPaymentSubintent({
-        inspection,
-        requirements,
-      }),
-    );
-
-    expect(result).toEqual({
-      payerAccount:
-        'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
-      subintentHash: 'subtxid_rdx1valid',
-    });
-  });
-
-  it('rejects variants from the exact sponsored payment Subintent shape', async () => {
-    const error = await Effect.runPromise(
-      Effect.flip(
-        validateExactPaymentSubintent({
+  it.effect(
+    'accepts the exact sponsored payment Subintent shape and derives payer details',
+    () =>
+      Effect.gen(function* () {
+        const result = yield* validateExactPaymentSubintent({
+          inspection,
           requirements,
-          inspection: {
-            ...inspection,
-            rootSubintent: {
-              intentCore: {
-                ...inspection.rootSubintent.intentCore,
-                instructions:
-                  inspection.rootSubintent.intentCore.instructions.replace(
-                    'Decimal("1.5")',
-                    'Decimal("2")',
-                  ),
+        });
+
+        assert.deepStrictEqual(result, {
+          payerAccount:
+            'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
+          subintentHash: 'subtxid_rdx1valid',
+        });
+      }),
+  );
+
+  it.effect(
+    'rejects variants from the exact sponsored payment Subintent shape',
+    () =>
+      Effect.gen(function* () {
+        const error = yield* Effect.flip(
+          validateExactPaymentSubintent({
+            requirements,
+            inspection: {
+              ...inspection,
+              rootSubintent: {
+                intentCore: {
+                  ...inspection.rootSubintent.intentCore,
+                  instructions:
+                    inspection.rootSubintent.intentCore.instructions.replace(
+                      'Decimal("1.5")',
+                      'Decimal("2")',
+                    ),
+                },
               },
             },
-          },
-        }),
-      ),
-    );
+          }),
+        );
 
-    expect(error).toBeInstanceOf(ExactPaymentSubintentValidationError);
-    expect(error.code).toBe('NON_EXACT_PAYMENT_SUBINTENT');
-  });
+        assert.instanceOf(error, ExactPaymentSubintentValidationError);
+        assert.strictEqual(error.code, 'NON_EXACT_PAYMENT_SUBINTENT');
+      }),
+  );
 });

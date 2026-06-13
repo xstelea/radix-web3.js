@@ -1,4 +1,4 @@
-import { it } from "@effect/vitest";
+import { describe, expect, layer } from "@effect/vitest";
 import { GatewayApiClient, PreviewTransactionV2 } from "@radix-effects/gateway";
 import {
   RadixEngineToolkit,
@@ -32,7 +32,6 @@ import { createAccount } from "./test-helpers/createAccount";
 import { TransactionHeader } from "./transactionHeader";
 import { TransactionHeaderV2 } from "./transactionHeaderV2";
 import { TransactionStatus } from "./transactionStatus";
-import { describe, expect } from "vitest";
 
 const signerLayer = Signer.makePrivateKeySigner(
   Redacted.make(
@@ -58,14 +57,15 @@ const testLayer = Layer.mergeAll(
   Layer.provide(
     GatewayApiClient.Default.pipe(
       Layer.provide(
-        Layer.setConfigProvider(ConfigProvider.fromJson({ NETWORK_ID: 2 })),
+        ConfigProvider.layer(ConfigProvider.fromUnknown({ NETWORK_ID: 2 })),
       ),
     ),
   ),
 );
 
 describe("CreateTransactionIntent", () => {
-  it.live(
+  layer(testLayer, { excludeTestServices: true })((it) => {
+    it.effect(
     "should create, compile, submit, and poll a transaction intent",
     () =>
       Effect.gen(function* () {
@@ -111,15 +111,14 @@ describe("CreateTransactionIntent", () => {
         expect(statusResult).toBeDefined();
       }).pipe(
         Effect.tapError(Effect.logError),
-        Effect.provide(Logger.pretty),
-        Effect.provide(testLayer),
+        Effect.provide(Logger.layer([Logger.consolePretty()])),
       ),
     {
       timeout: 300_000,
     },
-  );
+    );
 
-  it.live(
+    it.effect(
     "should submit a v2 transaction when root and subintent headers differ",
     () =>
       Effect.gen(function* () {
@@ -343,11 +342,11 @@ describe("CreateTransactionIntent", () => {
         expect(statusResult.intent_status).toBe("CommittedSuccess");
       }).pipe(
         Effect.tapError(Effect.logError),
-        Effect.provide(Logger.pretty),
-        Effect.provide(testLayer),
+        Effect.provide(Logger.layer([Logger.consolePretty()])),
       ),
     {
       timeout: 300_000,
     },
-  );
+    );
+  });
 });

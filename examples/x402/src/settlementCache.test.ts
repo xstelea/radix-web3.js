@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@effect/vitest';
+
 import type { PaymentRequirements } from './paymentRequirements';
 import { settlementCacheKey } from './settlementCache';
 

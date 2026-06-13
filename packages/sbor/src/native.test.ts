@@ -12,7 +12,7 @@ import {
 } from '@radix-effects/shared';
 import type { ProgrammaticScryptoSborValue } from '@radixdlt/babylon-gateway-api-sdk';
 import { BigNumber } from 'bignumber.js';
-import { Effect, Either, type Schema } from 'effect';
+import { Effect, Result, type Schema } from 'effect';
 
 import {
   type NativeSborSchema,
@@ -57,12 +57,12 @@ import {
 const decodeFailure = <Decoded, Encoded>(
   schema: NativeSborSchema<Decoded, Encoded>,
   input: unknown,
-) => Effect.either(decodeSbor(schema)(input));
+) => Effect.result(decodeSbor(schema)(input));
 
 const encodeFailure = <Decoded, Encoded>(
   schema: NativeSborSchema<Decoded, Encoded>,
   input: Decoded,
-) => Effect.either(encodeSbor(schema)(input));
+) => Effect.result(encodeSbor(schema)(input));
 
 describe('native SBOR Effect schemas', () => {
   it.effect(
@@ -459,7 +459,7 @@ describe('native SBOR Effect schemas', () => {
     Effect.gen(function* () {
       const result = yield* encodeFailure(u32, new BigNumber('4294967296'));
 
-      assert.isTrue(Either.isLeft(result));
+      assert.isTrue(Result.isFailure(result));
     }),
   );
 
@@ -509,15 +509,17 @@ describe('native SBOR Effect schemas', () => {
       ).toBe('-170141183460469231731687303715884105728');
 
       assert.isTrue(
-        Either.isLeft(yield* decodeFailure(u8, { kind: 'U8', value: '256' })),
+        Result.isFailure(
+          yield* decodeFailure(u8, { kind: 'U8', value: '256' }),
+        ),
       );
       assert.isTrue(
-        Either.isLeft(
+        Result.isFailure(
           yield* decodeFailure(u32, { kind: 'U32', value: 'not-an-int' }),
         ),
       );
       assert.isTrue(
-        Either.isLeft(yield* encodeFailure(u32, new BigNumber('1.5'))),
+        Result.isFailure(yield* encodeFailure(u32, new BigNumber('1.5'))),
       );
     }),
   );
@@ -531,12 +533,14 @@ describe('native SBOR Effect schemas', () => {
         })).toString(),
       ).toBe('1.23456789');
       assert.isTrue(
-        Either.isLeft(
+        Result.isFailure(
           yield* decodeFailure(number, { kind: 'String', value: '1' }),
         ),
       );
       assert.isTrue(
-        Either.isLeft(yield* decodeFailure(number, { kind: 'U32', value: 1 })),
+        Result.isFailure(
+          yield* decodeFailure(number, { kind: 'U32', value: 1 }),
+        ),
       );
     }),
   );
@@ -575,7 +579,7 @@ describe('native SBOR Effect schemas', () => {
   it.effect('rejects semantic scalars with the wrong SBOR type name', () =>
     Effect.gen(function* () {
       assert.isTrue(
-        Either.isLeft(
+        Result.isFailure(
           yield* decodeFailure(resourceAddress, {
             kind: 'Reference',
             type_name: 'ComponentAddress',
@@ -584,7 +588,7 @@ describe('native SBOR Effect schemas', () => {
         ),
       );
       assert.isTrue(
-        Either.isLeft(
+        Result.isFailure(
           yield* decodeFailure(vaultAddress, {
             kind: 'Own',
             type_name: 'KeyValueStore',
@@ -605,7 +609,7 @@ describe('native SBOR Effect schemas', () => {
         }),
       ).toBe('deadbeef');
       assert.isTrue(
-        Either.isLeft(
+        Result.isFailure(
           yield* decodeFailure(bytes, {
             kind: 'Bytes',
             element_kind: 'U16',
@@ -805,7 +809,7 @@ describe('native SBOR Effect schemas', () => {
         }),
       ).toEqual({ variant: 'None' });
       assert.isTrue(
-        Either.isLeft(
+        Result.isFailure(
           yield* decodeFailure(MaybeString, {
             kind: 'Enum',
             type_name: 'Option',
@@ -861,7 +865,7 @@ describe('native SBOR Effect schemas', () => {
         fields: [{ kind: 'String', field_name: 'name', value: 'Ada' }],
       });
       assert.isTrue(
-        Either.isLeft(
+        Result.isFailure(
           yield* decodeFailure(Event, {
             kind: 'Enum',
             variant_id: '9',

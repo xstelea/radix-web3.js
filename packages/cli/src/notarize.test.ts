@@ -1,13 +1,16 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { it } from '@effect/vitest';
+import { afterEach, assert, describe, it, vi } from '@effect/vitest';
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
 
-import { notarizeTransactionArtifact } from './notarize';
 import {
+  gatewayNotarizePreview,
+  notarizeTransactionArtifact,
+} from './notarize';
+import {
+  NetworkSchema,
   SignatureTemplateSchema,
   type SigningRequest,
   SigningRequestSchema,
@@ -17,6 +20,7 @@ import { makeTempDir } from './test-helpers';
 const transactionId = 'txid';
 const hashHex = 'aabbcc';
 const notaryPublicKeyHex = '1'.repeat(64);
+const stokenet = NetworkSchema.make('stokenet');
 const stokenetFaucetManifest =
   'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free"; CALL_METHOD Address("account_tdx_2_1284vgk4yrqj7p0plsa2hptcxrt9lpw2s446jlu8egcl7zwk4wzg36g") "try_deposit_batch_or_abort" Expression("ENTIRE_WORKTOP") Enum<0u8>();';
 
@@ -31,6 +35,39 @@ const signingRequest: SigningRequest = {
 };
 
 describe('tx notarize workflow', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.effect('fails notarize preview when the gateway receipt fails', () =>
+    Effect.gen(function* () {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            receipt: {
+              status: 'Failed',
+              error_message: 'signature rejected',
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = yield* Effect.result(
+        gatewayNotarizePreview({
+          config: { network: stokenet },
+          previewTransactionHex: 'aa',
+        }),
+      );
+
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.strictEqual(result.failure._tag, 'NotarizeError');
+        assert.strictEqual(result.failure.code, 'PREVIEW_FAILED');
+      }
+    }),
+  );
+
   it.effect(
     'creates a notary signing request after required signatures are complete',
     () =>
@@ -44,7 +81,7 @@ describe('tx notarize workflow', () => {
           transactionId,
         });
 
-        expect(result).toMatchObject({
+        assert.deepInclude(result, {
           transactionId,
           signedTransactionIntentPath: join(
             artifactPath,
@@ -60,40 +97,42 @@ describe('tx notarize workflow', () => {
           ),
         });
 
-        const requestJson = yield* Effect.promise(() =>
+        const requestJson = yield* Effect.tryPromise(() =>
           readFile(result.notarySigningRequestPath, 'utf8'),
         );
         const request = Schema.decodeUnknownSync(SigningRequestSchema)(
           JSON.parse(requestJson),
         );
-        expect(request).toMatchObject({
+        assert.deepInclude(request, {
           transactionId,
           scope: { kind: 'notary' },
           account: null,
         });
-        expect(request.hash.hex).toMatch(/^[0-9a-f]{64}$/);
+        assert.match(request.hash.hex, /^[0-9a-f]{64}$/);
 
-        const templateJson = yield* Effect.promise(() =>
+        const templateJson = yield* Effect.tryPromise(() =>
           readFile(result.notarySignatureTemplatePath, 'utf8'),
         );
         const template = Schema.decodeUnknownSync(SignatureTemplateSchema)(
           JSON.parse(templateJson),
         );
-        expect(template).toMatchObject({
+        assert.deepInclude(template, {
           transactionId,
           scope: { kind: 'notary' },
           publicKey: { curve: 'Ed25519', hex: notaryPublicKeyHex },
         });
 
         const prepared = JSON.parse(
-          yield* Effect.promise(() =>
+          yield* Effect.tryPromise(() =>
             readFile(join(artifactPath, 'prepared.json'), 'utf8'),
           ),
         );
-        expect(prepared.signingRequests).toContain(
+        assert.include(
+          prepared.signingRequests,
           'signing-requests/notary.json',
         );
-        expect(prepared.signatureTemplates).toContain(
+        assert.include(
+          prepared.signatureTemplates,
           'signature-templates/notary.json',
         );
       }),
@@ -107,13 +146,13 @@ describe('tx notarize workflow', () => {
         const artifactPath = join(artifactRoot, transactionId);
         yield* writeArtifactFixture(artifactPath, { complete: false });
 
-        const result = yield* Effect.either(
+        const result = yield* Effect.result(
           notarizeTransactionArtifact({ artifactRoot, transactionId }),
         );
 
-        expect(result._tag).toBe('Left');
-        if (result._tag === 'Left') {
-          expect(result.left).toMatchObject({
+        assert.strictEqual(result._tag, 'Failure');
+        if (result._tag === 'Failure') {
+          assert.deepInclude(result.failure, {
             _tag: 'NotarizeError',
             code: 'INCOMPLETE_SIGNATURES',
           });
@@ -130,13 +169,13 @@ describe('tx notarize workflow', () => {
         omitSignaturesFile: true,
       });
 
-      const result = yield* Effect.either(
+      const result = yield* Effect.result(
         notarizeTransactionArtifact({ artifactRoot, transactionId }),
       );
 
-      expect(result._tag).toBe('Left');
-      if (result._tag === 'Left') {
-        expect(result.left).toMatchObject({
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.deepInclude(result.failure, {
           _tag: 'NotarizeError',
           code: 'MISSING_SIGNATURE_FILE',
         });
@@ -160,7 +199,8 @@ describe('tx notarize workflow', () => {
           transactionId,
         });
 
-        expect(result.notarySigningRequestPath).toBe(
+        assert.strictEqual(
+          result.notarySigningRequestPath,
           join(artifactPath, 'signing-requests/notary.json'),
         );
       }),
@@ -172,7 +212,7 @@ describe('tx notarize workflow', () => {
       const artifactPath = join(artifactRoot, transactionId);
       yield* writeArtifactFixture(artifactPath, { complete: true });
 
-      const result = yield* Effect.either(
+      const result = yield* Effect.result(
         notarizeTransactionArtifact({
           artifactRoot,
           transactionId,
@@ -181,13 +221,13 @@ describe('tx notarize workflow', () => {
         }),
       );
 
-      expect(result._tag).toBe('Left');
-      const notaryRequestExists = yield* Effect.promise(() =>
+      assert.strictEqual(result._tag, 'Failure');
+      const notaryRequestExists = yield* Effect.tryPromise(() =>
         access(join(artifactPath, 'signing-requests/notary.json'))
           .then(() => true)
           .catch(() => false),
       );
-      expect(notaryRequestExists).toBe(false);
+      assert.isFalse(notaryRequestExists);
     }),
   );
 
@@ -208,13 +248,13 @@ describe('tx notarize workflow', () => {
           previewSignedTransactionIntent: () => Effect.void,
         });
 
-        const requestJson = yield* Effect.promise(() =>
+        const requestJson = yield* Effect.tryPromise(() =>
           readFile(result.notarySigningRequestPath, 'utf8'),
         );
         const request = Schema.decodeUnknownSync(SigningRequestSchema)(
           JSON.parse(requestJson),
         );
-        expect(request.scope).toEqual({ kind: 'notary' });
+        assert.deepEqual(request.scope, { kind: 'notary' });
       }),
   );
 });
@@ -228,7 +268,7 @@ const writeArtifactFixture = (
     omitSignaturesFile?: boolean;
   },
 ) =>
-  Effect.promise(async () => {
+  Effect.tryPromise(async () => {
     const childSubintent = input.withSubintent
       ? {
           intentCore: {

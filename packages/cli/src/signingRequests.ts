@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 
 import {
   PLACEHOLDER_PUBLIC_KEY_HEX,
@@ -159,11 +159,14 @@ export const generateSigningRequests = (input: {
     return { requests, templates };
   });
 
-export class SigningRequestGenerator extends Effect.Service<SigningRequestGenerator>()(
+export class SigningRequestGenerator extends Context.Service<SigningRequestGenerator>()(
   'SigningRequestGenerator',
   {
-    sync: () => ({
+    make: Effect.succeed({
       generateSigningRequests,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

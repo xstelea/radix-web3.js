@@ -1,4 +1,5 @@
 import { Effect } from 'effect';
+
 import type { PaymentRequirements } from './paymentRequirements';
 
 export type ValidatedPaymentSettlementInput = {

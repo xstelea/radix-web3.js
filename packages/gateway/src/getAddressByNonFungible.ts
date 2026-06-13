@@ -1,4 +1,4 @@
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 import { GetNonFungibleLocationService } from './getNonFungibleLocation';
 import type { AtLedgerState } from './schemas';
@@ -13,11 +13,10 @@ export type GetAddressByNonFungibleServiceInput = {
   at_ledger_state?: AtLedgerState;
 };
 
-export class GetAddressByNonFungibleService extends Effect.Service<GetAddressByNonFungibleService>()(
+export class GetAddressByNonFungibleService extends Context.Service<GetAddressByNonFungibleService>()(
   'GetAddressByNonFungibleService',
   {
-    dependencies: [GetNonFungibleLocationService.Default],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const getNonFungibleLocationService =
         yield* GetNonFungibleLocationService;
       return Effect.fn(function* (input: GetAddressByNonFungibleServiceInput) {
@@ -70,4 +69,9 @@ export class GetAddressByNonFungibleService extends Effect.Service<GetAddressByN
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GetNonFungibleLocationService.Default),
+  );
+}

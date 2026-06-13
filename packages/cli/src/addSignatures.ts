@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { Effect, Schema } from 'effect';
+import { Context, Effect, Layer, Schema } from 'effect';
 
 import {
   type SignatureImportResult,
@@ -26,19 +26,19 @@ const readJson = (path: string) => readJsonFile(path, (reason) => reason);
 
 const readPrepared = (artifactPath: string) =>
   readJson(join(artifactPath, 'prepared.json')).pipe(
-    Effect.flatMap(Schema.decodeUnknown(PreparedTransactionSchema)),
+    Effect.flatMap(Schema.decodeUnknownEffect(PreparedTransactionSchema)),
   );
 
 const readSigningRequest = (artifactPath: string, requestPath: string) =>
   readJson(join(artifactPath, requestPath)).pipe(
-    Effect.flatMap(Schema.decodeUnknown(SigningRequestSchema)),
+    Effect.flatMap(Schema.decodeUnknownEffect(SigningRequestSchema)),
   );
 
 const readExistingSignatures = (artifactPath: string) =>
   readJson(join(artifactPath, 'signatures.json')).pipe(
-    Effect.flatMap(Schema.decodeUnknown(SignatureFileSchema)),
+    Effect.flatMap(Schema.decodeUnknownEffect(SignatureFileSchema)),
     Effect.map((file) => file.signatures),
-    Effect.catchAll(() => Effect.succeed([] as SignatureEntry[])),
+    Effect.catch(() => Effect.succeed([] as SignatureEntry[])),
   );
 
 const requestComplete = (
@@ -98,11 +98,14 @@ export const addSignaturesToArtifact = (input: {
     };
   });
 
-export class AddSignaturesWorkflow extends Effect.Service<AddSignaturesWorkflow>()(
+export class AddSignaturesWorkflow extends Context.Service<AddSignaturesWorkflow>()(
   'AddSignaturesWorkflow',
   {
-    sync: () => ({
+    make: Effect.succeed({
       addSignaturesToArtifact,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

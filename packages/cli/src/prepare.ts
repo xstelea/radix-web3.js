@@ -9,11 +9,11 @@ import {
   type TransactionIntentV2,
   TransactionV2Builder,
 } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect, Schema } from 'effect';
+import { Context, Data, Effect, Layer, Schema } from 'effect';
 
 import { createTransactionArtifactDirectory } from './artifacts';
 import type { Network, ResolvedRdxConfig } from './config';
-import { gatewayErrorMessage } from './gatewayHttp';
+import { gatewayErrorMessage, gatewayResponseJson } from './gatewayHttp';
 import {
   makeDirectory,
   readFileString,
@@ -56,6 +56,23 @@ const gatewayBaseUrl = (network: Network) =>
   network === 'stokenet'
     ? 'https://stokenet.radixdlt.com'
     : 'https://mainnet.radixdlt.com';
+
+const GatewayPreviewResponseSchema = Schema.Struct({
+  receipt: Schema.optional(
+    Schema.Struct({
+      status: Schema.optional(Schema.String),
+      error_message: Schema.optional(Schema.String),
+    }),
+  ),
+});
+
+const GatewayStatusResponseSchema = Schema.Struct({
+  ledger_state: Schema.optional(
+    Schema.Struct({
+      epoch: Schema.optional(Schema.Number),
+    }),
+  ),
+});
 
 type EpochWindow = {
   startEpochInclusive: number;
@@ -239,76 +256,76 @@ export const gatewayPreparePreview = (input: {
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   previewTransactionHex: string;
 }) =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/preview-v2`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            preview_transaction: {
-              type: 'Compiled',
-              preview_transaction_hex: input.previewTransactionHex,
-            },
-            flags: {
-              assume_all_signature_proofs: true,
-              skip_epoch_check: true,
-              use_free_credit: true,
-            },
-            opt_ins: {
-              core_api_receipt: false,
-            },
-          }),
-        },
+  Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        fetch(
+          `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/preview-v2`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              preview_transaction: {
+                type: 'Compiled',
+                preview_transaction_hex: input.previewTransactionHex,
+              },
+              flags: {
+                assume_all_signature_proofs: true,
+                skip_epoch_check: true,
+                use_free_credit: true,
+              },
+              opt_ins: {
+                core_api_receipt: false,
+              },
+            }),
+          },
+        ),
+      catch: (reason) => reason,
+    });
+    if (!response.ok) {
+      const message = yield* gatewayErrorMessage('Gateway preview', response);
+      return yield* Effect.fail(new Error(message));
+    }
+    const body = yield* gatewayResponseJson(response).pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(GatewayPreviewResponseSchema)),
+    );
+    if (body.receipt && body.receipt.status !== 'Succeeded') {
+      return yield* Effect.fail(
+        new Error(body.receipt.error_message ?? 'Preview failed'),
       );
-      if (!response.ok) {
-        throw new Error(
-          await Effect.runPromise(
-            gatewayErrorMessage('Gateway preview', response),
-          ),
-        );
-      }
-      const body = (await response.json()) as {
-        receipt?: { status?: string; error_message?: string };
-      };
-      if (body.receipt && body.receipt.status !== 'Succeeded') {
-        throw new Error(body.receipt.error_message ?? 'Preview failed');
-      }
-    },
-    catch: (reason) => new PreparePreviewError({ reason }),
-  });
+    }
+  }).pipe(Effect.mapError((reason) => new PreparePreviewError({ reason })));
 
 export const gatewayCurrentEpoch = (input: {
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
 }) =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/status/gateway-status`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: '{}',
-        },
+  Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        fetch(
+          `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/status/gateway-status`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{}',
+          },
+        ),
+      catch: (reason) => reason,
+    });
+    if (!response.ok) {
+      const message = yield* gatewayErrorMessage('Gateway status', response);
+      return yield* Effect.fail(new Error(message));
+    }
+    const body = yield* gatewayResponseJson(response).pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(GatewayStatusResponseSchema)),
+    );
+    if (body.ledger_state?.epoch === undefined) {
+      return yield* Effect.fail(
+        new Error('Gateway status response did not include an epoch'),
       );
-      if (!response.ok) {
-        throw new Error(
-          await Effect.runPromise(
-            gatewayErrorMessage('Gateway status', response),
-          ),
-        );
-      }
-      const body = (await response.json()) as {
-        ledger_state?: { epoch?: unknown };
-      };
-      if (typeof body.ledger_state?.epoch !== 'number') {
-        throw new Error('Gateway status response did not include an epoch');
-      }
-      return body.ledger_state.epoch;
-    },
-    catch: (reason) => new PreparePreviewError({ reason }),
-  });
+    }
+    return body.ledger_state.epoch;
+  }).pipe(Effect.mapError((reason) => new PreparePreviewError({ reason })));
 
 export const prepareTransactionArtifacts = (input: {
   artifactRoot: string;
@@ -328,7 +345,7 @@ export const prepareTransactionArtifacts = (input: {
     );
     const subintentsFile = input.subintentsPath
       ? yield* readJsonFile(input.subintentsPath, (reason) => reason).pipe(
-          Effect.flatMap(Schema.decodeUnknown(SubintentsFileSchema)),
+          Effect.flatMap(Schema.decodeUnknownEffect(SubintentsFileSchema)),
         )
       : undefined;
     const childSubintents = yield* Effect.all(
@@ -525,13 +542,16 @@ export const prepareTransactionArtifacts = (input: {
     };
   });
 
-export class TransactionPreparer extends Effect.Service<TransactionPreparer>()(
+export class TransactionPreparer extends Context.Service<TransactionPreparer>()(
   'TransactionPreparer',
   {
-    sync: () => ({
+    make: Effect.succeed({
       prepareTransactionArtifacts,
       gatewayPreparePreview,
       gatewayCurrentEpoch,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

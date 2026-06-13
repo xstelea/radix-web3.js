@@ -1,20 +1,30 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
-import { Array as A, Effect, Option, Order, pipe, Ref, Stream } from 'effect';
+import {
+  Array as A,
+  Context,
+  Effect,
+  Layer,
+  Option,
+  Order,
+  pipe,
+  Ref,
+  Stream,
+} from 'effect';
 
 import { ConfigService } from './config';
 
-export class TransactionStreamService extends Effect.Service<TransactionStreamService>()(
+export class TransactionStreamService extends Context.Service<TransactionStreamService>()(
   'TransactionStreamService',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayApiClient = yield* GatewayApiClient;
 
       const currentStateVersion = yield* gatewayApiClient.status
         .getCurrent()
-        .pipe(Effect.catchAll(Effect.die));
+        .pipe(Effect.catch(Effect.die));
       yield* Effect.logDebug(currentStateVersion.ledger_state);
 
-      return Stream.paginateEffect(1, () =>
+      return Stream.unfold(1, () =>
         Effect.gen(function* () {
           const configRef = yield* ConfigService;
           const config = yield* configRef.pipe(Ref.get);
@@ -24,7 +34,7 @@ export class TransactionStreamService extends Effect.Service<TransactionStreamSe
               onNone: () =>
                 gatewayApiClient.status.getCurrent().pipe(
                   Effect.map((res) => res.ledger_state.state_version),
-                  Effect.catchAll(Effect.die),
+                  Effect.catch(Effect.die),
                 ),
               onSome: (version) => Effect.succeed(version),
             }),
@@ -62,13 +72,13 @@ export class TransactionStreamService extends Effect.Service<TransactionStreamSe
 
           const firstItem = pipe(
             result.items,
-            A.sortBy(Order.mapInput(Order.number, (tx) => tx.state_version)),
+            A.sortBy(Order.mapInput(Order.Number, (tx) => tx.state_version)),
             A.head,
           );
 
           const lastItem = pipe(
             result.items,
-            A.sortBy(Order.mapInput(Order.number, (tx) => tx.state_version)),
+            A.sortBy(Order.mapInput(Order.Number, (tx) => tx.state_version)),
             A.last,
           );
 
@@ -97,12 +107,17 @@ export class TransactionStreamService extends Effect.Service<TransactionStreamSe
           if (nextStateVersion === stateVersion) {
             yield* Effect.logDebug('Waiting for new transactions...');
             yield* Effect.sleep(config.waitTime);
-            return [[], Option.some(stateVersion)];
+            return [[], stateVersion];
           }
 
-          return [result.items, Option.some(nextStateVersion)];
+          return [result.items, nextStateVersion];
         }),
       ).pipe(Stream.filter((item) => item.length > 0));
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

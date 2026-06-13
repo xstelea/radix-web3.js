@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import type { MiddlewareHandler } from 'hono';
+
 import { parseX402PaymentHeader } from './paymentPayload';
 import {
   type PaymentRequirements,
@@ -58,7 +59,7 @@ export const createX402PaymentMiddleware = ({
           existingSettlementKey !== undefined &&
           settlementRecords.has(existingSettlementKey)
         ) {
-          yield* Effect.promise(() => next());
+          yield* Effect.tryPromise(() => next());
           return;
         }
 
@@ -78,7 +79,7 @@ export const createX402PaymentMiddleware = ({
                 requirements,
                 resourceUrl: requirements.resourceUrl,
               }).pipe(
-                Effect.catchAll(() =>
+                Effect.catch(() =>
                   Effect.succeed({
                     status: 'SettlementFailed',
                   } satisfies SettlementResult),
@@ -105,7 +106,7 @@ export const createX402PaymentMiddleware = ({
           payloadSettlementKeys.set(parsedPaymentPayload.transaction, cacheKey);
         }
 
-        yield* Effect.promise(() => next());
+        yield* Effect.tryPromise(() => next());
       }).pipe(
         Effect.catchTag('InvalidPaymentPayloadError', () =>
           Effect.succeed(

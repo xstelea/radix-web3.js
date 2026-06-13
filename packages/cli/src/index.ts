@@ -4,6 +4,7 @@ import { AccountAddress, TransactionId } from '@radix-effects/shared';
 import { Data, Effect, Schema } from 'effect';
 
 import {
+  accountReadGatewayLayer,
   deriveVirtualAccountAddress,
   gatewayAccountDetails,
   gatewayAccountFungibles,
@@ -214,13 +215,13 @@ type ParsedRdxCommand = Data.TaggedEnum<{
 
 const RdxCommand = Data.taggedEnum<ParsedRdxCommand>();
 
-const decodeOptional = <A, I, R>(
-  schema: Schema.Schema<A, I, R>,
+const decodeOptional = <S extends Schema.Decoder<unknown>>(
+  schema: S,
   value: string | undefined,
 ) =>
   value === undefined
     ? Effect.succeed(undefined)
-    : Schema.decodeUnknown(schema)(value);
+    : Schema.decodeUnknownEffect(schema)(value);
 
 const parseRdxCommand = (
   argv: string[],
@@ -376,10 +377,13 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
       AccountFungibles: ({ accountAddress }) =>
         Effect.gen(function* () {
           const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const accountReadLayer = accountReadGatewayLayer(config);
           const result = yield* getAccountFungibles({
             accountAddress,
             readFungibles: (accountAddress) =>
-              gatewayAccountFungibles({ config, accountAddress }),
+              gatewayAccountFungibles({ accountAddress }).pipe(
+                Effect.provide(accountReadLayer),
+              ),
           });
           return {
             exitCode: 0,
@@ -390,10 +394,13 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
       AccountNfts: ({ accountAddress }) =>
         Effect.gen(function* () {
           const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const accountReadLayer = accountReadGatewayLayer(config);
           const result = yield* getAccountNfts({
             accountAddress,
             readNfts: (accountAddress) =>
-              gatewayAccountNfts({ config, accountAddress }),
+              gatewayAccountNfts({ accountAddress }).pipe(
+                Effect.provide(accountReadLayer),
+              ),
           });
           return {
             exitCode: 0,
@@ -424,10 +431,13 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
       AccountShow: ({ accountAddress }) =>
         Effect.gen(function* () {
           const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const accountReadLayer = accountReadGatewayLayer(config);
           const result = yield* getAccountDetails({
             accountAddress,
             readDetails: (accountAddress) =>
-              gatewayAccountDetails({ config, accountAddress }),
+              gatewayAccountDetails({ accountAddress }).pipe(
+                Effect.provide(accountReadLayer),
+              ),
           });
           return {
             exitCode: 0,
@@ -464,7 +474,7 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
           const config = yield* resolveRdxConfig({ cwd: input.cwd });
           const notary = notaryFilePath
             ? yield* readJsonFile(notaryFilePath, (reason) => reason).pipe(
-                Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)),
+                Effect.flatMap(Schema.decodeUnknownEffect(NotaryFileSchema)),
               )
             : config.notary;
           if (!notary) {
@@ -589,15 +599,15 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
       TxHistory: ({ accountAddress, limit }) =>
         Effect.gen(function* () {
           const config = yield* resolveRdxConfig({ cwd: input.cwd });
+          const accountReadLayer = accountReadGatewayLayer(config);
           const result = yield* getAccountTransactionHistory({
             accountAddress,
             limit,
             readHistory: (accountAddress, itemLimit) =>
               gatewayAccountHistory({
-                config,
                 accountAddress,
                 limit: itemLimit,
-              }),
+              }).pipe(Effect.provide(accountReadLayer)),
           });
           return {
             exitCode: 0,
@@ -686,7 +696,7 @@ export const runRdxEffect = (input: RunRdxInput): Effect.Effect<RdxResult> =>
         ),
     });
   }).pipe(
-    Effect.catchAll((error) => {
+    Effect.catch((error) => {
       if (
         typeof error === 'object' &&
         error !== null &&

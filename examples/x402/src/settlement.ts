@@ -1,5 +1,6 @@
 import { inspectSignedPartialTransaction as inspectWithTxTool } from '@radix-effects/tx-tool';
 import { Data, Effect } from 'effect';
+
 import type { PaymentRequirements } from './paymentRequirements';
 import {
   type PaymentSubintentInspection,
@@ -45,10 +46,11 @@ const inspectSignedPartialTransactionWithTxTool = (input: {
   signedPartialTransactionHex: string;
   networkId: 1;
 }) =>
-  Effect.tryPromise({
-    try: () => inspectWithTxTool(input),
-    catch: (reason) => new SignedPartialTransactionInspectionError({ reason }),
-  });
+  inspectWithTxTool(input).pipe(
+    Effect.mapError(
+      (reason) => new SignedPartialTransactionInspectionError({ reason }),
+    ),
+  );
 
 export const createSponsoredSettlement = ({
   inspectSignedPartialTransaction = inspectSignedPartialTransactionWithTxTool,

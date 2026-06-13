@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 import { z } from 'zod';
 
 import { GatewayApiClient } from '../gatewayApiClient';
@@ -12,10 +12,10 @@ export const ValidatorSchema = z.object({
 
 export type Validator = z.infer<typeof ValidatorSchema>;
 
-export class GetValidators extends Effect.Service<GetValidators>()(
+export class GetValidators extends Context.Service<GetValidators>()(
   'GetValidators',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       return Effect.fn(function* () {
         const result = yield* gatewayClient.state.getValidators();
@@ -62,4 +62,9 @@ export class GetValidators extends Effect.Service<GetValidators>()(
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

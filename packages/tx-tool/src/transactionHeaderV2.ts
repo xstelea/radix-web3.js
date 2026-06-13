@@ -1,5 +1,5 @@
 import { Epoch, type NetworkId } from '@radix-effects/shared';
-import { Effect, Option } from 'effect';
+import { Context, Effect, Layer, Option } from 'effect';
 
 import { EpochService } from './epoch';
 import { NotaryKeyPair } from './notaryKeyPair';
@@ -27,11 +27,10 @@ export type CreateTransactionHeaderV2Output = {
   intentHeader: IntentHeaderV2;
 };
 
-export class TransactionHeaderV2 extends Effect.Service<TransactionHeaderV2>()(
+export class TransactionHeaderV2 extends Context.Service<TransactionHeaderV2>()(
   '@radix-effects/tx-tool/TransactionHeaderV2',
   {
-    dependencies: [NotaryKeyPair.Default, EpochService.Default],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const notaryKeyPair = yield* NotaryKeyPair;
       const epochService = yield* EpochService;
 
@@ -87,4 +86,10 @@ export class TransactionHeaderV2 extends Effect.Service<TransactionHeaderV2>()(
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(NotaryKeyPair.Default),
+    Layer.provide(EpochService.Default),
+  );
+}

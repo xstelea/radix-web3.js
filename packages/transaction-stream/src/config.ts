@@ -1,15 +1,15 @@
-import { Option, Duration, Context, Ref } from 'effect';
+import { Option, Duration, Context, Layer, Ref } from 'effect';
 
-import { type Config, TransactionDetailsOptInsSchema } from './schemas';
+import { type Config, makeTransactionDetailsOptIns } from './schemas';
 
-export class ConfigService extends Context.Tag('Config')<
-  ConfigService,
-  Ref.Ref<Config>
->() {
-  static make = Ref.make<Config>({
+export class ConfigService extends Context.Service<ConfigService>()('Config', {
+  make: Ref.make<Config>({
     stateVersion: Option.none(),
     limitPerPage: 100,
     waitTime: Duration.seconds(60),
-    optIns: TransactionDetailsOptInsSchema.make(),
-  });
+    optIns: makeTransactionDetailsOptIns(),
+  }),
+}) {
+  static readonly Default = Layer.effect(this, this.make);
+  static readonly DefaultWithoutDependencies = this.Default;
 }

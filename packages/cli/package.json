@@ -30,11 +30,7 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "@effect/cli": "catalog:",
-    "@effect/platform": "catalog:",
     "@effect/platform-node": "catalog:",
-    "@effect/printer": "catalog:",
-    "@effect/printer-ansi": "catalog:",
     "@noble/curves": "catalog:",
     "@radix-effects/gateway": "workspace:*",
     "@radix-effects/shared": "workspace:*",

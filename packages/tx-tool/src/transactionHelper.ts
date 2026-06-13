@@ -18,8 +18,10 @@ import {
   Context,
   Data,
   Effect,
+  Layer,
   Option,
   Record as R,
+  Result,
   flow,
   pipe,
 } from 'effect';
@@ -44,9 +46,7 @@ export class FaucetNotAvailableError extends Data.TaggedError(
   message: string;
 }> {}
 
-export class TransactionLifeCycleHook extends Context.Tag(
-  '@radix-effects/tx-tool/TransactionLifeCycleHook',
-)<
+export class TransactionLifeCycleHook extends Context.Service<
   TransactionLifeCycleHook,
   {
     onSubmit?: (input: {
@@ -66,7 +66,7 @@ export class TransactionLifeCycleHook extends Context.Tag(
       id: TransactionId;
     }) => Effect.Effect<void, never, never>;
   }
->() {}
+>()('@radix-effects/tx-tool/TransactionLifeCycleHook') {}
 
 export class InsufficientXrdBalanceError extends Data.TaggedError(
   'InsufficientXrdBalanceError',
@@ -74,22 +74,10 @@ export class InsufficientXrdBalanceError extends Data.TaggedError(
   message: string;
 }> {}
 
-export class TransactionHelper extends Effect.Service<TransactionHelper>()(
+export class TransactionHelper extends Context.Service<TransactionHelper>()(
   '@radix-effects/tx-tool/TransactionHelper',
   {
-    dependencies: [
-      CreateTransactionIntent.Default,
-      CreateTransactionIntentV2.Default,
-      CompileTransaction.Default,
-      SubmitTransaction.Default,
-      TransactionStatus.Default,
-      ManifestHelper.Default,
-      IntentHashService.Default,
-      EpochService.Default,
-      GetFungibleBalance.Default,
-      GetLedgerStateService.Default,
-    ],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const createTransactionIntent = yield* CreateTransactionIntent;
       const createTransactionIntentV2 = yield* CreateTransactionIntentV2;
       const compileTransaction = yield* CompileTransaction;
@@ -114,19 +102,19 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
       );
 
       const onSubmitLifeCycleHook = lifeCycleHook.pipe(
-        Option.flatMap((item) => Option.fromNullable(item.onSubmit)),
+        Option.flatMap((item) => Option.fromNullishOr(item.onSubmit)),
       );
 
       const onSubmitSuccessLifeCycleHook = lifeCycleHook.pipe(
-        Option.flatMap((item) => Option.fromNullable(item.onSubmitSuccess)),
+        Option.flatMap((item) => Option.fromNullishOr(item.onSubmitSuccess)),
       );
 
       const onStatusFailureLifeCycleHook = lifeCycleHook.pipe(
-        Option.flatMap((item) => Option.fromNullable(item.onStatusFailure)),
+        Option.flatMap((item) => Option.fromNullishOr(item.onStatusFailure)),
       );
 
       const onSuccessLifeCycleHook = lifeCycleHook.pipe(
-        Option.flatMap((item) => Option.fromNullable(item.onSuccess)),
+        Option.flatMap((item) => Option.fromNullishOr(item.onSuccess)),
       );
 
       const xrdBalance = (account: Account, stateVersion: number) =>
@@ -158,7 +146,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
         version?: 'v1' | 'v2';
       }) =>
         Effect.gen(function* () {
-          yield* Option.fromNullable(input.feePayer).pipe(
+          yield* Option.fromNullishOr(input.feePayer).pipe(
             Option.match({
               onNone: () => Effect.void,
               onSome: (feePayer) =>
@@ -185,7 +173,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
             }),
           );
 
-          const { intent, id, hash } = yield* Option.fromNullable(
+          const { intent, id, hash } = yield* Option.fromNullishOr(
             input.transactionIntent,
           ).pipe(
             Option.match({
@@ -214,10 +202,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
                           })),
                         ),
                       ),
-                      Effect.catchTags({
-                        ParseError: Effect.die,
-                        InvalidEpochError: Effect.die,
-                      }),
+                      Effect.catch((error) => Effect.die(error)),
                     );
                   }
 
@@ -231,10 +216,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
                           Effect.map(({ id, hash }) => ({ id, hash, intent })),
                         ),
                     ),
-                    Effect.catchTags({
-                      ParseError: Effect.die,
-                      InvalidEpochError: Effect.die,
-                    }),
+                    Effect.catch((error) => Effect.die(error)),
                   );
                 }),
               onSome: (intent) =>
@@ -258,7 +240,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
             const compiledTransaction = yield* compileTransaction({
               intent,
               signatures,
-            }).pipe(Effect.catchAll(Effect.die));
+            }).pipe(Effect.catch(Effect.die));
 
             yield* Option.match(onSubmitLifeCycleHook, {
               onNone: () => Effect.void,
@@ -291,7 +273,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
               })
               .pipe(
                 Effect.map((status) => ({ statusResponse: status, id })),
-                Effect.catchAllCause((cause) =>
+                Effect.catchCause((cause) =>
                   Effect.gen(function* () {
                     yield* Option.match(onStatusFailureLifeCycleHook, {
                       onNone: () => Effect.void,
@@ -301,9 +283,17 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
                             'Executing life cycle hook: onFailure',
                           );
 
-                          const permanent =
-                            Cause.isFailType(cause) &&
-                            cause.error._tag === 'TransactionFailedError';
+                          const permanent = pipe(
+                            Cause.findError(cause),
+                            Result.match({
+                              onFailure: () => false,
+                              onSuccess: (error) =>
+                                typeof error === 'object' &&
+                                error !== null &&
+                                '_tag' in error &&
+                                error._tag === 'TransactionFailedError',
+                            }),
+                          );
 
                           yield* effect({
                             id,
@@ -357,7 +347,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
           ),
           Effect.map((result) =>
             pipe(
-              Option.fromNullable(
+              Option.fromNullishOr(
                 result.transaction.balance_changes?.fungible_balance_changes,
               ),
               Option.flatMap(A.head),
@@ -389,7 +379,7 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
           ),
           Effect.map((result) =>
             pipe(
-              Option.fromNullable(
+              Option.fromNullishOr(
                 result.transaction.balance_changes?.fungible_balance_changes,
               ),
               Option.flatMap(A.head),
@@ -432,4 +422,18 @@ export class TransactionHelper extends Effect.Service<TransactionHelper>()(
       };
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(CreateTransactionIntent.Default),
+    Layer.provide(CreateTransactionIntentV2.Default),
+    Layer.provide(CompileTransaction.Default),
+    Layer.provide(SubmitTransaction.Default),
+    Layer.provide(TransactionStatus.Default),
+    Layer.provide(ManifestHelper.Default),
+    Layer.provide(IntentHashService.Default),
+    Layer.provide(EpochService.Default),
+    Layer.provide(GetFungibleBalance.Default),
+    Layer.provide(GetLedgerStateService.Default),
+  );
+}

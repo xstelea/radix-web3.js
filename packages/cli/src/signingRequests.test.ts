@@ -1,6 +1,5 @@
-import { it } from '@effect/vitest';
+import { assert, describe, it } from '@effect/vitest';
 import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
 
 import {
   PLACEHOLDER_PUBLIC_KEY_HEX,
@@ -36,13 +35,37 @@ describe('signing request generation', () => {
         },
       });
 
-      expect(result.requests.map((item) => item.path)).toEqual([
-        'signing-requests/root/account_rdx1root.json',
-        'signing-requests/subintents/child/account_rdx1child.json',
-      ]);
+      assert.deepEqual(
+        result.requests.map((item) => item.path),
+        [
+          'signing-requests/root/account_rdx1root.json',
+          'signing-requests/subintents/child/account_rdx1child.json',
+        ],
+      );
+      assert.deepEqual(
+        result.templates.map((item) => item.path),
+        [
+          'signature-templates/root/account_rdx1root.json',
+          'signature-templates/subintents/child/account_rdx1child.json',
+        ],
+      );
       for (const request of result.requests) {
         Schema.decodeUnknownSync(SigningRequestSchema)(request.file);
       }
+      for (const template of result.templates) {
+        const decoded = Schema.decodeUnknownSync(SignatureTemplateSchema)(
+          template.file,
+        );
+        assert.deepEqual(decoded, template.file);
+      }
+      assert.strictEqual(
+        result.templates[0].file.signingRequestPath,
+        result.requests[0].path,
+      );
+      assert.strictEqual(
+        result.templates[1].file.signingRequestPath,
+        result.requests[1].path,
+      );
     }),
   );
 
@@ -62,8 +85,8 @@ describe('signing request generation', () => {
         },
       });
 
-      expect(result.requests).toEqual([]);
-      expect(result.templates).toEqual([]);
+      assert.deepEqual(result.requests, []);
+      assert.deepEqual(result.templates, []);
     }),
   );
 
@@ -86,8 +109,8 @@ describe('signing request generation', () => {
       const template = Schema.decodeUnknownSync(SignatureTemplateSchema)(
         result.templates[0].file,
       );
-      expect(template.publicKey.hex).toBe(PLACEHOLDER_PUBLIC_KEY_HEX);
-      expect(template.signature.hex).toBe(PLACEHOLDER_SIGNATURE_HEX);
+      assert.strictEqual(template.publicKey.hex, PLACEHOLDER_PUBLIC_KEY_HEX);
+      assert.strictEqual(template.signature.hex, PLACEHOLDER_SIGNATURE_HEX);
     }),
   );
 
@@ -107,12 +130,13 @@ describe('signing request generation', () => {
         },
       });
 
-      expect(result.requests).toHaveLength(1);
-      expect(result.requests[0].file.scope).toEqual({
+      assert.lengthOf(result.requests, 1);
+      assert.deepEqual(result.requests[0].file.scope, {
         kind: 'notarySignatory',
       });
-      expect(result.templates[0].file.publicKey).toEqual(notaryPublicKey);
-      expect(result.templates[0].path).toBe(
+      assert.deepEqual(result.templates[0].file.publicKey, notaryPublicKey);
+      assert.strictEqual(
+        result.templates[0].path,
         'signature-templates/notary-signatory.json',
       );
     }),

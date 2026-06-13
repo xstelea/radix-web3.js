@@ -1,5 +1,6 @@
+import { assert, describe, it } from '@effect/vitest';
 import { Effect } from 'effect';
-import { describe, expect, it } from 'vitest';
+
 import {
   ConfigParseError,
   ConfigPlaceholderError,
@@ -9,26 +10,30 @@ import {
 } from './config';
 
 describe('Placeholder Rejection', () => {
-  it('rejects the Mainnet config template before runtime use', async () => {
-    const error = await Effect.runPromise(
-      Effect.flip(validateX402Config(mainnetConfigTemplate)),
-    );
+  it.effect('rejects the Mainnet config template before runtime use', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(
+        validateX402Config(mainnetConfigTemplate),
+      );
 
-    expect(error).toBeInstanceOf(ConfigPlaceholderError);
-    expect(error.placeholderPaths).toEqual([
-      'gatewayBaseUrl',
-      'resourceBaseUrl',
-      'feePayerAccount',
-      'payTo',
-      'facilitatorNotaryBadge',
-      'asset',
-      'intentDiscriminator',
-    ]);
-  });
+      assert.instanceOf(error, ConfigPlaceholderError);
+      assert.deepStrictEqual(error.placeholderPaths, [
+        'gatewayBaseUrl',
+        'resourceBaseUrl',
+        'feePayerAccount',
+        'payTo',
+        'facilitatorNotaryBadge',
+        'asset',
+        'intentDiscriminator',
+      ]);
+    }),
+  );
 
-  it('rejects malformed config JSON with a typed parse error', async () => {
-    const error = await Effect.runPromise(Effect.flip(parseX402Config('{')));
+  it.effect('rejects malformed config JSON with a typed parse error', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(parseX402Config('{'));
 
-    expect(error).toBeInstanceOf(ConfigParseError);
-  });
+      assert.instanceOf(error, ConfigParseError);
+    }),
+  );
 });

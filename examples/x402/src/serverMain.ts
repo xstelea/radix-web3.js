@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+
 import { serve } from '@hono/node-server';
 import { Effect } from 'effect';
+
 import {
   ConfigParseError,
   parseX402Config,

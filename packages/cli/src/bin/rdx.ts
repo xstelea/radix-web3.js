@@ -1,34 +1,37 @@
 #!/usr/bin/env node
-import { ValidationError } from '@effect/cli';
-import { FileSystem, Path } from '@effect/platform';
-import { NodeContext, NodeRuntime } from '@effect/platform-node';
+import { NodeRuntime, NodeServices } from '@effect/platform-node';
 import {
+  Console,
+  Context,
+  Data,
+  Effect,
+  Layer,
+  Option,
+  Schema,
   Terminal,
-  type Terminal as TerminalService,
-} from '@effect/platform/Terminal';
-import { Console, Data, Effect, Option, Schema } from 'effect';
+} from 'effect';
+import { CliError } from 'effect/unstable/cli';
 
 import { cli } from '../cli';
 import { renderJson } from '../json';
 
-const CliBuiltInRenderFlagSchema = Schema.Literal(
+const CliBuiltInRenderFlagSchema = Schema.Literals([
   '--help',
   '-h',
   '--version',
   '--wizard',
   '--completions',
-);
+]);
 const shouldRenderCliTerminal = (argv: ReadonlyArray<string>) =>
   argv.some(Schema.is(CliBuiltInRenderFlagSchema));
 
-const quietTerminal = {
+const quietTerminal = Terminal.make({
   columns: Effect.succeed(80),
   rows: Effect.succeed(24),
-  isTTY: Effect.succeed(false),
-  readInput: Effect.dieMessage('rdx is non-interactive'),
-  readLine: Effect.dieMessage('rdx is non-interactive'),
+  readInput: Effect.die('rdx is non-interactive'),
+  readLine: Effect.die('rdx is non-interactive'),
   display: () => Effect.void,
-} as TerminalService;
+});
 
 let hasSuppressedCliValidationText = false;
 
@@ -83,8 +86,10 @@ const TaggedErrorSchema = Schema.Struct({
   reason: Schema.optional(Schema.Unknown),
 });
 
-const decodeUnknownOption = <A>(schema: Schema.Schema<A>, value: unknown) =>
-  Option.getOrUndefined(Schema.decodeUnknownOption(schema)(value));
+const decodeUnknownOption = <S extends Schema.Decoder<unknown>>(
+  schema: S,
+  value: unknown,
+) => Option.getOrUndefined(Schema.decodeUnknownOption(schema)(value));
 
 class CliFailure extends Data.TaggedError('CliFailure')<{
   code: string;
@@ -134,8 +139,7 @@ const validationMessage = (error: unknown) => {
 
 const validationCode = (error: unknown, message: string) => {
   if (
-    (ValidationError.isValidationError(error) &&
-      ValidationError.isMissingSubcommand(error)) ||
+    (CliError.isCliError(error) && error._tag === 'UnknownSubcommand') ||
     message.startsWith('Invalid subcommand')
   ) {
     return 'UNKNOWN_COMMAND';
@@ -171,41 +175,42 @@ const reportCliFailure = (failure: CliFailure) =>
       message: failure.message,
     }),
   ).pipe(
-    Effect.zipRight(
+    Effect.andThen(
       Effect.sync(() => {
         process.exitCode = 64;
       }),
     ),
   );
 
-class RdxCliRuntime extends Effect.Service<RdxCliRuntime>()('RdxCliRuntime', {
-  accessors: true,
-  effect: Effect.gen(function* () {
-    const fileSystem = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const terminal = yield* Terminal;
+class RdxCliRuntime extends Context.Service<RdxCliRuntime>()('RdxCliRuntime', {
+  make: Effect.gen(function* () {
+    const terminal = yield* Terminal.Terminal;
 
     return {
       run: (argv: ReadonlyArray<string>) =>
         suppressCliValidationText(argv).pipe(
-          Effect.zipRight(
+          Effect.andThen(
             Effect.suspend(() => cli([...argv])).pipe(
-              Effect.provideService(FileSystem.FileSystem, fileSystem),
-              Effect.provideService(Path.Path, path),
               Effect.provideService(
-                Terminal,
+                Terminal.Terminal,
                 shouldRenderCliTerminal(argv) ? terminal : quietTerminal,
               ),
+              Effect.provide(NodeServices.layer),
             ),
           ),
-          Effect.catchAll((error) =>
-            reportCliFailure(normalizeCliFailure(error)),
-          ),
+          Effect.catch((error) => reportCliFailure(normalizeCliFailure(error))),
         ),
     };
   }),
-  dependencies: [NodeContext.layer],
-}) {}
+}) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(NodeServices.layer),
+  );
+
+  static readonly run = (argv: ReadonlyArray<string>) =>
+    Effect.flatMap(this, (runtime) => runtime.run(argv));
+}
 
 RdxCliRuntime.run(process.argv).pipe(
   Effect.provide(RdxCliRuntime.Default),

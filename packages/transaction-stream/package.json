@@ -27,6 +27,8 @@
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "dev:debug": "tsx --inspect-brk --watch src/index.ts",
+    "test": "vitest run",
+    "check-types": "tsc --noEmit",
     "build": "tsdown"
   },
   "dependencies": {
@@ -34,6 +36,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@effect/vitest": "catalog:",
     "@types/node": "^22.13.14",
     "tsdown": "catalog:",
     "tsx": "catalog:",

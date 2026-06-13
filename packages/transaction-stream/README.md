@@ -15,7 +15,7 @@ import { Effect, Layer, Stream, Ref, Option, Duration } from 'effect';
 import {
   TransactionStreamService,
   ConfigService,
-  TransactionDetailsOptInsSchema,
+  makeTransactionDetailsOptIns,
 } from '@radix-effects/transaction-stream';
 
 const program = Effect.gen(function* () {
@@ -31,7 +31,7 @@ const program = Effect.gen(function* () {
     stateVersion: Option.some(1), // Start from state version 1
     limitPerPage: 100,
     waitTime: Duration.seconds(60),
-    optIns: TransactionDetailsOptInsSchema.make({
+    optIns: makeTransactionDetailsOptIns({
       detailed_events: true,
       balance_changes: true,
     }),
@@ -66,7 +66,7 @@ The `ConfigService` allows you to configure the transaction stream:
 Control what data is included in the transaction response:
 
 ```typescript
-TransactionDetailsOptInsSchema.make({
+makeTransactionDetailsOptIns({
   raw_hex: false, // Raw transaction hex
   receipt_state_changes: false, // State changes in receipt
   receipt_fee_summary: false, // Fee summary in receipt
@@ -87,12 +87,12 @@ TransactionDetailsOptInsSchema.make({
 You can run multiple streams for different networks simultaneously:
 
 ```typescript
-import { ConfigProvider, Fiber } from 'effect';
+import { ConfigProvider, Effect, Fiber, Layer } from 'effect';
 
 const program = Effect.gen(function* () {
   // Configure for Stokenet (network ID 2)
-  const stokenetConfig = Layer.setConfigProvider(
-    ConfigProvider.fromJson({ NETWORK_ID: '2' }),
+  const stokenetConfig = ConfigProvider.layer(
+    ConfigProvider.fromUnknown({ NETWORK_ID: '2' }),
   );
 
   const stokenetStream = yield* TransactionStreamService.pipe(

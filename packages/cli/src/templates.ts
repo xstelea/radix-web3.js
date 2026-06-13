@@ -4,6 +4,7 @@ import {
   type SignatureFile,
   type SignatureTemplate,
   type SigningRequest,
+  type SubintentsFile,
 } from './schemas';
 
 export type TemplateKind =
@@ -19,7 +20,16 @@ const sampleHash = {
 
 const sampleScope = { kind: 'rootIntent' as const };
 
-export const workflowTemplate = (kind: TemplateKind) => {
+export function workflowTemplate(kind: 'subintents'): SubintentsFile;
+export function workflowTemplate(kind: 'signing-request'): SigningRequest;
+export function workflowTemplate(kind: 'signature-template'): SignatureTemplate;
+export function workflowTemplate(kind: 'signature-file'): SignatureFile;
+export function workflowTemplate(
+  kind: TemplateKind,
+): SubintentsFile | SigningRequest | SignatureTemplate | SignatureFile;
+export function workflowTemplate(
+  kind: TemplateKind,
+): SubintentsFile | SigningRequest | SignatureTemplate | SignatureFile {
   switch (kind) {
     case 'subintents':
       return {
@@ -30,7 +40,7 @@ export const workflowTemplate = (kind: TemplateKind) => {
             manifest: 'child-one.rtm',
           },
         },
-      };
+      } satisfies SubintentsFile;
     case 'signing-request':
       return {
         type: 'signingRequest',
@@ -67,4 +77,4 @@ export const workflowTemplate = (kind: TemplateKind) => {
         signatures: [],
       } satisfies SignatureFile;
   }
-};
+}

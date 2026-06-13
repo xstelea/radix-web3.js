@@ -14,57 +14,67 @@ import {
   PublicKey,
   SignatureWithPublicKey,
 } from '@steleaio/radix-engine-toolkit';
-import { Effect, Option, Schema } from 'effect';
+import { Effect, Option, Schema, SchemaGetter } from 'effect';
 
-export const Base64FromHexSchema = Schema.asSchema(
-  Schema.transformOrFail(HexString, Base64String, {
-    decode: (hex) =>
+export const Base64FromHexSchema = HexString.pipe(
+  Schema.decodeTo(Base64String, {
+    decode: SchemaGetter.transformOrFail((hex) =>
       Effect.succeed(
         Base64String.make(Buffer.from(hex, 'hex').toString('base64')),
       ),
-    encode: (base64) =>
+    ),
+    encode: SchemaGetter.transformOrFail((base64) =>
       Effect.succeed(
         HexString.make(Buffer.from(base64, 'base64').toString('hex')),
       ),
+    ),
   }),
 );
 
-export const HexFromBase64Schema = Schema.asSchema(
-  Schema.transformOrFail(Base64String, HexString, {
-    decode: (base64) =>
+export const HexFromBase64Schema = Base64String.pipe(
+  Schema.decodeTo(HexString, {
+    decode: SchemaGetter.transformOrFail((base64) =>
       Effect.succeed(
         HexString.make(Buffer.from(base64, 'base64').toString('hex')),
       ),
-    encode: (hex) =>
+    ),
+    encode: SchemaGetter.transformOrFail((hex) =>
       Effect.succeed(
         Base64String.make(Buffer.from(hex, 'hex').toString('base64')),
       ),
+    ),
   }),
 );
 
-export const Ed25519PublicKeySchema = Schema.asSchema(
-  Schema.transformOrFail(HexString, Schema.instanceOf(PublicKey.Ed25519), {
-    decode: (hex) => Effect.succeed(new PublicKey.Ed25519(hex)),
-    encode: (publicKey) => Effect.succeed(HexString.make(publicKey.hex())),
+export const Ed25519PublicKeySchema = HexString.pipe(
+  Schema.decodeTo(Schema.instanceOf(PublicKey.Ed25519), {
+    decode: SchemaGetter.transformOrFail((hex) =>
+      Effect.succeed(new PublicKey.Ed25519(hex)),
+    ),
+    encode: SchemaGetter.transformOrFail((publicKey) =>
+      Effect.succeed(HexString.make(publicKey.hex())),
+    ),
   }),
 );
 export type Ed25519PublicKey = typeof Ed25519PublicKeySchema.Type;
 
-export const Ed25519PrivateKeySchema = Schema.asSchema(
-  Schema.transformOrFail(HexString, Schema.instanceOf(PrivateKey.Ed25519), {
-    decode: (hex) => Effect.succeed(new PrivateKey.Ed25519(hex)),
-    encode: (publicKey) =>
+export const Ed25519PrivateKeySchema = HexString.pipe(
+  Schema.decodeTo(Schema.instanceOf(PrivateKey.Ed25519), {
+    decode: SchemaGetter.transformOrFail((hex) =>
+      Effect.succeed(new PrivateKey.Ed25519(hex)),
+    ),
+    encode: SchemaGetter.transformOrFail((publicKey) =>
       Effect.succeed(
         HexString.make(Convert.Uint8Array.toHexString(publicKey.bytes)),
       ),
+    ),
   }),
 );
 
 export type Ed25519PrivateKey = typeof Ed25519PrivateKeySchema.Type;
 
-export const ManifestSchema = Schema.asSchema(
-  Schema.transformOrFail(
-    TransactionManifestString,
+export const ManifestSchema = TransactionManifestString.pipe(
+  Schema.decodeTo(
     Schema.Struct({
       instructions: Schema.Struct({
         kind: Schema.Literal('String'),
@@ -73,7 +83,7 @@ export const ManifestSchema = Schema.asSchema(
       blobs: Schema.mutable(Schema.Array(Schema.Uint8Array)),
     }),
     {
-      decode: (value) =>
+      decode: SchemaGetter.transformOrFail((value) =>
         Effect.succeed({
           instructions: {
             kind: 'String' as const,
@@ -81,10 +91,12 @@ export const ManifestSchema = Schema.asSchema(
           },
           blobs: [],
         }),
-      encode: (input) =>
+      ),
+      encode: SchemaGetter.transformOrFail((input) =>
         Effect.succeed(
           TransactionManifestString.make(input.instructions.value),
         ),
+      ),
     },
   ),
 );
@@ -105,33 +117,33 @@ const PlainTextMessageSchema = Schema.Struct({
 
 const EmptyMessageSchema = Schema.Struct({ kind: Schema.Literal('None') });
 
-export const TransactionMessageSchema = Schema.asSchema(
-  Schema.transformOrFail(
-    Schema.OptionFromUndefinedOr(TransactionMessageString),
-    Schema.Union(PlainTextMessageSchema, EmptyMessageSchema),
-    {
-      decode: (value) =>
-        Option.match(value, {
-          onNone: () => Effect.succeed({ kind: 'None' as const }),
-          onSome: (value) =>
-            Effect.succeed({
+export const TransactionMessageSchema = Schema.OptionFromUndefinedOr(
+  TransactionMessageString,
+).pipe(
+  Schema.decodeTo(Schema.Union([PlainTextMessageSchema, EmptyMessageSchema]), {
+    decode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed(
+        Option.isNone(value)
+          ? { kind: 'None' as const }
+          : {
               kind: 'PlainText' as const,
               value: {
-                message: { kind: 'String' as const, value },
+                message: { kind: 'String' as const, value: value.value },
                 mimeType: 'text/plain' as const,
               },
-            }),
-        }),
-      encode: (input) =>
-        Effect.succeed(
-          input.kind === 'None'
-            ? Option.none()
-            : Option.some(
-                TransactionMessageString.make(input.value.message.value),
-              ),
-        ),
-    },
-  ),
+            },
+      ),
+    ),
+    encode: SchemaGetter.transformOrFail((input) =>
+      Effect.succeed(
+        input.kind === 'None'
+          ? Option.none()
+          : Option.some(
+              TransactionMessageString.make(input.value.message.value),
+            ),
+      ),
+    ),
+  }),
 );
 
 export type TransactionMessage = typeof TransactionMessageSchema.Type;
@@ -156,7 +168,7 @@ export const TransactionHeaderV2Schema = Schema.Struct({
 
 export type TransactionHeaderV2 = typeof TransactionHeaderV2Schema.Type;
 
-const TransactionMessageContentV2Schema = Schema.Union(
+const TransactionMessageContentV2Schema = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal('String'),
     value: TransactionMessageString,
@@ -165,7 +177,7 @@ const TransactionMessageContentV2Schema = Schema.Union(
     kind: Schema.Literal('Bytes'),
     value: Schema.Uint8Array,
   }),
-);
+]);
 
 const PlainTextMessageV2Schema = Schema.Struct({
   kind: Schema.Literal('PlainText'),
@@ -175,28 +187,22 @@ const PlainTextMessageV2Schema = Schema.Struct({
   }),
 });
 
-const DecryptorsByCurveV2Schema = Schema.Union(
+const DecryptorsByCurveV2Schema = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal('Ed25519'),
     value: Schema.Struct({
       dhEphemeralPublicKey: Schema.Uint8Array,
-      decryptors: Schema.Record({
-        key: Schema.String,
-        value: Schema.String,
-      }),
+      decryptors: Schema.Record(Schema.String, Schema.String),
     }),
   }),
   Schema.Struct({
     kind: Schema.Literal('Secp256k1'),
     value: Schema.Struct({
       dhEphemeralPublicKey: Schema.Uint8Array,
-      decryptors: Schema.Record({
-        key: Schema.String,
-        value: Schema.String,
-      }),
+      decryptors: Schema.Record(Schema.String, Schema.String),
     }),
   }),
-);
+]);
 
 const EncryptedMessageV2Schema = Schema.Struct({
   kind: Schema.Literal('Encrypted'),
@@ -211,11 +217,11 @@ const EncryptedMessageV2Schema = Schema.Struct({
 
 const EmptyMessageV2Schema = Schema.Struct({ kind: Schema.Literal('None') });
 
-export const TransactionMessageV2Schema = Schema.Union(
+export const TransactionMessageV2Schema = Schema.Union([
   EmptyMessageV2Schema,
   PlainTextMessageV2Schema,
   EncryptedMessageV2Schema,
-);
+]);
 export type TransactionMessageV2 = typeof TransactionMessageV2Schema.Type;
 
 export const IntentHeaderV2Schema = Schema.Struct({
@@ -259,34 +265,32 @@ export type TransactionIntentV2 = typeof TransactionIntentV2Schema.Type;
 export type TransactionIntentV2Encoded =
   typeof TransactionIntentV2Schema.Encoded;
 
-export const Ed25519SignatureWithPublicKeySchema = Schema.asSchema(
-  Schema.transformOrFail(
-    Schema.Struct({
-      signature: HexString,
-      signerPublicKey: HexString,
-      curve: Schema.Literal('Ed25519'),
-    }),
-    Schema.instanceOf(SignatureWithPublicKey.Ed25519),
-    {
-      strict: false,
-      decode: (value) =>
-        Effect.succeed(
-          new SignatureWithPublicKey.Ed25519(
-            value.signature,
-            value.signerPublicKey,
-          ),
+export const Ed25519SignatureWithPublicKeySchema = Schema.Struct({
+  signature: HexString,
+  signerPublicKey: HexString,
+  curve: Schema.Literal('Ed25519'),
+}).pipe(
+  Schema.decodeTo(Schema.instanceOf(SignatureWithPublicKey.Ed25519), {
+    decode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed(
+        new SignatureWithPublicKey.Ed25519(
+          value.signature,
+          value.signerPublicKey,
         ),
-      encode: (input) =>
-        Effect.succeed({
-          signature: HexString.make(
-            Convert.Uint8Array.toHexString(input.signature),
-          ),
-          signerPublicKey: HexString.make(
-            Convert.Uint8Array.toHexString(input.publicKey),
-          ),
-        }),
-    },
-  ),
+      ),
+    ),
+    encode: SchemaGetter.transformOrFail((input) =>
+      Effect.succeed({
+        signature: HexString.make(
+          Convert.Uint8Array.toHexString(input.signature),
+        ),
+        signerPublicKey: HexString.make(
+          Convert.Uint8Array.toHexString(input.publicKey),
+        ),
+        curve: 'Ed25519' as const,
+      }),
+    ),
+  }),
 );
 
 export type Ed25519SignatureWithPublicKey =
@@ -300,15 +304,12 @@ export const BadgeDecodedSchema = Schema.Struct({
   resourceAddress: FungibleResourceAddress,
 });
 
-export const BadgeSchema = Schema.transformOrFail(
-  Schema.Struct({
-    type: Schema.String,
-    resourceAddress: Schema.String,
-  }),
-  BadgeDecodedSchema,
-  {
-    strict: false,
-    decode: (value) =>
+export const BadgeSchema = Schema.Struct({
+  type: Schema.String,
+  resourceAddress: Schema.String,
+}).pipe(
+  Schema.decodeTo(BadgeDecodedSchema, {
+    decode: SchemaGetter.transformOrFail((value) =>
       Effect.succeed(
         Schema.Struct({
           type: Schema.Literal('fungibleResource'),
@@ -318,8 +319,9 @@ export const BadgeSchema = Schema.transformOrFail(
           resourceAddress: FungibleResourceAddress.make(value.resourceAddress),
         }),
       ),
-    encode: (value) => Effect.succeed(value),
-  },
+    ),
+    encode: SchemaGetter.transformOrFail((value) => Effect.succeed(value)),
+  }),
 );
 
 export type Badge = typeof BadgeSchema.Type;

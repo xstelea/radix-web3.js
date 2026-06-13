@@ -1,4 +1,4 @@
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from '../gatewayApiClient';
 import { chunker } from '../helpers/chunker';
@@ -10,10 +10,10 @@ export type StateEntityDetailsParameters = Parameters<
 export type StateEntityDetailsInput =
   StateEntityDetailsParameters[0]['stateEntityDetailsRequest'];
 
-export class StateEntityDetails extends Effect.Service<StateEntityDetails>()(
+export class StateEntityDetails extends Context.Service<StateEntityDetails>()(
   'StateEntityDetails',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
 
       const pageSize = yield* Config.number(
@@ -24,12 +24,14 @@ export class StateEntityDetails extends Effect.Service<StateEntityDetails>()(
         'GATEWAY_STATE_ENTITY_DETAILS_CONCURRENCY',
       ).pipe(Config.withDefault(5));
 
-      return Effect.fnUntraced(function* (input: StateEntityDetailsInput) {
+      return Effect.fn('StateEntityDetails')(function* (
+        input: StateEntityDetailsInput,
+      ) {
         const chunks = chunker(input.addresses, pageSize);
 
         const result = yield* Effect.forEach(
           chunks,
-          Effect.fnUntraced(function* (addresses) {
+          Effect.fn('StateEntityDetails.getChunk')(function* (addresses) {
             return yield* gatewayClient.state.innerClient.stateEntityDetails({
               stateEntityDetailsRequest: { ...input, addresses },
             });
@@ -51,4 +53,9 @@ export class StateEntityDetails extends Effect.Service<StateEntityDetails>()(
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

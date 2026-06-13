@@ -8,19 +8,7 @@ export type JsonValue =
   | readonly JsonValue[]
   | { readonly [key: string]: JsonValue };
 
-export const JsonValueSchema: Schema.Schema<JsonValue> = Schema.Union(
-  Schema.Null,
-  Schema.Boolean,
-  Schema.JsonNumber,
-  Schema.String,
-  Schema.Array(Schema.suspend(() => JsonValueSchema)),
-  Schema.Record({
-    key: Schema.String,
-    value: Schema.suspend(() => JsonValueSchema),
-  }),
-);
-
-const JsonStringSchema = Schema.parseJson(JsonValueSchema, { space: 2 });
+export const JsonValueSchema: Schema.Schema<JsonValue> = Schema.Json;
 
 const isBigNumberLike = (
   value: unknown,
@@ -71,4 +59,4 @@ export const toJsonValue = (value: unknown): JsonValue => {
 };
 
 export const renderJson = (value: unknown) =>
-  Schema.encodeUnknownSync(JsonStringSchema)(toJsonValue(value));
+  JSON.stringify(toJsonValue(value), null, 2);

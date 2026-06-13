@@ -8,11 +8,11 @@ import {
   type TransactionIntentV2,
   TransactionV2Builder,
 } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect, Schema } from 'effect';
+import { Context, Data, Effect, Layer, Schema } from 'effect';
 
 import { findTransactionArtifact } from './artifacts';
 import type { ResolvedRdxConfig } from './config';
-import { gatewayErrorMessage } from './gatewayHttp';
+import { gatewayErrorMessage, gatewayResponseJson } from './gatewayHttp';
 import {
   fileExists,
   makeDirectory,
@@ -108,7 +108,7 @@ const readSignatureFile = (input: {
     }
 
     return yield* readJson(path).pipe(
-      Effect.flatMap(Schema.decodeUnknown(SignatureFileSchema)),
+      Effect.flatMap(Schema.decodeUnknownEffect(SignatureFileSchema)),
     );
   });
 
@@ -269,49 +269,62 @@ const gatewayBaseUrl = (network: ResolvedRdxConfig['network']) =>
     ? 'https://stokenet.radixdlt.com'
     : 'https://mainnet.radixdlt.com';
 
+const GatewayPreviewResponseSchema = Schema.Struct({
+  receipt: Schema.optional(
+    Schema.Struct({
+      status: Schema.optional(Schema.String),
+      error_message: Schema.optional(Schema.String),
+    }),
+  ),
+});
+
 export const gatewayNotarizePreview = (input: {
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   previewTransactionHex: string;
 }) =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/preview-v2`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            preview_transaction: {
-              type: 'Compiled',
-              preview_transaction_hex: input.previewTransactionHex,
-            },
-            flags: {
-              assume_all_signature_proofs: false,
-              skip_epoch_check: true,
-              use_free_credit: true,
-            },
-            opt_ins: {
-              core_api_receipt: false,
-            },
-          }),
-        },
+  Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        fetch(
+          `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/preview-v2`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              preview_transaction: {
+                type: 'Compiled',
+                preview_transaction_hex: input.previewTransactionHex,
+              },
+              flags: {
+                assume_all_signature_proofs: false,
+                skip_epoch_check: true,
+                use_free_credit: true,
+              },
+              opt_ins: {
+                core_api_receipt: false,
+              },
+            }),
+          },
+        ),
+      catch: (reason) => reason,
+    });
+    if (!response.ok) {
+      const message = yield* gatewayErrorMessage('Gateway preview', response);
+      return yield* Effect.fail(new Error(message));
+    }
+    const body = yield* gatewayResponseJson(response).pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(GatewayPreviewResponseSchema)),
+    );
+    if (body.receipt && body.receipt.status !== 'Succeeded') {
+      return yield* Effect.fail(
+        new Error(body.receipt.error_message ?? 'Preview failed'),
       );
-      if (!response.ok) {
-        throw new Error(
-          await Effect.runPromise(
-            gatewayErrorMessage('Gateway preview', response),
-          ),
-        );
-      }
-      const body = (await response.json()) as {
-        receipt?: { status?: string; error_message?: string };
-      };
-      if (body.receipt && body.receipt.status !== 'Succeeded') {
-        throw new Error(body.receipt.error_message ?? 'Preview failed');
-      }
-    },
-    catch: (reason) => new NotarizeError({ code: 'PREVIEW_FAILED', reason }),
-  });
+    }
+  }).pipe(
+    Effect.mapError(
+      (reason) => new NotarizeError({ code: 'PREVIEW_FAILED', reason }),
+    ),
+  );
 
 export const notarizeTransactionArtifact = (input: {
   artifactRoot: string;
@@ -324,7 +337,7 @@ export const notarizeTransactionArtifact = (input: {
     const artifactPath = yield* findTransactionArtifact(input);
     const preparedPath = join(artifactPath, 'prepared.json');
     const prepared = yield* readJson(preparedPath).pipe(
-      Effect.flatMap(Schema.decodeUnknown(PreparedTransactionSchema)),
+      Effect.flatMap(Schema.decodeUnknownEffect(PreparedTransactionSchema)),
     );
 
     if (!prepared.notaryPublicKey) {
@@ -337,7 +350,7 @@ export const notarizeTransactionArtifact = (input: {
     const generatedRequests = yield* Effect.all(
       prepared.signingRequests.map((requestPath) =>
         readJson(join(artifactPath, requestPath)).pipe(
-          Effect.flatMap(Schema.decodeUnknown(SigningRequestSchema)),
+          Effect.flatMap(Schema.decodeUnknownEffect(SigningRequestSchema)),
         ),
       ),
     );
@@ -473,12 +486,15 @@ export const notarizeTransactionArtifact = (input: {
     };
   });
 
-export class NotarizationCoordinator extends Effect.Service<NotarizationCoordinator>()(
+export class NotarizationCoordinator extends Context.Service<NotarizationCoordinator>()(
   'NotarizationCoordinator',
   {
-    sync: () => ({
+    make: Effect.succeed({
       notarizeTransactionArtifact,
       gatewayNotarizePreview,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

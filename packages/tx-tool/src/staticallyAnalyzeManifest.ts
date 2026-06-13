@@ -1,6 +1,6 @@
 import type { NetworkId } from '@radix-effects/shared';
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 import type { Manifest } from './schemas';
 
@@ -10,10 +10,10 @@ export class FailedToStaticallyAnalyzeManifestError extends Data.TaggedError(
   error: unknown;
 }> {}
 
-export class StaticallyAnalyzeManifest extends Effect.Service<StaticallyAnalyzeManifest>()(
+export class StaticallyAnalyzeManifest extends Context.Service<StaticallyAnalyzeManifest>()(
   '@radix-effects/tx-tool/StaticallyAnalyzeManifest',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       return (input: { manifest: Manifest; networkId: NetworkId }) =>
         Effect.tryPromise({
           try: () =>
@@ -26,4 +26,7 @@ export class StaticallyAnalyzeManifest extends Effect.Service<StaticallyAnalyzeM
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

@@ -1,4 +1,4 @@
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from '../gatewayApiClient';
 import type { AtLedgerState } from '../schemas';
@@ -11,10 +11,10 @@ export type GetNonFungibleIdsInput = {
   cursor?: string;
 };
 
-export class EntityNonFungibleIdsPage extends Effect.Service<EntityNonFungibleIdsPage>()(
+export class EntityNonFungibleIdsPage extends Context.Service<EntityNonFungibleIdsPage>()(
   'EntityNonFungibleIdsPage',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(
         'GatewayApi__Endpoint__StateEntityDetailsPageSize',
@@ -55,4 +55,9 @@ export class EntityNonFungibleIdsPage extends Effect.Service<EntityNonFungibleId
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

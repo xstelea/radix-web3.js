@@ -1,10 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { it } from '@effect/vitest';
+import { assert, describe, it } from '@effect/vitest';
 import { Convert, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
 
 import {
   PreparedSubintentSchema,
@@ -14,6 +13,7 @@ import {
 import {
   buildSignedPartialTransaction,
   prepareSubintentArtifacts,
+  SubintentPreviewRootManifestError,
 } from './subintent';
 import { makeTempDir } from './test-helpers';
 
@@ -41,11 +41,11 @@ describe('subintent workflow', () => {
       const manifestPath = join(cwd, 'payment.rtm');
       const headerPath = join(cwd, 'subintent-header.json');
       const rootManifestPath = join(cwd, 'preview-root.rtm');
-      yield* Effect.promise(() => writeFile(manifestPath, manifest, 'utf8'));
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() => writeFile(manifestPath, manifest, 'utf8'));
+      yield* Effect.tryPromise(() =>
         writeFile(headerPath, JSON.stringify(header), 'utf8'),
       );
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() =>
         writeFile(
           rootManifestPath,
           'USE_CHILD NamedIntent("payment") Intent("<subintentHash>");\nYIELD_TO_CHILD NamedIntent("payment");',
@@ -60,42 +60,94 @@ describe('subintent workflow', () => {
         rootManifestPath,
       });
 
-      const prepared = Schema.decodeUnknownSync(PreparedSubintentSchema)(
+      const prepared = yield* Schema.decodeUnknownEffect(
+        PreparedSubintentSchema,
+      )(
         JSON.parse(
-          yield* Effect.promise(() => readFile(result.preparedPath, 'utf8')),
+          yield* Effect.tryPromise(() => readFile(result.preparedPath, 'utf8')),
         ),
       );
-      expect(prepared.subintentHash.id).toMatch(/^subtxid_rdx1/);
-      expect(prepared.networkId).toBe(1);
-      expect(result.signatureTemplatePath).toBe(
+      const subintentHashId = prepared.subintentHash.id;
+      if (subintentHashId === null) {
+        assert.fail('Expected prepared subintent hash to include an id');
+      }
+      assert.match(subintentHashId, /^subtxid_rdx1/);
+      assert.strictEqual(prepared.networkId, 1);
+      assert.strictEqual(
+        result.signatureTemplatePath,
         join(result.artifactPath, 'signature-template.json'),
       );
 
-      const request = Schema.decodeUnknownSync(SigningRequestSchema)(
+      const request = yield* Schema.decodeUnknownEffect(SigningRequestSchema)(
         JSON.parse(
-          yield* Effect.promise(() =>
+          yield* Effect.tryPromise(() =>
             readFile(join(result.artifactPath, 'signing-request.json'), 'utf8'),
           ),
         ),
       );
-      expect(request.scope).toEqual({ kind: 'subintent', subintentId: 'root' });
-      expect(request.hash).toEqual(prepared.subintentHash);
+      assert.deepEqual(request.scope, {
+        kind: 'subintent',
+        subintentId: 'root',
+      });
+      assert.deepEqual(request.hash, prepared.subintentHash);
 
-      const template = Schema.decodeUnknownSync(SignatureTemplateSchema)(
+      const template = yield* Schema.decodeUnknownEffect(
+        SignatureTemplateSchema,
+      )(
         JSON.parse(
-          yield* Effect.promise(() =>
+          yield* Effect.tryPromise(() =>
             readFile(result.signatureTemplatePath, 'utf8'),
           ),
         ),
       );
-      expect(template.hash).toEqual(prepared.subintentHash);
+      assert.deepEqual(template.hash, prepared.subintentHash);
 
-      const previewRoot = yield* Effect.promise(() =>
+      const previewRoot = yield* Effect.tryPromise(() =>
         readFile(join(result.artifactPath, 'preview-root.rtm'), 'utf8'),
       );
-      expect(previewRoot).toContain(prepared.subintentHash.id);
-      expect(previewRoot).not.toContain('<subintentHash>');
+      assert.include(previewRoot, subintentHashId);
+      assert.notInclude(previewRoot, '<subintentHash>');
     }),
+  );
+
+  it.effect(
+    'rejects preview root manifests without exactly one subintent hash placeholder',
+    () =>
+      Effect.gen(function* () {
+        const cwd = yield* makeTempDir('subintent-preview-placeholder');
+        const artifactRoot = join(cwd, '.rdx', 'subintents');
+        const manifestPath = join(cwd, 'payment.rtm');
+        const headerPath = join(cwd, 'subintent-header.json');
+        const rootManifestPath = join(cwd, 'preview-root.rtm');
+        yield* Effect.tryPromise(() =>
+          writeFile(manifestPath, manifest, 'utf8'),
+        );
+        yield* Effect.tryPromise(() =>
+          writeFile(headerPath, JSON.stringify(header), 'utf8'),
+        );
+        yield* Effect.tryPromise(() =>
+          writeFile(
+            rootManifestPath,
+            'YIELD_TO_CHILD NamedIntent("payment");',
+            'utf8',
+          ),
+        );
+
+        const result = yield* Effect.result(
+          prepareSubintentArtifacts({
+            artifactRoot,
+            manifestPath,
+            headerPath,
+            rootManifestPath,
+          }),
+        );
+
+        assert.strictEqual(result._tag, 'Failure');
+        if (result._tag === 'Failure') {
+          assert.instanceOf(result.failure, SubintentPreviewRootManifestError);
+          assert.strictEqual(result.failure.placeholderCount, 0);
+        }
+      }),
   );
 
   it.effect(
@@ -106,8 +158,10 @@ describe('subintent workflow', () => {
         const artifactRoot = join(cwd, '.rdx', 'subintents');
         const manifestPath = join(cwd, 'payment.rtm');
         const headerPath = join(cwd, 'subintent-header.json');
-        yield* Effect.promise(() => writeFile(manifestPath, manifest, 'utf8'));
-        yield* Effect.promise(() =>
+        yield* Effect.tryPromise(() =>
+          writeFile(manifestPath, manifest, 'utf8'),
+        );
+        yield* Effect.tryPromise(() =>
           writeFile(headerPath, JSON.stringify(header), 'utf8'),
         );
 
@@ -118,7 +172,7 @@ describe('subintent workflow', () => {
           noPreview: true,
         });
         const signaturePath = join(cwd, 'signature.json');
-        yield* Effect.promise(() =>
+        yield* Effect.tryPromise(() =>
           writeFile(
             signaturePath,
             JSON.stringify({
@@ -144,24 +198,34 @@ describe('subintent workflow', () => {
           signaturePath,
         });
 
-        const hex = yield* Effect.promise(() =>
+        const hex = yield* Effect.tryPromise(() =>
           readFile(result.signedPartialTransactionPath, 'utf8'),
         );
-        expect(hex).toBe(result.signedPartialTransactionHex);
+        assert.strictEqual(hex, result.signedPartialTransactionHex);
 
-        const signedPartialTransaction = yield* Effect.promise(() =>
+        const signedPartialTransaction = yield* Effect.tryPromise(() =>
           RadixEngineToolkit.SignedPartialTransactionV2.decompile(
             Convert.HexString.toUint8Array(result.signedPartialTransactionHex),
             1,
           ),
         );
-        expect(
+        const decodedHeader =
           signedPartialTransaction.partialTransaction.rootSubintent.intentCore
-            .header,
-        ).toEqual(header.header);
-        expect(signedPartialTransaction.rootSubintentSignatures).toHaveLength(
-          1,
+            .header;
+        assert.strictEqual(decodedHeader.networkId, header.header.networkId);
+        assert.strictEqual(
+          decodedHeader.startEpochInclusive,
+          header.header.startEpochInclusive,
         );
+        assert.strictEqual(
+          decodedHeader.endEpochExclusive,
+          header.header.endEpochExclusive,
+        );
+        assert.strictEqual(
+          decodedHeader.intentDiscriminator,
+          header.header.intentDiscriminator,
+        );
+        assert.lengthOf(signedPartialTransaction.rootSubintentSignatures, 1);
       }),
   );
 });

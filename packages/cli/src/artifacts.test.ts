@@ -1,11 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { it } from '@effect/vitest';
+import { assert, describe, it } from '@effect/vitest';
 import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
 
 import {
+  ArtifactStoreError,
   createTransactionArtifactDirectory,
   findTransactionArtifact,
   listTransactionArtifacts,
@@ -50,16 +50,20 @@ describe('artifact store', () => {
           transactionId: 'txid_123',
         });
 
-        expect(first).toBe(join(artifactRoot, 'txid_123'));
+        assert.strictEqual(first, join(artifactRoot, 'txid_123'));
 
-        const second = yield* Effect.exit(
+        const second = yield* Effect.result(
           createTransactionArtifactDirectory({
             artifactRoot,
             transactionId: 'txid_123',
           }),
         );
 
-        expect(second._tag).toBe('Failure');
+        assert.strictEqual(second._tag, 'Failure');
+        if (second._tag === 'Failure') {
+          assert.instanceOf(second.failure, ArtifactStoreError);
+          assert.strictEqual(second.failure.path, first);
+        }
       }),
   );
 
@@ -80,11 +84,12 @@ describe('artifact store', () => {
         ],
       });
 
-      expect(result.acceptedCount).toBe(2);
-      expect(result.warnings).toHaveLength(1);
-      expect(
+      assert.strictEqual(result.acceptedCount, 2);
+      assert.lengthOf(result.warnings, 1);
+      assert.deepEqual(
         result.signatureFile.signatures.map((item) => item.scope.kind),
-      ).toEqual(['rootIntent', 'notary']);
+        ['rootIntent', 'notary'],
+      );
     }),
   );
 
@@ -92,7 +97,7 @@ describe('artifact store', () => {
     Effect.gen(function* () {
       const artifactRoot = yield* makeTempDir('canonical-signatures');
       const artifactPath = join(artifactRoot, 'txid');
-      yield* Effect.promise(() => mkdir(artifactPath, { recursive: true }));
+      yield* Effect.tryPromise(() => mkdir(artifactPath, { recursive: true }));
 
       const filePath = yield* writeCanonicalSignatures({
         artifactPath,
@@ -101,17 +106,15 @@ describe('artifact store', () => {
         imported: [entry()],
       });
 
-      const file = yield* Effect.promise(() => readFile(filePath, 'utf8'));
+      const file = yield* Effect.tryPromise(() => readFile(filePath, 'utf8'));
       const parsed = Schema.decodeUnknownSync(SignatureFileSchema)(
         JSON.parse(file),
       );
 
-      expect(parsed).toMatchObject({
-        type: 'signatureFile',
-        version: 1,
-        transactionId: 'txid',
-      });
-      expect(parsed.signatures).toHaveLength(1);
+      assert.strictEqual(parsed.type, 'signatureFile');
+      assert.strictEqual(parsed.version, 1);
+      assert.strictEqual(parsed.transactionId, 'txid');
+      assert.lengthOf(parsed.signatures, 1);
     }),
   );
 
@@ -132,7 +135,32 @@ describe('artifact store', () => {
         transactionId: 'txid',
       });
 
-      expect(result).toBe(artifactPath);
+      assert.strictEqual(result, artifactPath);
+    }),
+  );
+
+  it.effect('fails with a typed artifact error when no artifact exists', () =>
+    Effect.gen(function* () {
+      const artifactRoot = yield* makeTempDir('missing-artifact');
+      const result = yield* Effect.result(
+        findTransactionArtifact({
+          artifactRoot,
+          transactionId: 'txid_missing',
+        }),
+      );
+
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.instanceOf(result.failure, ArtifactStoreError);
+        assert.strictEqual(
+          result.failure.path,
+          join(artifactRoot, 'txid_missing'),
+        );
+        assert.strictEqual(
+          result.failure.reason,
+          'Transaction artifact not found',
+        );
+      }
     }),
   );
 
@@ -153,7 +181,7 @@ describe('artifact store', () => {
         intentHash: 'intent_beta',
         manifestSourceFile: 'beta.rtm',
       });
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() =>
         writeFile(
           join(artifactRoot, 'txid_2', 'submitResult.json'),
           '{}',
@@ -165,22 +193,20 @@ describe('artifact store', () => {
         artifactRoot,
         pattern: 'alpha',
       });
-      expect(patternResult.map((item) => item.transactionId)).toEqual([
-        'txid_1',
-      ]);
+      assert.deepEqual(
+        patternResult.map((item) => item.transactionId),
+        ['txid_1'],
+      );
 
       const filteredResult = yield* listTransactionArtifacts({
         artifactRoot,
         network: stokenet,
         status: 'submitted',
       });
-      expect(filteredResult).toMatchObject([
-        {
-          transactionId: 'txid_2',
-          status: 'submitted',
-          network: stokenet,
-        },
-      ]);
+      assert.lengthOf(filteredResult, 1);
+      assert.strictEqual(filteredResult[0].transactionId, 'txid_2');
+      assert.strictEqual(filteredResult[0].status, 'submitted');
+      assert.strictEqual(filteredResult[0].network, stokenet);
     }),
   );
 });
@@ -192,7 +218,7 @@ const writePreparedArtifact = (input: {
   intentHash: string;
   manifestSourceFile: string;
 }) =>
-  Effect.promise(async () => {
+  Effect.tryPromise(async () => {
     await mkdir(input.artifactPath, { recursive: true });
     await writeFile(
       join(input.artifactPath, 'prepared.json'),

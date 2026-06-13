@@ -11,7 +11,7 @@ import {
   ResponseError as ResponseErrorSdk,
   type TransactionNotFoundError as TransactionNotFoundErrorSdk,
 } from '@radixdlt/babylon-gateway-api-sdk';
-import { Config, Data, Duration, Effect } from 'effect';
+import { Config, Context, Data, Duration, Effect, Layer } from 'effect';
 
 export class AccountLockerNotFoundError extends Data.TaggedError(
   'AccountLockerNotFoundError',
@@ -63,10 +63,10 @@ export class UnknownGatewayError extends Data.TaggedError(
   error: unknown;
 }> {}
 
-export class GatewayApiClient extends Effect.Service<GatewayApiClient>()(
+export class GatewayApiClient extends Context.Service<GatewayApiClient>()(
   'GatewayApiClient',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const networkId = yield* Config.number('NETWORK_ID')
         .pipe(Config.withDefault(1))
         .pipe(Effect.orDie);
@@ -321,4 +321,7 @@ export class GatewayApiClient extends Effect.Service<GatewayApiClient>()(
       };
     }),
   },
-) {}
+) {
+  static readonly Default = Layer.effect(this, this.make);
+  static readonly DefaultWithoutDependencies = this.Default;
+}

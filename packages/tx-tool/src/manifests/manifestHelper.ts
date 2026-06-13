@@ -1,12 +1,12 @@
 import type { Amount } from '@radix-effects/shared';
 import { TransactionManifestString } from '@radix-effects/shared';
 import type { Account } from '@radix-effects/shared';
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 
-export class ManifestHelper extends Effect.Service<ManifestHelper>()(
+export class ManifestHelper extends Context.Service<ManifestHelper>()(
   'ManifestHelper',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       return {
         addFeePayer: (input: { account: Account; amount: Amount }) =>
           Effect.gen(function* () {
@@ -36,4 +36,7 @@ export class ManifestHelper extends Effect.Service<ManifestHelper>()(
       };
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

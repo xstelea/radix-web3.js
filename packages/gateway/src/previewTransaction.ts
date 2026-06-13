@@ -3,7 +3,7 @@ import type {
   TransactionPreviewOperationRequest,
   TransactionPreviewV2OperationRequest,
 } from '@radixdlt/babylon-gateway-api-sdk';
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from './gatewayApiClient';
 
@@ -13,13 +13,13 @@ export class TransactionPreviewError extends Data.TaggedError(
   message?: string;
 }> {}
 
-export class PreviewTransaction extends Effect.Service<PreviewTransaction>()(
+export class PreviewTransaction extends Context.Service<PreviewTransaction>()(
   'PreviewTransaction',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayApiClient = yield* GatewayApiClient;
 
-      return Effect.fnUntraced(function* (input: {
+      return Effect.fn('PreviewTransaction')(function* (input: {
         payload: TransactionPreviewOperationRequest['transactionPreviewRequest'];
       }) {
         const result =
@@ -38,15 +38,20 @@ export class PreviewTransaction extends Effect.Service<PreviewTransaction>()(
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}
 
-export class PreviewTransactionV2 extends Effect.Service<PreviewTransactionV2>()(
+export class PreviewTransactionV2 extends Context.Service<PreviewTransactionV2>()(
   'PreviewTransactionV2',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayApiClient = yield* GatewayApiClient;
 
-      return Effect.fnUntraced(function* (input: {
+      return Effect.fn('PreviewTransactionV2')(function* (input: {
         payload: TransactionPreviewV2OperationRequest['transactionPreviewV2Request'];
       }) {
         const result =
@@ -69,4 +74,9 @@ export class PreviewTransactionV2 extends Effect.Service<PreviewTransactionV2>()
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

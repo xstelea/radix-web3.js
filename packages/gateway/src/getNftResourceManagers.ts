@@ -3,7 +3,7 @@ import type {
   StateEntityDetailsOperationRequest,
   StateEntityDetailsResponseItem,
 } from '@radixdlt/babylon-gateway-api-sdk';
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from './gatewayApiClient';
 import { chunker } from './helpers/chunker';
@@ -18,14 +18,10 @@ type GetNftResourceManagersInput = {
   options?: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
 };
 
-export class GetNftResourceManagersService extends Effect.Service<GetNftResourceManagersService>()(
+export class GetNftResourceManagersService extends Context.Service<GetNftResourceManagersService>()(
   'GetNftResourceManagersService',
   {
-    dependencies: [
-      EntityNonFungiblesPage.Default,
-      EntityNonFungibleIdsPage.Default,
-    ],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const entityNonFungiblesPageService = yield* EntityNonFungiblesPage;
       const entityNonFungibleIdsPage = yield* EntityNonFungibleIdsPage;
@@ -102,7 +98,7 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
 
         const nftIds = yield* Effect.forEach(
           vaults,
-          Effect.fnUntraced(function* (vault) {
+          Effect.fn('GetNftResourceManagers.getVaultNftIds')(function* (vault) {
             const nftIds = vault?.items || [];
 
             if (vault.next_cursor && vault.total_count > 0) {
@@ -136,16 +132,20 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
 
           const results = yield* Effect.forEach(
             chunker(addresses, stateEntityDetailsPageSize),
-            Effect.fnUntraced(function* (addresses) {
-              return yield* gatewayClient.state.innerClient.stateEntityDetails({
-                stateEntityDetailsRequest: {
-                  addresses,
-                  opt_ins: optIns,
-                  at_ledger_state,
-                  aggregation_level: AGGREGATION_LEVEL,
-                },
-              });
-            }),
+            Effect.fn('GetNftResourceManagers.getStateEntityDetailsChunk')(
+              function* (addresses) {
+                return yield* gatewayClient.state.innerClient.stateEntityDetails(
+                  {
+                    stateEntityDetailsRequest: {
+                      addresses,
+                      opt_ins: optIns,
+                      at_ledger_state,
+                      aggregation_level: AGGREGATION_LEVEL,
+                    },
+                  },
+                );
+              },
+            ),
             { concurrency: stateEntityDetailsConcurrency },
           );
 
@@ -164,47 +164,49 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
           input;
         return yield* Effect.forEach(
           items,
-          Effect.fnUntraced(function* (item) {
-            const resourceManagers =
-              (item.non_fungible_resources
-                ?.items as NonFungibleResourcesCollectionItemVaultAggregated[]) ??
-              [];
+          Effect.fn('GetNftResourceManagers.getResourceManager')(
+            function* (item) {
+              const resourceManagers =
+                (item.non_fungible_resources
+                  ?.items as NonFungibleResourcesCollectionItemVaultAggregated[]) ??
+                [];
 
-            const address = item.address;
+              const address = item.address;
 
-            let next_cursor = item.non_fungible_resources?.next_cursor;
-            const totalCount = item.non_fungible_resources?.total_count ?? 0;
+              let next_cursor = item.non_fungible_resources?.next_cursor;
+              const totalCount = item.non_fungible_resources?.total_count ?? 0;
 
-            while (next_cursor && totalCount > 0) {
-              const entityNonFungiblesPageResult =
-                yield* entityNonFungiblesPageService({
-                  address,
-                  at_ledger_state: input.at_ledger_state,
-                  aggregation_level: aggregationLevel,
-                  opt_ins: optIns,
-                  cursor: next_cursor,
-                });
+              while (next_cursor && totalCount > 0) {
+                const entityNonFungiblesPageResult =
+                  yield* entityNonFungiblesPageService({
+                    address,
+                    at_ledger_state: input.at_ledger_state,
+                    aggregation_level: aggregationLevel,
+                    opt_ins: optIns,
+                    cursor: next_cursor,
+                  });
 
-              resourceManagers.push(
-                ...(entityNonFungiblesPageResult.items as NonFungibleResourcesCollectionItemVaultAggregated[]),
-              );
+                resourceManagers.push(
+                  ...(entityNonFungiblesPageResult.items as NonFungibleResourcesCollectionItemVaultAggregated[]),
+                );
 
-              next_cursor = entityNonFungiblesPageResult.next_cursor;
-            }
+                next_cursor = entityNonFungiblesPageResult.next_cursor;
+              }
 
-            const filteredResourceManagers = filterResourceAddresses
-              ? resourceManagers.filter((resourceManager) =>
-                  filterResourceAddresses.includes(
-                    resourceManager.resource_address,
-                  ),
-                )
-              : resourceManagers;
+              const filteredResourceManagers = filterResourceAddresses
+                ? resourceManagers.filter((resourceManager) =>
+                    filterResourceAddresses.includes(
+                      resourceManager.resource_address,
+                    ),
+                  )
+                : resourceManagers;
 
-            return {
-              address,
-              resourceManagers: filteredResourceManagers,
-            };
-          }),
+              return {
+                address,
+                resourceManagers: filteredResourceManagers,
+              };
+            },
+          ),
         );
       });
 
@@ -230,37 +232,41 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
 
         const resourceManagerResults = yield* Effect.forEach(
           stateEntityDetailsResults,
-          Effect.fnUntraced(function* (stateEntityDetails) {
-            return yield* getResourceManagers({
-              items: stateEntityDetails.items,
-              at_ledger_state: paginationState,
-              aggregationLevel: AGGREGATION_LEVEL,
-              optIns,
-              filterResourceAddresses,
-            });
-          }),
+          Effect.fn('GetNftResourceManagers.getResourceManagers')(
+            function* (stateEntityDetails) {
+              return yield* getResourceManagers({
+                items: stateEntityDetails.items,
+                at_ledger_state: paginationState,
+                aggregationLevel: AGGREGATION_LEVEL,
+                optIns,
+                filterResourceAddresses,
+              });
+            },
+          ),
           { concurrency: getNftResourceManagersConcurrency },
         ).pipe(Effect.map((items) => items.flat()));
 
         const results = yield* Effect.forEach(
           resourceManagerResults,
-          Effect.fnUntraced(function* (resourceManagerResult) {
-            const nftIds = yield* Effect.forEach(
-              resourceManagerResult.resourceManagers,
-              (resourceManager) =>
-                getNftIds({
-                  resourceManager,
-                  optIns,
-                  at_ledger_state: paginationState,
-                  address: resourceManagerResult.address,
-                }),
-            );
+          Effect.fn('GetNftResourceManagers.getNftIds')(
+            function* (resourceManagerResult) {
+              const nftIds = yield* Effect.forEach(
+                resourceManagerResult.resourceManagers,
+                (resourceManager) =>
+                  getNftIds({
+                    resourceManager,
+                    optIns,
+                    at_ledger_state: paginationState,
+                    address: resourceManagerResult.address,
+                  }),
+              );
 
-            return {
-              address: resourceManagerResult.address,
-              items: nftIds,
-            };
-          }),
+              return {
+                address: resourceManagerResult.address,
+                items: nftIds,
+              };
+            },
+          ),
           { concurrency: getNftIdsConcurrency },
         );
 
@@ -268,4 +274,15 @@ export class GetNftResourceManagersService extends Effect.Service<GetNftResource
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        GatewayApiClient.Default,
+        EntityNonFungiblesPage.Default,
+        EntityNonFungibleIdsPage.Default,
+      ),
+    ),
+  );
+}

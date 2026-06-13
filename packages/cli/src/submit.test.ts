@@ -1,10 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { it } from '@effect/vitest';
+import { afterEach, assert, describe, it, vi } from '@effect/vitest';
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
 import { Effect, Schema } from 'effect';
-import { afterEach, describe, expect, vi } from 'vitest';
 
 import { NetworkSchema, SubmitResultSchema } from './schemas';
 import {
@@ -28,7 +27,7 @@ describe('tx submit workflow', () => {
     Effect.gen(function* () {
       const fetchMock = vi
         .spyOn(globalThis, 'fetch')
-        .mockResolvedValue({ ok: true } as Response);
+        .mockResolvedValue(new Response(null, { status: 200 }));
 
       yield* gatewaySubmitNotarizedTransaction({
         config: { network: stokenet },
@@ -36,10 +35,34 @@ describe('tx submit workflow', () => {
         notarizedTransactionHex: 'aa',
       });
 
-      expect(fetchMock).toHaveBeenCalledWith(
+      const firstCall = fetchMock.mock.calls[0];
+      assert.isDefined(firstCall);
+      assert.strictEqual(
+        firstCall?.[0],
         'https://stokenet.radixdlt.com/transaction/submit',
-        expect.any(Object),
       );
+    }),
+  );
+
+  it.effect('returns a typed submit error when gateway broadcast fails', () =>
+    Effect.gen(function* () {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ message: 'rejected' }), { status: 400 }),
+      );
+
+      const result = yield* Effect.result(
+        gatewaySubmitNotarizedTransaction({
+          config: { network: stokenet },
+          transactionId,
+          notarizedTransactionHex: 'aa',
+        }),
+      );
+
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.strictEqual(result.failure._tag, 'SubmitError');
+        assert.strictEqual(result.failure.code, 'WRITE_FAILED');
+      }
     }),
   );
 
@@ -62,7 +85,7 @@ describe('tx submit workflow', () => {
           }),
       });
 
-      expect(result).toMatchObject({
+      assert.deepInclude(result, {
         transactionId,
         artifactPath,
         notarizedTransactionPath: join(
@@ -71,21 +94,22 @@ describe('tx submit workflow', () => {
         ),
         submitResultPath: join(artifactPath, 'submitResult.json'),
       });
-      expect(
-        yield* Effect.promise(() =>
+      assert.match(
+        yield* Effect.tryPromise(() =>
           readFile(result.notarizedTransactionPath, 'utf8'),
         ),
-      ).toMatch(/^[0-9a-f]+\n$/);
+        /^[0-9a-f]+\n$/,
+      );
 
       const submitResult = Schema.decodeUnknownSync(SubmitResultSchema)(
         JSON.parse(
-          yield* Effect.promise(() =>
+          yield* Effect.tryPromise(() =>
             readFile(result.submitResultPath, 'utf8'),
           ),
         ),
       );
-      expect(submitResult.networkStatus.status).toBe('Pending');
-      expect(submitResult.attempts).toHaveLength(1);
+      assert.strictEqual(submitResult.networkStatus.status, 'Pending');
+      assert.lengthOf(submitResult.attempts, 1);
     }),
   );
 
@@ -118,16 +142,16 @@ describe('tx submit workflow', () => {
 
       const submitResult = Schema.decodeUnknownSync(SubmitResultSchema)(
         JSON.parse(
-          yield* Effect.promise(() =>
+          yield* Effect.tryPromise(() =>
             readFile(result.submitResultPath, 'utf8'),
           ),
         ),
       );
-      expect(submitResult.networkStatus.status).toBe('CommittedSuccess');
-      expect(submitResult.attempts.map((attempt) => attempt.status)).toEqual([
-        'Submitted',
-        'CommittedSuccess',
-      ]);
+      assert.strictEqual(submitResult.networkStatus.status, 'CommittedSuccess');
+      assert.deepEqual(
+        submitResult.attempts.map((attempt) => attempt.status),
+        ['Submitted', 'CommittedSuccess'],
+      );
     }),
   );
 
@@ -144,7 +168,7 @@ describe('tx submit workflow', () => {
         });
         let submitCalls = 0;
 
-        const result = yield* Effect.either(
+        const result = yield* Effect.result(
           submitTransactionArtifact({
             artifactRoot,
             transactionId,
@@ -161,14 +185,14 @@ describe('tx submit workflow', () => {
           }),
         );
 
-        expect(result._tag).toBe('Left');
-        if (result._tag === 'Left') {
-          expect(result.left).toMatchObject({
+        assert.strictEqual(result._tag, 'Failure');
+        if (result._tag === 'Failure') {
+          assert.deepInclude(result.failure, {
             _tag: 'SubmitError',
             code: 'ALREADY_SUBMITTED',
           });
         }
-        expect(submitCalls).toBe(0);
+        assert.strictEqual(submitCalls, 0);
       }),
   );
 
@@ -199,15 +223,15 @@ describe('tx submit workflow', () => {
 
         const submitResult = Schema.decodeUnknownSync(SubmitResultSchema)(
           JSON.parse(
-            yield* Effect.promise(() =>
+            yield* Effect.tryPromise(() =>
               readFile(result.submitResultPath, 'utf8'),
             ),
           ),
         );
-        expect(submitResult.attempts.map((attempt) => attempt.status)).toEqual([
-          'CommittedFailure',
-          'Pending',
-        ]);
+        assert.deepEqual(
+          submitResult.attempts.map((attempt) => attempt.status),
+          ['CommittedFailure', 'Pending'],
+        );
       }),
   );
 
@@ -222,7 +246,7 @@ describe('tx submit workflow', () => {
         });
         let submitCalls = 0;
 
-        const result = yield* Effect.either(
+        const result = yield* Effect.result(
           submitTransactionArtifact({
             artifactRoot,
             transactionId,
@@ -239,14 +263,14 @@ describe('tx submit workflow', () => {
           }),
         );
 
-        expect(result._tag).toBe('Left');
-        if (result._tag === 'Left') {
-          expect(result.left).toMatchObject({
+        assert.strictEqual(result._tag, 'Failure');
+        if (result._tag === 'Failure') {
+          assert.deepInclude(result.failure, {
             _tag: 'SubmitError',
             code: 'MISSING_SIGNATURE',
           });
         }
-        expect(submitCalls).toBe(0);
+        assert.strictEqual(submitCalls, 0);
       }),
   );
 
@@ -271,11 +295,12 @@ describe('tx submit workflow', () => {
             }),
         });
 
-        expect(
-          yield* Effect.promise(() =>
+        assert.match(
+          yield* Effect.tryPromise(() =>
             readFile(result.notarizedTransactionPath, 'utf8'),
           ),
-        ).toMatch(/^[0-9a-f]+\n$/);
+          /^[0-9a-f]+\n$/,
+        );
       }),
   );
 });
@@ -284,7 +309,7 @@ const writeArtifactFixture = (
   artifactPath: string,
   input: { missingRootSignature?: boolean; withSubintent?: boolean } = {},
 ) =>
-  Effect.promise(async () => {
+  Effect.tryPromise(async () => {
     const childSubintent = input.withSubintent
       ? {
           intentCore: {
@@ -436,7 +461,7 @@ const writeSubmitResultFixture = (
   artifactPath: string,
   input: { status: string; checkedAt: string },
 ) =>
-  Effect.promise(() =>
+  Effect.tryPromise(() =>
     writeFile(
       join(artifactPath, 'submitResult.json'),
       JSON.stringify(

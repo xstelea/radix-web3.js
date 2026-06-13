@@ -1,12 +1,12 @@
 import type { ResourceHoldersCollectionItem } from '@radixdlt/babylon-gateway-api-sdk';
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from './gatewayApiClient';
 
-export class GetResourceHoldersService extends Effect.Service<GetResourceHoldersService>()(
+export class GetResourceHoldersService extends Context.Service<GetResourceHoldersService>()(
   'GetResourceHoldersService',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
 
       const getResourceHolders = Effect.fn(function* (input: {
@@ -49,4 +49,9 @@ export class GetResourceHoldersService extends Effect.Service<GetResourceHolders
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

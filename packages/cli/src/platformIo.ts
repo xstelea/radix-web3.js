@@ -1,10 +1,12 @@
-import { FileSystem } from '@effect/platform';
 import { NodeFileSystem } from '@effect/platform-node';
-import { Effect, Schema } from 'effect';
+import { Effect, FileSystem, Schema } from 'effect';
 
 import { renderJson } from './json';
 
 type FileErrorMapper<E> = (reason: unknown) => E;
+type MakeDirectoryOptions = Parameters<
+  FileSystem.FileSystem['makeDirectory']
+>[1];
 
 const withNodeFileSystem = <A, E>(
   effect: Effect.Effect<A, E, FileSystem.FileSystem>,
@@ -15,12 +17,12 @@ export const fileExists = (path: string): Effect.Effect<boolean> =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       return yield* fs.exists(path);
-    }).pipe(Effect.catchAll(() => Effect.succeed(false))),
+    }).pipe(Effect.catch(() => Effect.succeed(false))),
   );
 
 export const makeDirectory = <E>(
   path: string,
-  options: FileSystem.MakeDirectoryOptions | undefined,
+  options: MakeDirectoryOptions | undefined,
   mapError: FileErrorMapper<E>,
 ): Effect.Effect<void, E> =>
   withNodeFileSystem(
@@ -82,9 +84,9 @@ export const readJsonFile = <E>(
 ): Effect.Effect<unknown, E> =>
   readFileString(path, mapError).pipe(
     Effect.flatMap((content) =>
-      Schema.decodeUnknown(Schema.parseJson())(content).pipe(
-        Effect.mapError(mapError),
-      ),
+      Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Json))(
+        content,
+      ).pipe(Effect.mapError(mapError)),
     ),
   );
 

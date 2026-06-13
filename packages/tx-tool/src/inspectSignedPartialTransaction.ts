@@ -4,6 +4,7 @@ import {
   type SignedPartialTransactionV2,
   type SubintentV2,
 } from '@steleaio/radix-engine-toolkit';
+import { Data, Effect } from 'effect';
 
 export type InspectedSignature = {
   curve: 'Ed25519';
@@ -22,6 +23,12 @@ export type SignedPartialTransactionInspection = {
   nonRootSubintentCount: number;
 };
 
+export class FailedToInspectSignedPartialTransactionError extends Data.TaggedError(
+  'FailedToInspectSignedPartialTransactionError',
+)<{
+  error: unknown;
+}> {}
+
 const inspectSignature = (signature: {
   curve: string;
   signature: Uint8Array;
@@ -38,29 +45,41 @@ const inspectSignature = (signature: {
   };
 };
 
-export const inspectSignedPartialTransaction = async (input: {
+export const inspectSignedPartialTransaction = (input: {
   signedPartialTransactionHex: string;
   networkId: number;
-}): Promise<SignedPartialTransactionInspection> => {
-  const signedPartialTransaction =
-    await RadixEngineToolkit.SignedPartialTransactionV2.decompile(
-      Convert.HexString.toUint8Array(input.signedPartialTransactionHex),
-      input.networkId,
-    );
-  const rootSubintent =
-    signedPartialTransaction.partialTransaction.rootSubintent;
-  const hash = await RadixEngineToolkit.SubintentV2.hash(rootSubintent);
+}): Effect.Effect<
+  SignedPartialTransactionInspection,
+  FailedToInspectSignedPartialTransactionError
+> =>
+  Effect.gen(function* () {
+    const signedPartialTransaction = yield* Effect.tryPromise({
+      try: () =>
+        RadixEngineToolkit.SignedPartialTransactionV2.decompile(
+          Convert.HexString.toUint8Array(input.signedPartialTransactionHex),
+          input.networkId,
+        ),
+      catch: (error) =>
+        new FailedToInspectSignedPartialTransactionError({ error }),
+    });
+    const rootSubintent =
+      signedPartialTransaction.partialTransaction.rootSubintent;
+    const hash = yield* Effect.tryPromise({
+      try: () => RadixEngineToolkit.SubintentV2.hash(rootSubintent),
+      catch: (error) =>
+        new FailedToInspectSignedPartialTransactionError({ error }),
+    });
 
-  return {
-    signedPartialTransaction,
-    rootSubintent,
-    rootSubintentHash: {
-      id: hash.id,
-      hex: Convert.Uint8Array.toHexString(hash.hash),
-    },
-    rootSubintentSignatures:
-      signedPartialTransaction.rootSubintentSignatures.map(inspectSignature),
-    nonRootSubintentCount:
-      signedPartialTransaction.partialTransaction.nonRootSubintents.length,
-  };
-};
+    return {
+      signedPartialTransaction,
+      rootSubintent,
+      rootSubintentHash: {
+        id: hash.id,
+        hex: Convert.Uint8Array.toHexString(hash.hash),
+      },
+      rootSubintentSignatures:
+        signedPartialTransaction.rootSubintentSignatures.map(inspectSignature),
+      nonRootSubintentCount:
+        signedPartialTransaction.partialTransaction.nonRootSubintents.length,
+    };
+  });

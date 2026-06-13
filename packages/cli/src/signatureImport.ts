@@ -1,5 +1,5 @@
 import { ed25519 } from '@noble/curves/ed25519';
-import { Data, Effect, Schema } from 'effect';
+import { Context, Data, Effect, Layer, Schema } from 'effect';
 
 import { type SignatureImportResult, normalizeSignatures } from './artifacts';
 import {
@@ -65,9 +65,9 @@ const decodeImportableFile = (file: ImportableSignatureFile) =>
     }
 
     if (file.type === 'signatureTemplate') {
-      const template = yield* Schema.decodeUnknown(SignatureTemplateSchema)(
-        file,
-      ).pipe(
+      const template = yield* Schema.decodeUnknownEffect(
+        SignatureTemplateSchema,
+      )(file).pipe(
         Effect.mapError(
           (reason) =>
             new SignatureImportError({
@@ -83,7 +83,7 @@ const decodeImportableFile = (file: ImportableSignatureFile) =>
     }
 
     if (file.type === 'batchSignatureFile') {
-      const batch = yield* Schema.decodeUnknown(BatchSignatureFileSchema)(
+      const batch = yield* Schema.decodeUnknownEffect(BatchSignatureFileSchema)(
         file,
       ).pipe(
         Effect.mapError(
@@ -100,9 +100,9 @@ const decodeImportableFile = (file: ImportableSignatureFile) =>
       };
     }
 
-    const signatureFile = yield* Schema.decodeUnknown(SignatureFileSchema)(
-      file,
-    ).pipe(
+    const signatureFile = yield* Schema.decodeUnknownEffect(
+      SignatureFileSchema,
+    )(file).pipe(
       Effect.mapError(
         (reason) =>
           new SignatureImportError({
@@ -213,11 +213,14 @@ export const importSignatures = (input: {
     });
   });
 
-export class SignatureImporter extends Effect.Service<SignatureImporter>()(
+export class SignatureImporter extends Context.Service<SignatureImporter>()(
   'SignatureImporter',
   {
-    sync: () => ({
+    make: Effect.succeed({
       importSignatures,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

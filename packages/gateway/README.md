@@ -16,10 +16,7 @@ This package provides Effect-based wrappers around the Radix Gateway API, with f
 
 ```typescript
 import { Effect } from 'effect';
-import {
-  GatewayApiClientService,
-  getEntityDetails,
-} from '@radix-effects/gateway';
+import { GatewayApiClient, getEntityDetails } from '@radix-effects/gateway';
 
 const program = Effect.gen(function* () {
   const entityDetails = yield* getEntityDetails({
@@ -31,7 +28,7 @@ const program = Effect.gen(function* () {
 });
 
 const result = await Effect.runPromise(
-  program.pipe(Effect.provide(GatewayApiClientService.Default)),
+  program.pipe(Effect.provide(GatewayApiClient.Default)),
 );
 ```
 
@@ -53,7 +50,7 @@ In browser environments, use ConfigProvider to set configuration:
 
 ```typescript
 import { Effect, ConfigProvider, Layer } from 'effect';
-import { GatewayApiClientService } from '@radix-effects/gateway';
+import { GatewayApiClient } from '@radix-effects/gateway';
 
 // Create a configuration provider with your settings
 const browserConfig = ConfigProvider.fromMap(
@@ -67,8 +64,8 @@ const browserConfig = ConfigProvider.fromMap(
 
 // Create a layer with the config provider
 const BrowserGatewayLayer = Layer.provide(
-  GatewayApiClientService.Default,
-  Layer.setConfigProvider(browserConfig),
+  GatewayApiClient.Default,
+  ConfigProvider.layer(browserConfig),
 );
 
 // Use in your application

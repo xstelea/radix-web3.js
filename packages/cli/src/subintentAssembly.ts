@@ -1,4 +1,4 @@
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 export class SubintentAssemblyError extends Data.TaggedError(
   'SubintentAssemblyError',
@@ -96,11 +96,14 @@ export const assembleRootManifest = (input: {
     };
   });
 
-export class SubintentAssembly extends Effect.Service<SubintentAssembly>()(
+export class SubintentAssembly extends Context.Service<SubintentAssembly>()(
   'SubintentAssembly',
   {
-    sync: () => ({
+    make: Effect.succeed({
       assembleRootManifest,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
+
 import { Data, Effect } from 'effect';
 import { Hono } from 'hono';
+
 import {
   type X402PaymentMiddlewareOptions,
   createX402PaymentMiddleware,

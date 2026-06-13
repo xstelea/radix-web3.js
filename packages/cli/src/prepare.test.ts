@@ -1,11 +1,14 @@
 import { access, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { it } from '@effect/vitest';
+import { afterEach, assert, describe, it, vi } from '@effect/vitest';
 import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
 
-import { prepareTransactionArtifacts } from './prepare';
+import {
+  gatewayCurrentEpoch,
+  gatewayPreparePreview,
+  prepareTransactionArtifacts,
+} from './prepare';
 import {
   NetworkSchema,
   PreparedTransactionSchema,
@@ -23,12 +26,65 @@ const stokenetFaucetManifest =
   'CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "lock_fee" Decimal("10"); CALL_METHOD Address("component_tdx_2_1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxyulkzl") "free";';
 
 describe('tx prepare workflow', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.effect('fails prepare preview when the gateway receipt fails', () =>
+    Effect.gen(function* () {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            receipt: {
+              status: 'Failed',
+              error_message: 'manifest rejected',
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = yield* Effect.result(
+        gatewayPreparePreview({
+          config: { network: stokenet },
+          previewTransactionHex: 'aa',
+        }),
+      );
+
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.strictEqual(result.failure._tag, 'PreparePreviewError');
+      }
+    }),
+  );
+
+  it.effect('rejects malformed gateway epoch responses', () =>
+    Effect.gen(function* () {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ ledger_state: { epoch: '12' } }), {
+          status: 200,
+        }),
+      );
+
+      const result = yield* Effect.result(
+        gatewayCurrentEpoch({
+          config: { network: stokenet },
+        }),
+      );
+
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.strictEqual(result.failure._tag, 'PreparePreviewError');
+      }
+    }),
+  );
+
   it.effect('writes durable prepared transaction artifacts', () =>
     Effect.gen(function* () {
       const cwd = yield* makeTempDir('prepare-cwd');
       const artifactRoot = join(cwd, '.rdx', 'transactions');
       const manifestPath = join(cwd, 'root.rtm');
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() =>
         writeFile(manifestPath, stokenetFaucetManifest, 'utf8'),
       );
 
@@ -42,35 +98,35 @@ describe('tx prepare workflow', () => {
         },
       });
 
-      expect(result.transactionId).toMatch(/^txid_tdx_2_/);
-      expect(result.preparedPath).toBe(
+      assert.match(result.transactionId, /^txid_tdx_2_/);
+      assert.strictEqual(
+        result.preparedPath,
         join(result.artifactPath, 'prepared.json'),
       );
-      expect(result.signatureTemplatePaths).toContain(
+      assert.include(
+        result.signatureTemplatePaths,
         join(result.artifactPath, 'signature-templates/notary-signatory.json'),
       );
 
       const prepared = Schema.decodeUnknownSync(PreparedTransactionSchema)(
         JSON.parse(
-          yield* Effect.promise(() => readFile(result.preparedPath, 'utf8')),
+          yield* Effect.tryPromise(() => readFile(result.preparedPath, 'utf8')),
         ),
       );
-      expect(prepared).toMatchObject({
+      assert.deepInclude(prepared, {
         type: 'preparedTransaction',
         transactionId: result.transactionId,
         network: stokenet,
         transactionIntentPath: 'transactionIntent.json',
         staticAnalysisPath: 'staticAnalysis.json',
         notaryPublicKey,
-        authorizationAnalysis: {
-          rootIntent: [],
-          subintents: {},
-        },
       });
+      assert.deepEqual(prepared.authorizationAnalysis.rootIntent, []);
+      assert.deepEqual(prepared.authorizationAnalysis.subintents, {});
 
       const request = Schema.decodeUnknownSync(SigningRequestSchema)(
         JSON.parse(
-          yield* Effect.promise(() =>
+          yield* Effect.tryPromise(() =>
             readFile(
               join(
                 result.artifactPath,
@@ -81,11 +137,11 @@ describe('tx prepare workflow', () => {
           ),
         ),
       );
-      expect(request.scope).toEqual({ kind: 'notarySignatory' });
+      assert.deepEqual(request.scope, { kind: 'notarySignatory' });
 
       const template = Schema.decodeUnknownSync(SignatureTemplateSchema)(
         JSON.parse(
-          yield* Effect.promise(() =>
+          yield* Effect.tryPromise(() =>
             readFile(
               join(
                 result.artifactPath,
@@ -96,7 +152,7 @@ describe('tx prepare workflow', () => {
           ),
         ),
       );
-      expect(template.publicKey).toEqual(notaryPublicKey);
+      assert.deepEqual(template.publicKey, notaryPublicKey);
     }),
   );
 
@@ -105,7 +161,7 @@ describe('tx prepare workflow', () => {
       const cwd = yield* makeTempDir('prepare-overwrite');
       const artifactRoot = join(cwd, '.rdx', 'transactions');
       const manifestPath = join(cwd, 'root.rtm');
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() =>
         writeFile(manifestPath, stokenetFaucetManifest, 'utf8'),
       );
 
@@ -131,7 +187,7 @@ describe('tx prepare workflow', () => {
         }),
       );
 
-      expect(result._tag).toBe('Failure');
+      assert.strictEqual(result._tag, 'Failure');
     }),
   );
 
@@ -140,11 +196,11 @@ describe('tx prepare workflow', () => {
       const cwd = yield* makeTempDir('prepare-preview-fails');
       const artifactRoot = join(cwd, '.rdx', 'transactions');
       const manifestPath = join(cwd, 'root.rtm');
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() =>
         writeFile(manifestPath, stokenetFaucetManifest, 'utf8'),
       );
 
-      const result = yield* Effect.either(
+      const result = yield* Effect.result(
         prepareTransactionArtifacts({
           artifactRoot,
           network: stokenet,
@@ -158,13 +214,13 @@ describe('tx prepare workflow', () => {
         }),
       );
 
-      expect(result._tag).toBe('Left');
-      const artifactRootExists = yield* Effect.promise(() =>
+      assert.strictEqual(result._tag, 'Failure');
+      const artifactRootExists = yield* Effect.tryPromise(() =>
         access(artifactRoot)
           .then(() => true)
           .catch(() => false),
       );
-      expect(artifactRootExists).toBe(false);
+      assert.isFalse(artifactRootExists);
     }),
   );
 
@@ -174,14 +230,14 @@ describe('tx prepare workflow', () => {
       const artifactRoot = join(cwd, '.rdx', 'transactions');
       const manifestPath = join(cwd, 'root.rtm');
       const subintentsPath = join(cwd, 'subintents.json');
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() =>
         writeFile(
           manifestPath,
           `${stokenetFaucetManifest}\nYIELD_TO_CHILD NamedIntent("child_one");`,
           'utf8',
         ),
       );
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() =>
         writeFile(
           subintentsPath,
           JSON.stringify({
@@ -210,31 +266,32 @@ describe('tx prepare workflow', () => {
 
       const prepared = Schema.decodeUnknownSync(PreparedTransactionSchema)(
         JSON.parse(
-          yield* Effect.promise(() => readFile(result.preparedPath, 'utf8')),
+          yield* Effect.tryPromise(() => readFile(result.preparedPath, 'utf8')),
         ),
       );
-      expect(prepared.subintentOrder).toEqual(['child_one']);
+      assert.deepEqual(prepared.subintentOrder, ['child_one']);
 
-      const rootManifest = yield* Effect.promise(() =>
+      const rootManifest = yield* Effect.tryPromise(() =>
         readFile(join(result.artifactPath, 'rootManifest.rtm'), 'utf8'),
       );
-      expect(rootManifest).toContain('USE_CHILD');
-      expect(rootManifest).toContain('NamedIntent("child_one")');
+      assert.include(rootManifest, 'USE_CHILD');
+      assert.include(rootManifest, 'NamedIntent("child_one")');
 
-      const childManifest = yield* Effect.promise(() =>
+      const childManifest = yield* Effect.tryPromise(() =>
         readFile(join(result.artifactPath, 'subintents/child_one.rtm'), 'utf8'),
       );
-      expect(childManifest).toBe('YIELD_TO_PARENT;');
+      assert.strictEqual(childManifest, 'YIELD_TO_PARENT;');
 
       const transactionIntent = JSON.parse(
-        yield* Effect.promise(() =>
+        yield* Effect.tryPromise(() =>
           readFile(result.transactionIntentPath, 'utf8'),
         ),
       );
-      expect(
+      assert.lengthOf(
         transactionIntent.encoded.value.rootIntentCore.children,
-      ).toHaveLength(1);
-      expect(transactionIntent.encoded.value.nonRootSubintents).toHaveLength(1);
+        1,
+      );
+      assert.lengthOf(transactionIntent.encoded.value.nonRootSubintents, 1);
     }),
   );
 });

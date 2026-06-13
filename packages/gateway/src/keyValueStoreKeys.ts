@@ -1,13 +1,13 @@
 import type { StateKeyValueStoreKeysRequest } from '@radixdlt/babylon-gateway-api-sdk';
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from './gatewayApiClient';
 import type { AtLedgerState } from './schemas';
 
-export class KeyValueStoreKeysService extends Effect.Service<KeyValueStoreKeysService>()(
+export class KeyValueStoreKeysService extends Context.Service<KeyValueStoreKeysService>()(
   'KeyValueStoreKeysService',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
 
       const pageSize = yield* Config.number(
@@ -28,4 +28,9 @@ export class KeyValueStoreKeysService extends Effect.Service<KeyValueStoreKeysSe
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

@@ -1,6 +1,7 @@
+import { describe, expect, it } from '@effect/vitest';
 import { Effect } from 'effect';
 import { Hono } from 'hono';
-import { describe, expect, it } from 'vitest';
+
 import { createX402PaymentMiddleware } from './paymentMiddleware';
 import type { PaymentRequirements } from './paymentRequirements';
 

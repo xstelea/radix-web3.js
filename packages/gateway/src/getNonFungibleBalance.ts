@@ -1,5 +1,5 @@
 import type { StateEntityDetailsOperationRequest } from '@radixdlt/babylon-gateway-api-sdk';
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GetNftResourceManagersService } from './getNftResourceManagers';
 import type { AtLedgerState } from './schemas';
@@ -17,18 +17,14 @@ type GetNonFungibleBalanceInput = {
   options?: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
 };
 
-export type GetNonFungibleBalanceOutput = Effect.Effect.Success<
+export type GetNonFungibleBalanceOutput = Effect.Success<
   Awaited<ReturnType<(typeof GetNonFungibleBalanceService)['Service']>>
 >;
 
-export class GetNonFungibleBalanceService extends Effect.Service<GetNonFungibleBalanceService>()(
+export class GetNonFungibleBalanceService extends Context.Service<GetNonFungibleBalanceService>()(
   'GetNonFungibleBalanceService',
   {
-    dependencies: [
-      NonFungibleData.Default,
-      GetNftResourceManagersService.Default,
-    ],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const entityNonFungibleDataService = yield* NonFungibleData;
       const getNftResourceManagersService =
         yield* GetNftResourceManagersService;
@@ -113,4 +109,14 @@ export class GetNonFungibleBalanceService extends Effect.Service<GetNonFungibleB
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        NonFungibleData.Default,
+        GetNftResourceManagersService.Default,
+      ),
+    ),
+  );
+}

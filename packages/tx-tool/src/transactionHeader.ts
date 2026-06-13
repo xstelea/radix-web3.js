@@ -1,7 +1,7 @@
 import { GetLedgerStateService } from '@radix-effects/gateway';
 import { Epoch, type NetworkId, Nonce } from '@radix-effects/shared';
 import { generateRandomNonce } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect, Option, pipe } from 'effect';
+import { Context, Data, Effect, Layer, Option, pipe } from 'effect';
 
 import { EpochService } from './epoch';
 import { NotaryKeyPair } from './notaryKeyPair';
@@ -20,15 +20,10 @@ export type CreateTransactionHeaderInput = {
   notaryIsSignatory?: boolean;
 };
 
-export class TransactionHeader extends Effect.Service<TransactionHeader>()(
+export class TransactionHeader extends Context.Service<TransactionHeader>()(
   '@radix-effects/tx-tool/TransactionHeader',
   {
-    dependencies: [
-      GetLedgerStateService.Default,
-      NotaryKeyPair.Default,
-      EpochService.Default,
-    ],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const notaryKeyPair = yield* NotaryKeyPair;
       const epochService = yield* EpochService;
 
@@ -78,4 +73,11 @@ export class TransactionHeader extends Effect.Service<TransactionHeader>()(
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GetLedgerStateService.Default),
+    Layer.provide(NotaryKeyPair.Default),
+    Layer.provide(EpochService.Default),
+  );
+}
