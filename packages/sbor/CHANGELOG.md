@@ -1,5 +1,18 @@
 # @radix-effects/sbor
 
+## 0.3.3
+
+### Patch Changes
+
+- b1e5ccb: Improve Effect error handling and add functional coverage across package modules.
+
+  - Reject non-finite shared `BigNumberSchema` values and prefer securified account decoding when access-controller data is present.
+  - Keep signed partial transaction inspection failures in the typed Effect error channel.
+  - Simplify transaction status polling behind a narrow Gateway status interface with deterministic retry tests.
+
+- Updated dependencies [b1e5ccb]
+  - @radix-effects/shared@0.0.5
+
 ## 0.3.2
 
 ### Patch Changes
