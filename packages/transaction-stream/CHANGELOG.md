@@ -1,5 +1,18 @@
 # @radix-effects/transaction-stream
 
+## 0.1.11
+
+### Patch Changes
+
+- b1e5ccb: Improve Effect error handling and add functional coverage across package modules.
+
+  - Reject non-finite shared `BigNumberSchema` values and prefer securified account decoding when access-controller data is present.
+  - Keep signed partial transaction inspection failures in the typed Effect error channel.
+  - Simplify transaction status polling behind a narrow Gateway status interface with deterministic retry tests.
+
+- Updated dependencies [b1e5ccb]
+  - @radix-effects/gateway@0.6.4
+
 ## 0.1.10
 
 ### Patch Changes
