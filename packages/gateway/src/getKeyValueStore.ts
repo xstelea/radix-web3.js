@@ -1,17 +1,13 @@
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 
 import { KeyValueStoreDataService } from './keyValueStoreData';
 import { KeyValueStoreKeysService } from './keyValueStoreKeys';
 import type { AtLedgerState } from './schemas';
 
-export class GetKeyValueStoreService extends Effect.Service<GetKeyValueStoreService>()(
+export class GetKeyValueStoreService extends Context.Service<GetKeyValueStoreService>()(
   'GetKeyValueStoreService',
   {
-    dependencies: [
-      KeyValueStoreKeysService.Default,
-      KeyValueStoreDataService.Default,
-    ],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const keyValueStoreKeysService = yield* KeyValueStoreKeysService;
       const keyValueStoreDataService = yield* KeyValueStoreDataService;
 
@@ -64,4 +60,14 @@ export class GetKeyValueStoreService extends Effect.Service<GetKeyValueStoreServ
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        KeyValueStoreKeysService.Default,
+        KeyValueStoreDataService.Default,
+      ),
+    ),
+  );
+}

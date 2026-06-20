@@ -1,4 +1,4 @@
-import { it } from '@effect/vitest';
+import { layer } from '@effect/vitest';
 import { GatewayApiClient } from '@radix-effects/gateway';
 import {
   Cause,
@@ -27,18 +27,30 @@ const signer = Signer.makePrivateKeySigner(
 
 const GatewayApiClientLayer = GatewayApiClient.Default.pipe(
   Layer.provide(
-    Layer.setConfigProvider(ConfigProvider.fromJson({ NETWORK_ID: 2 })),
+    ConfigProvider.layer(ConfigProvider.fromUnknown({ NETWORK_ID: 2 })),
   ),
 );
 
 const TestLayer = TransactionHelper.Default.pipe(
   Layer.provide(GatewayApiClientLayer),
   Layer.provide(signer),
-  Layer.provide(Logger.pretty),
+  Layer.provide(Logger.layer([Logger.consolePretty()])),
+);
+
+const FailingLifeCycleHookLayer = Layer.succeed(TransactionLifeCycleHook)({
+  onSubmit: () => Effect.die('expected failure'),
+});
+
+const FailingHookTestLayer = TransactionHelper.Default.pipe(
+  Layer.provide(GatewayApiClientLayer),
+  Layer.provide(signer),
+  Layer.provide(Logger.layer([Logger.consolePretty()])),
+  Layer.provide(FailingLifeCycleHookLayer),
 );
 
 describe('TransactionHelper', () => {
-  it.live(
+  layer(TestLayer, { excludeTestServices: true })((it) => {
+    it.effect(
     'should submit a transaction',
     () =>
       Effect.gen(function* () {
@@ -53,11 +65,13 @@ describe('TransactionHelper', () => {
         });
 
         expect(transaction).toBeDefined();
-      }).pipe(Effect.provide(TestLayer)),
+      }),
     { timeout: 30_000 },
-  );
+    );
+  });
 
-  it.live('should fail to submit a transaction if life cycle hook fails', () =>
+  layer(FailingHookTestLayer, { excludeTestServices: true })((it) => {
+    it.effect('should fail to submit a transaction if life cycle hook fails', () =>
     Effect.gen(function* () {
       const transactionHelper = yield* TransactionHelper;
       const account = yield* createAccount({ networkId: 2 });
@@ -73,13 +87,9 @@ describe('TransactionHelper', () => {
 
       yield* Exit.match(exit, {
         onSuccess: () => Effect.die('expected failure'),
-        onFailure: (cause) => Effect.succeed(Cause.isDie(cause)),
+        onFailure: (cause) => Effect.succeed(Cause.hasDies(cause)),
       });
-    }).pipe(
-      Effect.provide(TestLayer),
-      Effect.provideService(TransactionLifeCycleHook, {
-        onSubmit: Effect.die,
-      }),
-    ),
-  );
+    }),
+    );
+  });
 });

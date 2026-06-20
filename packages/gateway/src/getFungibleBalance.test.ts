@@ -1,44 +1,116 @@
-import { layer } from '@effect/vitest';
+import { assert, layer } from '@effect/vitest';
+import type {
+  EntityMetadataCollection,
+  FungibleResourcesCollectionItem,
+  LedgerState,
+  StateEntityDetailsResponseItem,
+} from '@radixdlt/babylon-gateway-api-sdk';
 import { Effect, Layer } from 'effect';
 
-import { GatewayApiClient } from './gatewayApiClient';
 import { GetFungibleBalance } from './getFungibleBalance';
+import {
+  EntityFungiblesPage,
+  type EntityFungiblesPageInput,
+} from './state/entityFungiblesPage';
+import {
+  StateEntityDetails,
+  type StateEntityDetailsInput,
+} from './state/stateEntityDetails';
 
-const ACCOUNT_ADDRESSES = [
-  'account_rdx12yvpng9r5u3ggqqfwva0u6vya3hjrd6jantdq72p0jm6qarg8lld2f',
-  'account_rdx1cx26ckdep9t0lut3qaz3q8cj9wey3tdee0rdxhc5f0nce64lw5gt70',
-  'account_rdx168nr5dwmll4k2x5apegw5dhrpejf3xac7khjhgjqyg4qddj9tg9v4d',
-  'account_rdx168fjn9fcts5h59k3z64acp8xszz8sf2a66hnw050vdnkurullz9rge',
-];
+const ACCOUNT_ADDRESS =
+  'account_rdx12yvpng9r5u3ggqqfwva0u6vya3hjrd6jantdq72p0jm6qarg8lld2f';
 
-const testLayer = Layer.merge(
-  GatewayApiClient.Default,
-  GetFungibleBalance.Default.pipe(Layer.provide(GatewayApiClient.Default)),
+const ledgerState = {
+  network: 'mainnet',
+  state_version: 123,
+  proposer_round_timestamp: '2026-01-01T00:00:00.000Z',
+  epoch: 10,
+  round: 20,
+} satisfies LedgerState;
+
+const emptyMetadata = {
+  items: [],
+} satisfies EntityMetadataCollection;
+
+const globalResource = (
+  resourceAddress: string,
+  amount: string,
+): FungibleResourcesCollectionItem => ({
+  aggregation_level: 'Global',
+  resource_address: resourceAddress,
+  amount,
+  last_updated_at_state_version: ledgerState.state_version,
+});
+
+const accountDetails = {
+  address: ACCOUNT_ADDRESS,
+  metadata: emptyMetadata,
+  fungible_resources: {
+    next_cursor: 'next-page',
+    items: [globalResource('resource_rdx1first', '1.5')],
+  },
+} satisfies StateEntityDetailsResponseItem;
+
+const stateEntityDetailsLayer = Layer.succeed(
+  StateEntityDetails,
+  Effect.fn('testStateEntityDetails')((_input: StateEntityDetailsInput) =>
+    Effect.succeed({
+      ledger_state: ledgerState,
+      items: [accountDetails],
+    }),
+  ),
+);
+
+const entityFungiblesPageLayer = Layer.succeed(
+  EntityFungiblesPage,
+  Effect.fn('testEntityFungiblesPage')((input: EntityFungiblesPageInput) =>
+    Effect.sync(() => {
+      assert.deepStrictEqual(input.at_ledger_state, {
+        state_version: ledgerState.state_version,
+      });
+
+      return [
+        globalResource('resource_rdx1second', '2'),
+        globalResource('resource_rdx1zero', '0'),
+      ];
+    }),
+  ),
+);
+
+const testLayer = GetFungibleBalance.DefaultWithoutDependencies.pipe(
+  Layer.provide(
+    Layer.mergeAll(stateEntityDetailsLayer, entityFungiblesPageLayer),
+  ),
 );
 
 layer(testLayer)('GetFungibleBalance', (it) => {
   it.effect(
-    'should get account balance',
-    Effect.fnUntraced(function* () {
+    'returns positive global balances from initial and cursor pages',
+    Effect.fn('getFungibleBalancePaginationTest')(function* () {
       const getFungibleBalance = yield* GetFungibleBalance;
-      const gatewayApiClient = yield* GatewayApiClient;
 
-      const ledgerState =
-        yield* gatewayApiClient.stream.innerClient.streamTransactions({
-          streamTransactionsRequest: {
-            limit_per_page: 100,
-            at_ledger_state: {
-              timestamp: new Date('2025-09-03T00:00:00.000Z'),
-            },
-          },
-        });
-
-      yield* getFungibleBalance({
-        addresses: ACCOUNT_ADDRESSES,
-        at_ledger_state: {
-          state_version: ledgerState.ledger_state.state_version,
-        },
+      const result = yield* getFungibleBalance({
+        addresses: [ACCOUNT_ADDRESS],
       });
+
+      assert.deepStrictEqual(
+        result.map((account) => ({
+          address: account.address,
+          items: account.items.map((item) => ({
+            resource_address: item.resource_address,
+            amount: item.amount.toString(10),
+          })),
+        })),
+        [
+          {
+            address: ACCOUNT_ADDRESS,
+            items: [
+              { resource_address: 'resource_rdx1first', amount: '1.5' },
+              { resource_address: 'resource_rdx1second', amount: '2' },
+            ],
+          },
+        ],
+      );
     }),
   );
 });

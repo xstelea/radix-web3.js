@@ -20,7 +20,7 @@ export const parseX402PaymentHeader = Effect.fn('parseX402PaymentHeader')(
   (
     headerValue: string,
   ): Effect.Effect<ParsedPaymentPayload, InvalidPaymentPayloadError> =>
-    Schema.decodeUnknown(Schema.parseJson(X402PaymentHeaderSchema))(
+    Schema.decodeUnknownEffect(Schema.fromJsonString(X402PaymentHeaderSchema))(
       headerValue,
     ).pipe(
       Effect.mapError((reason) => new InvalidPaymentPayloadError({ reason })),

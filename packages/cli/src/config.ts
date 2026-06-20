@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { dirname, join, parse, resolve } from 'node:path';
 
-import { Data, Effect, Schema } from 'effect';
+import { Context, Data, Effect, Layer, Schema } from 'effect';
 
 import { fileExists, readJsonFile } from './platformIo';
 import {
@@ -81,7 +81,7 @@ const readConfigFile = (path: string) =>
     (reason) => new ConfigResolutionError({ path, reason }),
   ).pipe(
     Effect.flatMap((value) =>
-      Schema.decodeUnknown(RdxConfigFileSchema)(value).pipe(
+      Schema.decodeUnknownEffect(RdxConfigFileSchema)(value).pipe(
         Effect.mapError(
           (reason) => new ConfigResolutionError({ path, reason }),
         ),
@@ -152,11 +152,14 @@ export const resolveRdxConfig = (input: {
     };
   });
 
-export class ConfigResolver extends Effect.Service<ConfigResolver>()(
+export class ConfigResolver extends Context.Service<ConfigResolver>()(
   'ConfigResolver',
   {
-    sync: () => ({
+    make: Effect.succeed({
       resolve: resolveRdxConfig,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

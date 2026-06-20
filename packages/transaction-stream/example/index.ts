@@ -15,14 +15,22 @@ import {
 } from 'effect';
 
 import { ConfigService } from '../src/config';
-import { TransactionDetailsOptInsSchema } from '../src/schemas';
+import { makeTransactionDetailsOptIns } from '../src/schemas';
 import { TransactionStreamService } from '../src/streamer';
 
-const runtime = ManagedRuntime.make(Layer.mergeAll(Logger.pretty));
+const decodeSborValue = (value: unknown) =>
+  Effect.try({
+    try: () => Schema.decodeUnknownSync(ScryptoSborValueSchema)(value),
+    catch: (error) => error,
+  });
+
+const runtime = ManagedRuntime.make(
+  Layer.mergeAll(Logger.layer([Logger.consolePretty()])),
+);
 
 const runnable = Effect.gen(function* () {
-  const stokenetConfig = Layer.setConfigProvider(
-    ConfigProvider.fromJson({ NETWORK_ID: '2' }),
+  const stokenetConfig = ConfigProvider.layer(
+    ConfigProvider.fromUnknown({ NETWORK_ID: '2' }),
   );
 
   const stokenetStream = yield* TransactionStreamService.pipe(
@@ -51,49 +59,45 @@ const runnable = Effect.gen(function* () {
       stateVersion: Option.some(1),
       limitPerPage: 100,
       waitTime: Duration.seconds(60),
-      optIns: TransactionDetailsOptInsSchema.make({
+      optIns: makeTransactionDetailsOptIns({
         detailed_events: true,
       }),
     };
   });
 
-  const stokenetStreamFiber = yield* Effect.fork(
-    Stream.runForEach(stokenetStream, (_res) =>
-      Effect.gen(function* () {
-        // yield* Effect.log(res);
-        // yield* Effect.sleep(Duration.seconds(60));
-      }),
-    ).pipe(
-      Effect.provide(
-        Layer.effect(ConfigService, Effect.succeed(stokenetConfigRef)),
+  const stokenetStreamFiber = yield* stokenetStream
+    .pipe(Stream.provideService(ConfigService, stokenetConfigRef))
+    .pipe(
+      Stream.runForEach((_res) =>
+        Effect.gen(function* () {
+          // yield* Effect.log(res);
+          // yield* Effect.sleep(Duration.seconds(60));
+        }),
       ),
       Effect.annotateLogs('network', 'stokenet'),
-    ),
-  );
+      Effect.forkChild,
+    );
 
-  const mainnetStreamFiber = yield* Effect.fork(
-    Stream.runForEach(
-      mainnetStream.pipe(
-        Stream.map((tx) =>
-          tx.filter((item) => item.transaction_status === 'CommittedSuccess'),
-        ),
+  const mainnetStreamFiber = yield* mainnetStream
+    .pipe(Stream.provideService(ConfigService, mainnetConfigRef))
+    .pipe(
+      Stream.map((tx) =>
+        tx.filter((item) => item.transaction_status === 'CommittedSuccess'),
       ),
-      (res) =>
+      Stream.runForEach((res) =>
         Effect.gen(function* () {
           yield* Effect.forEach(res, (tx) =>
             Effect.gen(function* () {
               yield* pipe(
-                Option.fromNullable(tx.receipt),
+                Option.fromNullishOr(tx.receipt),
                 Option.flatMap((receipt) =>
-                  Option.fromNullable(receipt.detailed_events),
+                  Option.fromNullishOr(receipt.detailed_events),
                 ),
                 Option.match({
                   onNone: () => Effect.succeed<ScryptoSborValueSchema[]>([]),
                   onSome: (events) =>
                     Effect.forEach(events, (event) =>
-                      Schema.decodeUnknown(ScryptoSborValueSchema)(
-                        event.payload.programmatic_json,
-                      ).pipe(
+                      decodeSborValue(event.payload.programmatic_json).pipe(
                         Effect.tap((item) =>
                           Effect.log(
                             JSON.stringify(
@@ -129,15 +133,12 @@ const runnable = Effect.gen(function* () {
 
           yield* Effect.sleep(Duration.seconds(10));
         }),
-    ).pipe(
-      Effect.provide(
-        Layer.effect(ConfigService, Effect.succeed(mainnetConfigRef)),
       ),
       Effect.annotateLogs('network', 'mainnet'),
-    ),
-  );
+      Effect.forkChild,
+    );
 
   yield* Fiber.joinAll([stokenetStreamFiber, mainnetStreamFiber]);
-}).pipe(Effect.tapError(Effect.logError));
+}).pipe(Effect.tapError((error) => Effect.logError(error)));
 
 runtime.runPromiseExit(runnable);

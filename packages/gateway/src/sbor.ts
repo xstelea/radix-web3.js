@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-export const ScryptoSborValueKind = Schema.Literal(
+export const ScryptoSborValueKind = Schema.Literals([
   'Bool',
   'I8',
   'I16',
@@ -23,7 +23,7 @@ export const ScryptoSborValueKind = Schema.Literal(
   'Decimal',
   'PreciseDecimal',
   'NonFungibleLocalId',
-);
+]);
 
 export type ScryptoSborValueKind = typeof ScryptoSborValueKind.Type;
 
@@ -230,7 +230,7 @@ export type ScryptoSborValueSchema =
 
 export type { ScryptoSborValueMapEntry };
 
-const ScryptoSborValueMapEntrySchema: Schema.Schema<ScryptoSborValueMapEntry> =
+const ScryptoSborValueMapEntrySchema: Schema.Codec<ScryptoSborValueMapEntry> =
   Schema.suspend(() =>
     Schema.Struct({
       key: ScryptoSborValueSchema,
@@ -238,7 +238,7 @@ const ScryptoSborValueMapEntrySchema: Schema.Schema<ScryptoSborValueMapEntry> =
     }),
   );
 
-const ScryptoSborValueArraySchema: Schema.Schema<ScryptoSborValueArray> =
+const ScryptoSborValueArraySchema: Schema.Codec<ScryptoSborValueArray> =
   Schema.suspend(() =>
     Schema.Struct({
       ...ScryptoSborValueBase.fields,
@@ -249,7 +249,7 @@ const ScryptoSborValueArraySchema: Schema.Schema<ScryptoSborValueArray> =
     }),
   );
 
-const ScryptoSborValueMapSchema: Schema.Schema<ScryptoSborValueMap> =
+const ScryptoSborValueMapSchema: Schema.Codec<ScryptoSborValueMap> =
   Schema.suspend(() =>
     Schema.Struct({
       ...ScryptoSborValueBase.fields,
@@ -262,7 +262,7 @@ const ScryptoSborValueMapSchema: Schema.Schema<ScryptoSborValueMap> =
     }),
   );
 
-const ScryptoSborValueTupleSchema: Schema.Schema<ScryptoSborValueTuple> =
+const ScryptoSborValueTupleSchema: Schema.Codec<ScryptoSborValueTuple> =
   Schema.suspend(() =>
     Schema.Struct({
       ...ScryptoSborValueBase.fields,
@@ -271,7 +271,7 @@ const ScryptoSborValueTupleSchema: Schema.Schema<ScryptoSborValueTuple> =
     }),
   );
 
-const ScryptoSborValueEnumSchema: Schema.Schema<ScryptoSborValueEnum> =
+const ScryptoSborValueEnumSchema: Schema.Codec<ScryptoSborValueEnum> =
   Schema.suspend(() =>
     Schema.Struct({
       ...ScryptoSborValueBase.fields,
@@ -282,8 +282,8 @@ const ScryptoSborValueEnumSchema: Schema.Schema<ScryptoSborValueEnum> =
     }),
   );
 
-export const ScryptoSborValueSchema: Schema.Schema<ScryptoSborValueSchema> =
-  Schema.Union(
+export const ScryptoSborValueSchema: Schema.Codec<ScryptoSborValueSchema> =
+  Schema.Union([
     ScryptoSborValueBool,
     ScryptoSborValueString,
     ScryptoSborValueBytes,
@@ -306,4 +306,4 @@ export const ScryptoSborValueSchema: Schema.Schema<ScryptoSborValueSchema> =
     ScryptoSborValueMapSchema,
     ScryptoSborValueTupleSchema,
     ScryptoSborValueEnumSchema,
-  );
+  ]);

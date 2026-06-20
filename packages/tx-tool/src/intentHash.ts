@@ -1,6 +1,6 @@
 import { HexString, TransactionId } from '@radix-effects/shared';
 import { Convert, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect, pipe } from 'effect';
+import { Context, Data, Effect, Layer, pipe } from 'effect';
 
 import type { TransactionIntent, TransactionIntentV2 } from './schemas';
 
@@ -10,10 +10,10 @@ export class FailedToCreateIntentHashError extends Data.TaggedError(
   error: unknown;
 }> {}
 
-export class IntentHashService extends Effect.Service<IntentHashService>()(
+export class IntentHashService extends Context.Service<IntentHashService>()(
   '@radix-effects/tx-tool/IntentHashService',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const createIntentHash = (
         input: TransactionIntent | TransactionIntentV2,
       ) =>
@@ -36,4 +36,7 @@ export class IntentHashService extends Effect.Service<IntentHashService>()(
       return { create: createIntentHash };
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

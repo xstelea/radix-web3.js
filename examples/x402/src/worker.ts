@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import { Hono } from 'hono';
+
 import {
   type X402Config,
   paymentRequirementsFromConfig,
@@ -76,9 +77,11 @@ export default {
     return Effect.runPromise(
       Effect.gen(function* () {
         const app = yield* createWorkerApp(env, request.url);
-        return yield* Effect.promise(() => Promise.resolve(app.fetch(request)));
+        return yield* Effect.tryPromise(() =>
+          Promise.resolve(app.fetch(request)),
+        );
       }).pipe(
-        Effect.catchAll((error) =>
+        Effect.catch((error) =>
           Effect.succeed(
             Response.json(
               {

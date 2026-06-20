@@ -5,7 +5,7 @@ import {
   TransactionManifestString,
   TransactionMessageString,
 } from '@radix-effects/shared';
-import { Effect, Option, Schema } from 'effect';
+import { Context, Effect, Layer, Option, Schema } from 'effect';
 
 import {
   ManifestSchema,
@@ -26,14 +26,10 @@ const CreateTransactionIntentInputSchema = Schema.Struct({
 type CreateTransactionIntentInput =
   typeof CreateTransactionIntentInputSchema.Type;
 
-export class CreateTransactionIntent extends Effect.Service<CreateTransactionIntent>()(
+export class CreateTransactionIntent extends Context.Service<CreateTransactionIntent>()(
   '@radix-effects/tx-tool/CreateTransactionIntent',
   {
-    dependencies: [
-      StaticallyValidateManifest.Default,
-      TransactionHeader.Default,
-    ],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const staticallyValidateManifest = yield* StaticallyValidateManifest;
       const createTransactionHeader = yield* TransactionHeader;
       const gatewayApiClient = yield* GatewayApiClient;
@@ -42,25 +38,25 @@ export class CreateTransactionIntent extends Effect.Service<CreateTransactionInt
 
       return (input: CreateTransactionIntentInput) =>
         Effect.gen(function* () {
-          const parsedInput = yield* Schema.decodeUnknown(
+          const parsedInput = yield* Schema.decodeUnknownEffect(
             CreateTransactionIntentInputSchema,
           )(input);
 
           const header = yield* createTransactionHeader({
             networkId: networkId,
-            startEpochInclusive: Option.fromNullable(
+            startEpochInclusive: Option.fromNullishOr(
               parsedInput.startEpochInclusive,
             ),
-            endEpochExclusive: Option.fromNullable(
+            endEpochExclusive: Option.fromNullishOr(
               parsedInput.endEpochExclusive,
             ),
           });
 
-          const message = yield* Schema.decodeUnknown(TransactionMessageSchema)(
-            parsedInput.message,
-          );
+          const message = yield* Schema.decodeUnknownEffect(
+            TransactionMessageSchema,
+          )(parsedInput.message);
 
-          const manifest = yield* Schema.decodeUnknown(ManifestSchema)(
+          const manifest = yield* Schema.decodeUnknownEffect(ManifestSchema)(
             parsedInput.manifest,
           );
 
@@ -79,4 +75,10 @@ export class CreateTransactionIntent extends Effect.Service<CreateTransactionInt
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(StaticallyValidateManifest.Default),
+    Layer.provide(TransactionHeader.Default),
+  );
+}

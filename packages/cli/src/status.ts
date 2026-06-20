@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { Data, Effect, Schema } from 'effect';
+import { Context, Data, Effect, Layer, Schema } from 'effect';
 
 import {
   type TransactionArtifactSummary,
@@ -9,7 +9,7 @@ import {
   writeSubmitResult,
 } from './artifacts';
 import type { Network, ResolvedRdxConfig } from './config';
-import { gatewayErrorMessage } from './gatewayHttp';
+import { gatewayErrorMessage, gatewayResponseJson } from './gatewayHttp';
 import { readJsonFile } from './platformIo';
 import {
   type ArtifactStatus,
@@ -38,58 +38,66 @@ const gatewayBaseUrl = (network: Network) =>
     ? 'https://stokenet.radixdlt.com'
     : 'https://mainnet.radixdlt.com';
 
+const GatewayTransactionStatusResponseSchema = Schema.Struct({
+  intent_status: Schema.optional(Schema.String),
+  intent_status_description: Schema.optional(Schema.String),
+  error_message: Schema.optional(Schema.NullOr(Schema.String)),
+});
+
 const readExistingSubmitResult = (artifactPath: string) =>
   readJsonFile(
     join(artifactPath, 'submitResult.json'),
     (reason) => reason,
   ).pipe(
-    Effect.flatMap(Schema.decodeUnknown(SubmitResultSchema)),
-    Effect.catchAll(() => Effect.succeed(undefined)),
+    Effect.flatMap(Schema.decodeUnknownEffect(SubmitResultSchema)),
+    Effect.catch(() => Effect.succeed(undefined)),
   );
 
 export const gatewayTransactionStatus = (input: {
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   transactionId: string;
 }): Effect.Effect<NetworkTransactionStatus, TransactionStatusError> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/status`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ intent_hash: input.transactionId }),
-        },
-      );
+  Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        fetch(
+          `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/status`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ intent_hash: input.transactionId }),
+          },
+        ),
+      catch: (reason) => reason,
+    });
 
-      if (!response.ok) {
-        throw new Error(
-          await Effect.runPromise(
-            gatewayErrorMessage('Gateway status', response),
-          ),
-        );
-      }
+    if (!response.ok) {
+      const message = yield* gatewayErrorMessage('Gateway status', response);
+      return yield* Effect.fail(new Error(message));
+    }
 
-      const body = (await response.json()) as {
-        intent_status?: string;
-        intent_status_description?: string;
-        error_message?: string | null;
-      };
+    const body = yield* gatewayResponseJson(response).pipe(
+      Effect.flatMap(
+        Schema.decodeUnknownEffect(GatewayTransactionStatusResponseSchema),
+      ),
+    );
 
-      return {
-        transactionId: input.transactionId,
-        status: body.intent_status ?? 'Unknown',
-        statusDescription: body.intent_status_description ?? '',
-        errorMessage: body.error_message ?? null,
-        checkedAt: new Date().toISOString(),
-      };
-    },
-    catch: (reason) =>
-      new TransactionStatusError({
-        transactionId: input.transactionId,
-        reason,
-      }),
-  });
+    return {
+      transactionId: input.transactionId,
+      status: body.intent_status ?? 'Unknown',
+      statusDescription: body.intent_status_description ?? '',
+      errorMessage: body.error_message ?? null,
+      checkedAt: new Date().toISOString(),
+    };
+  }).pipe(
+    Effect.mapError(
+      (reason) =>
+        new TransactionStatusError({
+          transactionId: input.transactionId,
+          reason,
+        }),
+    ),
+  );
 
 export const queryTransactionStatus = (input: {
   artifactRoot: string;
@@ -182,13 +190,16 @@ export const listTransactionArtifactsWithNetworkStatus = (input: {
     );
   });
 
-export class StatusLifecycle extends Effect.Service<StatusLifecycle>()(
+export class StatusLifecycle extends Context.Service<StatusLifecycle>()(
   'StatusLifecycle',
   {
-    sync: () => ({
+    make: Effect.succeed({
       queryTransactionStatus,
       listTransactionArtifactsWithNetworkStatus,
       gatewayTransactionStatus,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

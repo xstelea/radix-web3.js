@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { Data, Effect, Schema } from 'effect';
+import { Context, Data, Effect, Layer, Schema } from 'effect';
 
 import {
   fileExists,
@@ -160,7 +160,7 @@ export const writeSubmitResult = (input: {
 const readPreparedTransaction = (path: string) =>
   readJsonFile(path, (reason) => new ArtifactStoreError({ path, reason })).pipe(
     Effect.flatMap((value) =>
-      Schema.decodeUnknown(PreparedTransactionSchema)(value).pipe(
+      Schema.decodeUnknownEffect(PreparedTransactionSchema)(value).pipe(
         Effect.mapError((reason) => new ArtifactStoreError({ path, reason })),
       ),
     ),
@@ -293,10 +293,10 @@ export const listTransactionArtifacts = (input: {
     );
   });
 
-export class ArtifactStore extends Effect.Service<ArtifactStore>()(
+export class ArtifactStore extends Context.Service<ArtifactStore>()(
   'ArtifactStore',
   {
-    sync: () => ({
+    make: Effect.succeed({
       createTransactionArtifactDirectory,
       findTransactionArtifactOption,
       findTransactionArtifact,
@@ -305,4 +305,7 @@ export class ArtifactStore extends Effect.Service<ArtifactStore>()(
       writeCanonicalSignatures,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

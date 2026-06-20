@@ -92,7 +92,7 @@ const signatureEntryToRet = (entry: SignatureEntry) =>
 
 const buildRootSubintent = (input: { manifest: string; headerPath: string }) =>
   readJsonFile(input.headerPath, (reason) => reason).pipe(
-    Effect.flatMap(Schema.decodeUnknown(SubintentHeaderFileSchema)),
+    Effect.flatMap(Schema.decodeUnknownEffect(SubintentHeaderFileSchema)),
     Effect.map(
       (headerFile): SubintentV2 => ({
         intentCore: {
@@ -293,7 +293,7 @@ export const buildSignedPartialTransaction = (input: {
     const prepared = yield* readJsonFile(
       input.preparedPath,
       (reason) => reason,
-    ).pipe(Effect.flatMap(Schema.decodeUnknown(PreparedSubintentSchema)));
+    ).pipe(Effect.flatMap(Schema.decodeUnknownEffect(PreparedSubintentSchema)));
     const rootSubintent = yield* readJsonFile(
       join(artifactPath, prepared.subintentPath),
       (reason) => reason,
@@ -301,7 +301,7 @@ export const buildSignedPartialTransaction = (input: {
     const signatureFile = yield* readJsonFile(
       input.signaturePath,
       (reason) => reason,
-    ).pipe(Effect.flatMap(Schema.decodeUnknown(SignatureFileSchema)));
+    ).pipe(Effect.flatMap(Schema.decodeUnknownEffect(SignatureFileSchema)));
     const rootSignatures = signatureFile.signatures
       .filter(
         (entry) =>
@@ -312,7 +312,9 @@ export const buildSignedPartialTransaction = (input: {
       .map(signatureEntryToRet);
     const signedPartialTransaction: SignedPartialTransactionV2 = {
       partialTransaction: {
-        rootSubintent: yield* Schema.decodeUnknown(Schema.Any)(rootSubintent),
+        rootSubintent: yield* Schema.decodeUnknownEffect(Schema.Any)(
+          rootSubintent,
+        ),
         nonRootSubintents: [],
       },
       rootSubintentSignatures: rootSignatures,

@@ -1,7 +1,7 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
 import type { TransactionReceipt } from '@radixdlt/babylon-core-api-sdk';
 import type { TransactionPreviewOperationRequest } from '@radixdlt/babylon-gateway-api-sdk';
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 class TransactionPreviewError extends Data.TaggedError(
   'TransactionPreviewError',
@@ -9,10 +9,10 @@ class TransactionPreviewError extends Data.TaggedError(
   message?: string;
 }> {}
 
-export class PreviewTransaction extends Effect.Service<PreviewTransaction>()(
+export class PreviewTransaction extends Context.Service<PreviewTransaction>()(
   '@radix-effects/tx-tool/PreviewTransaction',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayApiClient = yield* GatewayApiClient;
 
       return (input: {
@@ -35,4 +35,7 @@ export class PreviewTransaction extends Effect.Service<PreviewTransaction>()(
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

@@ -1,4 +1,5 @@
 import { Data, Effect, Schema } from 'effect';
+
 import type { PaymentRequirements } from './paymentRequirements';
 
 export const X402ConfigSchema = Schema.Struct({
@@ -70,8 +71,8 @@ export const validateX402Config = Effect.fn('validateX402Config')(function* (
 export const parseX402Config = Effect.fn('parseX402Config')(function* (
   rawConfig: string,
 ) {
-  const config = yield* Schema.decodeUnknown(
-    Schema.parseJson(X402ConfigSchema),
+  const config = yield* Schema.decodeUnknownEffect(
+    Schema.fromJsonString(X402ConfigSchema),
   )(rawConfig).pipe(
     Effect.mapError((reason) => new ConfigParseError({ reason })),
   );

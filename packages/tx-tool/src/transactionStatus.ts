@@ -1,7 +1,15 @@
 import { GatewayApiClient } from '@radix-effects/gateway';
 import type { TransactionId } from '@radix-effects/shared';
 import type { TransactionStatusResponse } from '@radixdlt/babylon-gateway-api-sdk';
-import { Config, Data, Duration, Effect, Schedule } from 'effect';
+import {
+  Config,
+  Context,
+  Data,
+  Duration,
+  Effect,
+  Layer,
+  Schedule,
+} from 'effect';
 
 export class TransactionNotResolvedError extends Data.TaggedError(
   'TransactionNotResolvedError',
@@ -25,10 +33,10 @@ export class TimeoutError extends Data.TaggedError('TimeoutError')<{
   transactionId: TransactionId;
 }> {}
 
-export class TransactionStatus extends Effect.Service<TransactionStatus>()(
+export class TransactionStatus extends Context.Service<TransactionStatus>()(
   '@radix-effects/tx-tool/TransactionStatus',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const pollTimeoutDuration = yield* Config.duration(
         'TRANSACTION_STATUS_POLL_TIMEOUT',
       ).pipe(Config.withDefault(Duration.minutes(1)), Effect.orDie);
@@ -42,7 +50,7 @@ export class TransactionStatus extends Effect.Service<TransactionStatus>()(
       ).pipe(Config.withDefault(Duration.millis(100)), Effect.orDie);
 
       const retryPolicy = Schedule.exponential(pollDelay).pipe(
-        Schedule.compose(Schedule.recurs(maxPollAttempts)),
+        Schedule.bothLeft(Schedule.recurs(maxPollAttempts)),
       );
 
       const gatewayApiClient = yield* GatewayApiClient;
@@ -93,11 +101,14 @@ export class TransactionStatus extends Effect.Service<TransactionStatus>()(
             }),
             Effect.timeout(input.timeout ?? pollTimeoutDuration),
             Effect.catchTags({
-              TimeoutException: () =>
-                new TimeoutError({ transactionId: input.id }),
+              TimeoutError: () =>
+                Effect.fail(new TimeoutError({ transactionId: input.id })),
             }),
           ),
       };
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

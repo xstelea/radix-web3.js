@@ -1,4 +1,4 @@
-import { Effect, Schema } from 'effect';
+import { Effect, Schema, SchemaGetter } from 'effect';
 
 import { AccessControllerAddress, AccountAddress } from '../brandedTypes';
 
@@ -7,29 +7,24 @@ export const UnsecurifiedAccountDecodedSchema = Schema.Struct({
   address: AccountAddress,
 });
 
-export const UnsecurifiedAccountSchema = Schema.asSchema(
-  Schema.transformOrFail(
-    Schema.Struct({
-      type: Schema.optionalWith(Schema.Literal('unsecurifiedAccount'), {
-        default: () => 'unsecurifiedAccount' as const,
+export const UnsecurifiedAccountSchema = Schema.Struct({
+  type: Schema.optional(Schema.Literal('unsecurifiedAccount')),
+  address: Schema.String,
+}).pipe(
+  Schema.decodeTo(UnsecurifiedAccountDecodedSchema, {
+    decode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'unsecurifiedAccount' as const,
+        address: AccountAddress.make(value.address),
       }),
-      address: Schema.String,
-    }),
-    UnsecurifiedAccountDecodedSchema,
-    {
-      strict: true,
-      decode: (value) =>
-        Effect.succeed({
-          type: 'unsecurifiedAccount' as const,
-          address: AccountAddress.make(value.address),
-        }),
-      encode: (value) =>
-        Effect.succeed({
-          type: 'unsecurifiedAccount' as const,
-          address: value.address,
-        }),
-    },
-  ),
+    ),
+    encode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'unsecurifiedAccount' as const,
+        address: value.address,
+      }),
+    ),
+  }),
 );
 
 export const SecurifiedAccountDecodedSchema = Schema.Struct({
@@ -38,40 +33,35 @@ export const SecurifiedAccountDecodedSchema = Schema.Struct({
   accessControllerAddress: AccessControllerAddress,
 });
 
-export const SecurifiedAccountSchema = Schema.asSchema(
-  Schema.transformOrFail(
-    Schema.Struct({
-      type: Schema.optionalWith(Schema.Literal('securifiedAccount'), {
-        default: () => 'securifiedAccount' as const,
+export const SecurifiedAccountSchema = Schema.Struct({
+  type: Schema.optional(Schema.Literal('securifiedAccount')),
+  address: Schema.String,
+  accessControllerAddress: Schema.String,
+}).pipe(
+  Schema.decodeTo(SecurifiedAccountDecodedSchema, {
+    decode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'securifiedAccount' as const,
+        address: AccountAddress.make(value.address),
+        accessControllerAddress: AccessControllerAddress.make(
+          value.accessControllerAddress,
+        ),
       }),
-      address: Schema.String,
-      accessControllerAddress: Schema.String,
-    }),
-    SecurifiedAccountDecodedSchema,
-    {
-      strict: true,
-      decode: (value) =>
-        Effect.succeed({
-          type: 'securifiedAccount' as const,
-          address: AccountAddress.make(value.address),
-          accessControllerAddress: AccessControllerAddress.make(
-            value.accessControllerAddress,
-          ),
-        }),
-      encode: (value) =>
-        Effect.succeed({
-          type: 'securifiedAccount' as const,
-          address: value.address,
-          accessControllerAddress: value.accessControllerAddress,
-        }),
-    },
-  ),
+    ),
+    encode: SchemaGetter.transformOrFail((value) =>
+      Effect.succeed({
+        type: 'securifiedAccount' as const,
+        address: value.address,
+        accessControllerAddress: value.accessControllerAddress,
+      }),
+    ),
+  }),
 );
 
-export const AccountSchema = Schema.Union(
-  UnsecurifiedAccountSchema,
+export const AccountSchema = Schema.Union([
   SecurifiedAccountSchema,
-);
+  UnsecurifiedAccountSchema,
+]);
 
 export type UnsecurifiedAccount = typeof UnsecurifiedAccountSchema.Type;
 export type SecurifiedAccount = typeof SecurifiedAccountSchema.Type;

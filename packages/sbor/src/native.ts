@@ -22,7 +22,17 @@ import type {
   ProgrammaticScryptoSborValueU128,
 } from '@radixdlt/babylon-gateway-api-sdk';
 import { BigNumber } from 'bignumber.js';
-import { Data, Effect, Option, ParseResult, Schema, flow, pipe } from 'effect';
+import {
+  Data,
+  Effect,
+  Option,
+  Result,
+  Schema,
+  SchemaGetter,
+  SchemaIssue,
+  flow,
+  pipe,
+} from 'effect';
 
 export type SborKind =
   | 'Bool'
@@ -70,9 +80,7 @@ export type GenericNumeric = {
   readonly value: BigNumber;
 };
 
-type Ast = Parameters<
-  NonNullable<Parameters<typeof Schema.transformOrFail>[2]['decode']>
->[2];
+type Ast = Schema.Top['ast'];
 
 type SborInfo = {
   readonly kind: SborKind;
@@ -87,19 +95,16 @@ export type NativeSborSchema<Decoded, Encoded = Decoded> = Schema.Schema<
   readonly sbor: SborInfo;
 };
 
-type AnyNativeSborSchema = Schema.Schema.AnyNoContext & {
+type AnyNativeSborSchema = Schema.Top & {
   readonly sbor: SborInfo;
 };
 
-export type Infer<S extends Schema.Schema.All> = Schema.Schema.Type<S>;
+export type Infer<S extends Schema.Top> = Schema.Schema.Type<S>;
 
-interface SborDecodeIssue {
-  readonly _tag: 'SborDecodeIssue';
+class SborDecodeIssue extends Data.TaggedClass('SborDecodeIssue')<{
   readonly message: string;
   readonly path: readonly string[];
-}
-
-const SborDecodeIssue = Data.tagged<SborDecodeIssue>('SborDecodeIssue');
+}> {}
 
 const renderIssue = flow((issue: SborDecodeIssue) =>
   issue.path.length === 0
@@ -108,23 +113,54 @@ const renderIssue = flow((issue: SborDecodeIssue) =>
 );
 
 const parseIssue =
-  (ast: Ast, input: unknown) =>
-  (issue: SborDecodeIssue): ParseResult.Type =>
-    new ParseResult.Type(ast, input, renderIssue(issue));
+  (_ast: Ast, input: unknown) =>
+  (issue: SborDecodeIssue): SchemaIssue.Issue =>
+    new SchemaIssue.InvalidValue(Option.some(input), {
+      message: renderIssue(issue),
+    });
 
 const fail = (
   ast: Ast,
   input: unknown,
   message: string,
   path: readonly string[] = [],
-): Effect.Effect<never, ParseResult.Type> =>
-  Effect.fail(pipe({ message, path }, SborDecodeIssue, parseIssue(ast, input)));
+): Effect.Effect<never, SchemaIssue.Issue> =>
+  Effect.fail(
+    pipe(new SborDecodeIssue({ message, path }), parseIssue(ast, input)),
+  );
 
-const withSbor = <S extends Schema.Schema.All>(
+const transformOrFail = <From extends Schema.Top, To extends Schema.Top>(
+  from: From,
+  to: To,
+  options: {
+    readonly decode: (
+      input: From['Type'],
+      parseOptions: unknown,
+      ast: Ast,
+    ) => Effect.Effect<To['Encoded'], SchemaIssue.Issue>;
+    readonly encode: (
+      input: To['Encoded'],
+      parseOptions: unknown,
+      ast: Ast,
+    ) => Effect.Effect<From['Type'], SchemaIssue.Issue>;
+  },
+) =>
+  from.pipe(
+    Schema.decodeTo(to, {
+      decode: SchemaGetter.transformOrFail((input, parseOptions) =>
+        options.decode(input, parseOptions, from.ast),
+      ),
+      encode: SchemaGetter.transformOrFail((input, parseOptions) =>
+        options.encode(input, parseOptions, to.ast),
+      ),
+    }),
+  );
+
+const withSbor = <S extends Schema.Top>(
   schema: S,
   kind: SborKind,
   typeName: Option.Option<string> = Option.none(),
-) => Object.assign(schema, { sbor: Data.struct({ kind, typeName }) });
+) => Object.assign(schema, { sbor: { kind, typeName } });
 
 const isRecord = (input: unknown): input is Record<string, unknown> =>
   typeof input === 'object' && input !== null;
@@ -222,6 +258,21 @@ const sborDecimal = (kind: DecimalKind) =>
     value: Schema.String,
   });
 
+const SborNumeric = Schema.Union([
+  sborInteger('U8'),
+  sborInteger('U16'),
+  sborInteger('U32'),
+  sborInteger('U64'),
+  sborInteger('U128'),
+  sborInteger('I8'),
+  sborInteger('I16'),
+  sborInteger('I32'),
+  sborInteger('I64'),
+  sborInteger('I128'),
+  sborDecimal('Decimal'),
+  sborDecimal('PreciseDecimal'),
+]);
+
 const SborIntegerI64Instant = Schema.Struct({
   ...baseFields,
   kind: Schema.Literal('I64'),
@@ -229,7 +280,7 @@ const SborIntegerI64Instant = Schema.Struct({
   value: Schema.String,
 });
 
-const NumericKindSchema = Schema.Literal(
+const NumericKindSchema = Schema.Literals([
   'U8',
   'U16',
   'U32',
@@ -242,7 +293,7 @@ const NumericKindSchema = Schema.Literal(
   'I128',
   'Decimal',
   'PreciseDecimal',
-);
+]);
 
 const GenericNumericSchema = Schema.Struct({
   type: NumericKindSchema,
@@ -252,34 +303,34 @@ const GenericNumericSchema = Schema.Struct({
 const integerRange = (kind: IntegerKind) => {
   switch (kind) {
     case 'U8':
-      return Data.struct({ min: 0n, max: 255n });
+      return { min: 0n, max: 255n };
     case 'U16':
-      return Data.struct({ min: 0n, max: 65535n });
+      return { min: 0n, max: 65535n };
     case 'U32':
-      return Data.struct({ min: 0n, max: 4294967295n });
+      return { min: 0n, max: 4294967295n };
     case 'U64':
-      return Data.struct({ min: 0n, max: 18446744073709551615n });
+      return { min: 0n, max: 18446744073709551615n };
     case 'U128':
-      return Data.struct({
+      return {
         min: 0n,
         max: 340282366920938463463374607431768211455n,
-      });
+      };
     case 'I8':
-      return Data.struct({ min: -128n, max: 127n });
+      return { min: -128n, max: 127n };
     case 'I16':
-      return Data.struct({ min: -32768n, max: 32767n });
+      return { min: -32768n, max: 32767n };
     case 'I32':
-      return Data.struct({ min: -2147483648n, max: 2147483647n });
+      return { min: -2147483648n, max: 2147483647n };
     case 'I64':
-      return Data.struct({
+      return {
         min: -9223372036854775808n,
         max: 9223372036854775807n,
-      });
+      };
     case 'I128':
-      return Data.struct({
+      return {
         min: -170141183460469231731687303715884105728n,
         max: 170141183460469231731687303715884105727n,
-      });
+      };
   }
 };
 
@@ -287,14 +338,18 @@ const parseBigInt = (value: string, ast: Ast, input: unknown) =>
   Effect.try({
     try: () => BigInt(value),
     catch: () =>
-      new ParseResult.Type(ast, input, 'Integer value must be a valid string'),
+      new SchemaIssue.InvalidValue(Option.some(input), {
+        message: 'Integer value must be a valid string',
+      }),
   });
 
 const parseBigNumber = (value: string, ast: Ast, input: unknown) =>
   Effect.try({
     try: () => new BigNumber(value),
     catch: () =>
-      new ParseResult.Type(ast, input, 'Numeric value must be a valid string'),
+      new SchemaIssue.InvalidValue(Option.some(input), {
+        message: 'Numeric value must be a valid string',
+      }),
   }).pipe(
     Effect.flatMap((numeric) =>
       numeric.isFinite()
@@ -336,15 +391,14 @@ const encodedInteger = (kind: IntegerKind, value: BigNumber, ast: Ast) =>
     }
     const encoded = value.toFixed(0);
     yield* validateInteger(kind, encoded, ast, value);
-    return Data.struct({ kind, value: encoded });
+    return { kind, value: encoded };
   });
 
 const numericKind = (input: unknown): Option.Option<NumericKind> =>
   isRecord(input) && typeof input.kind === 'string'
     ? pipe(
-        Schema.decodeUnknownEither(NumericKindSchema)(input.kind),
-        Option.liftPredicate((either) => either._tag === 'Right'),
-        Option.map((either) => either.right),
+        Schema.decodeUnknownResult(NumericKindSchema)(input.kind),
+        Result.getSuccess,
       )
     : Option.none();
 
@@ -359,60 +413,56 @@ const numericValue = (kind: NumericKind, value: string, ast: Ast) =>
 const fieldByName = (fields: ReadonlyArray<unknown>, name: string) =>
   pipe(
     fields.find((field) => isRecord(field) && field.field_name === name),
-    Option.fromNullable,
+    Option.fromNullishOr,
   );
 
 const withFieldName = (fieldName: string, input: unknown) =>
-  isRecord(input) ? Data.struct({ ...input, field_name: fieldName }) : input;
+  isRecord(input) ? { ...input, field_name: fieldName } : input;
 
 const getProperty = (input: unknown, property: string) =>
-  isRecord(input) ? Option.fromNullable(input[property]) : Option.none();
+  isRecord(input) ? Option.fromNullishOr(input[property]) : Option.none();
 
 export const value = withSbor(Schema.Unknown, 'Tuple');
 
 export const string = withSbor(
-  Schema.transformOrFail(SborString, Schema.String, {
+  transformOrFail(SborString, Schema.String, {
     strict: false,
     decode: (input) => Effect.succeed(input.value),
-    encode: (input) =>
-      Effect.succeed(Data.struct({ kind: 'String', value: input })),
+    encode: (input) => Effect.succeed({ kind: 'String', value: input }),
   }),
   'String',
 );
 
 export const bool = withSbor(
-  Schema.transformOrFail(SborBool, Schema.Boolean, {
+  transformOrFail(SborBool, Schema.Boolean, {
     strict: false,
     decode: (input) => Effect.succeed(input.value),
-    encode: (input) =>
-      Effect.succeed(Data.struct({ kind: 'Bool', value: input })),
+    encode: (input) => Effect.succeed({ kind: 'Bool', value: input }),
   }),
   'Bool',
 );
 
 export const bytes = withSbor(
-  Schema.transformOrFail(SborBytes, Schema.String, {
+  transformOrFail(SborBytes, Schema.String, {
     strict: false,
     decode: (input, _options, ast) =>
       input.element_kind === 'U8'
         ? Effect.succeed(input.hex)
         : fail(ast, input, 'Bytes element kind must be U8'),
     encode: (input) =>
-      Effect.succeed(
-        Data.struct({
-          kind: 'Bytes',
-          element_kind: 'U8',
-          element_type_name: 'U8',
-          hex: input,
-        }),
-      ),
+      Effect.succeed({
+        kind: 'Bytes',
+        element_kind: 'U8',
+        element_type_name: 'U8',
+        hex: input,
+      }),
   }),
   'Bytes',
 );
 
 const integer = (kind: IntegerKind) =>
   withSbor(
-    Schema.transformOrFail(sborInteger(kind), Schema.instanceOf(BigNumber), {
+    transformOrFail(sborInteger(kind), Schema.instanceOf(BigNumber), {
       strict: false,
       decode: (input, _options, ast) => integerValue(kind, input.value, ast),
       encode: (input, _options, ast) => encodedInteger(kind, input, ast),
@@ -422,12 +472,11 @@ const integer = (kind: IntegerKind) =>
 
 const decimalLike = (kind: DecimalKind) =>
   withSbor(
-    Schema.transformOrFail(sborDecimal(kind), Schema.instanceOf(BigNumber), {
+    transformOrFail(sborDecimal(kind), Schema.instanceOf(BigNumber), {
       strict: false,
       decode: (input, _options, ast) =>
         parseBigNumber(input.value, ast, input.value),
-      encode: (input) =>
-        Effect.succeed(Data.struct({ kind, value: input.toString(10) })),
+      encode: (input) => Effect.succeed({ kind, value: input.toString(10) }),
     }),
     kind,
   );
@@ -446,7 +495,7 @@ export const decimal = decimalLike('Decimal');
 export const preciseDecimal = decimalLike('PreciseDecimal');
 
 export const number = withSbor(
-  Schema.transformOrFail(Schema.Unknown, GenericNumericSchema, {
+  transformOrFail(SborNumeric, GenericNumericSchema, {
     strict: false,
     decode: (input, _options, ast) =>
       pipe(
@@ -457,9 +506,7 @@ export const number = withSbor(
             isRecord(input) && typeof input.value === 'string'
               ? pipe(
                   numericValue(kind, input.value, ast),
-                  Effect.map((decoded) =>
-                    Data.struct({ type: kind, value: decoded }),
-                  ),
+                  Effect.map((decoded) => ({ type: kind, value: decoded })),
                 )
               : fail(ast, input, 'Numeric value must be a string'),
         }),
@@ -467,12 +514,10 @@ export const number = withSbor(
     encode: (input, _options, ast) =>
       isIntegerKind(input.type)
         ? encodedInteger(input.type, input.value, ast)
-        : Effect.succeed(
-            Data.struct({
-              kind: input.type,
-              value: input.value.toString(10),
-            }),
-          ),
+        : Effect.succeed({
+            kind: input.type,
+            value: input.value.toString(10),
+          }),
   }),
   'Decimal',
 );
@@ -480,7 +525,7 @@ export const number = withSbor(
 export const numeric = number;
 
 export const instant = withSbor(
-  Schema.transformOrFail(SborIntegerI64Instant, Schema.DateFromSelf, {
+  transformOrFail(SborIntegerI64Instant, Schema.Date, {
     strict: false,
     decode: (input, _options, ast) =>
       pipe(
@@ -488,13 +533,11 @@ export const instant = withSbor(
         Effect.map((seconds) => new Date(seconds.toNumber() * 1000)),
       ),
     encode: (input) =>
-      Effect.succeed(
-        Data.struct({
-          kind: 'I64',
-          type_name: 'Instant',
-          value: Math.floor(input.getTime() / 1000).toString(),
-        }),
-      ),
+      Effect.succeed({
+        kind: 'I64',
+        type_name: 'Instant',
+        value: Math.floor(input.getTime() / 1000).toString(),
+      }),
   }),
   'I64',
   Option.some('Instant'),
@@ -505,16 +548,18 @@ function reference<const TypeName extends string, A extends string>(
   schema: Schema.Schema<A, string>,
 ) {
   return withSbor(
-    Schema.transformOrFail(SborReference, schema, {
+    transformOrFail(SborReference, schema, {
       strict: false,
       decode: (input, _options, ast) =>
         input.type_name === typeName
           ? Effect.succeed(input.value)
           : fail(ast, input, `Expected Reference type_name ${typeName}`),
       encode: (input) =>
-        Effect.succeed(
-          Data.struct({ kind: 'Reference', type_name: typeName, value: input }),
-        ),
+        Effect.succeed({
+          kind: 'Reference',
+          type_name: typeName,
+          value: input,
+        }),
     }),
     'Reference',
     Option.some(typeName),
@@ -526,16 +571,14 @@ function own<const TypeName extends string, A extends string>(
   schema: Schema.Schema<A, string>,
 ) {
   return withSbor(
-    Schema.transformOrFail(SborOwn, schema, {
+    transformOrFail(SborOwn, schema, {
       strict: false,
       decode: (input, _options, ast) =>
         input.type_name === typeName
           ? Effect.succeed(input.value)
           : fail(ast, input, `Expected Own type_name ${typeName}`),
       encode: (input) =>
-        Effect.succeed(
-          Data.struct({ kind: 'Own', type_name: typeName, value: input }),
-        ),
+        Effect.succeed({ kind: 'Own', type_name: typeName, value: input }),
     }),
     'Own',
     Option.some(typeName),
@@ -555,7 +598,7 @@ export const vaultAddress = own('Vault', VaultAddress);
 export const keyValueStoreAddress = own('KeyValueStore', KeyValueStoreAddress);
 
 export const nonFungibleLocalId = withSbor(
-  Schema.transformOrFail(
+  transformOrFail(
     Schema.Struct({
       ...baseFields,
       kind: Schema.Literal('NonFungibleLocalId'),
@@ -566,9 +609,7 @@ export const nonFungibleLocalId = withSbor(
       strict: false,
       decode: (input) => Effect.succeed(input.value),
       encode: (input) =>
-        Effect.succeed(
-          Data.struct({ kind: 'NonFungibleLocalId', value: input }),
-        ),
+        Effect.succeed({ kind: 'NonFungibleLocalId', value: input }),
     },
   ),
   'NonFungibleLocalId',
@@ -580,7 +621,7 @@ export const struct = <
   fields: Fields,
 ) =>
   withSbor(
-    Schema.transformOrFail(SborTuple, Schema.Struct(fields), {
+    transformOrFail(SborTuple, Schema.Struct(fields), {
       strict: false,
       decode: (input, _options, ast) =>
         pipe(
@@ -612,7 +653,7 @@ export const tuple = <const Items extends ReadonlyArray<AnyNativeSborSchema>>(
   items: Items,
 ) =>
   withSbor(
-    Schema.transformOrFail(SborTuple, Schema.Tuple(...items), {
+    transformOrFail(SborTuple, Schema.Tuple(items), {
       strict: false,
       decode: (input, _options, ast) =>
         input.fields.length === items.length
@@ -629,7 +670,7 @@ export const tuple = <const Items extends ReadonlyArray<AnyNativeSborSchema>>(
 
 export const array = <Item extends AnyNativeSborSchema>(item: Item) =>
   withSbor(
-    Schema.transformOrFail(SborArray, Schema.Array(item), {
+    transformOrFail(SborArray, Schema.Array(item), {
       strict: false,
       decode: (input) => Effect.succeed(input.elements),
       encode: (input) =>
@@ -647,12 +688,12 @@ const None = Schema.Struct({ variant: Schema.Literal('None') });
 
 export const option = <Item extends AnyNativeSborSchema>(item: Item) =>
   withSbor(
-    Schema.transformOrFail(
+    transformOrFail(
       SborEnum,
-      Schema.Union(
+      Schema.Union([
         None,
         Schema.Struct({ variant: Schema.Literal('Some'), value: item }),
-      ),
+      ]),
       {
         strict: false,
         decode: (input, _options, ast) =>
@@ -711,14 +752,14 @@ export const map = <
   readonly value: Value;
 }) =>
   withSbor(
-    Schema.transformOrFail(
+    transformOrFail(
       SborMap,
-      Schema.ReadonlyMap({ key: definition.key, value: definition.value }),
+      Schema.ReadonlyMap(definition.key, definition.value),
       {
         strict: false,
         decode: (input) =>
           Effect.succeed(
-            input.entries.map((entry) => [entry.key, entry.value]),
+            new Map(input.entries.map((entry) => [entry.key, entry.value])),
           ),
         encode: (input) =>
           Effect.succeed({
@@ -733,7 +774,7 @@ export const map = <
               definition.value.sbor.typeName,
               Option.getOrUndefined,
             ),
-            entries: input.map(([key, value]) => ({ key, value })),
+            entries: [...input].map(([key, value]) => ({ key, value })),
           }),
       },
     ),
@@ -749,7 +790,7 @@ export const enumeration = <
   variants: Variants,
 ) =>
   withSbor(
-    Schema.transformOrFail(
+    transformOrFail(
       SborEnum,
       Schema.Struct({ variant: Schema.String, value: Schema.Unknown }),
       {
@@ -757,11 +798,11 @@ export const enumeration = <
         decode: (input, _options, ast) =>
           pipe(
             input.variant_name,
-            Option.fromNullable,
+            Option.fromNullishOr,
             Option.flatMap((variantName) =>
               pipe(
                 variants.find((variant) => variant.variant === variantName),
-                Option.fromNullable,
+                Option.fromNullishOr,
               ),
             ),
             Option.match({
@@ -780,7 +821,7 @@ export const enumeration = <
         encode: (input, _options, ast) =>
           pipe(
             variants.find((variant) => variant.variant === input.variant),
-            Option.fromNullable,
+            Option.fromNullishOr,
             Option.match({
               onNone: () => fail(ast, input, 'Unknown enum variant'),
               onSome: (variant) =>
@@ -803,12 +844,12 @@ export const enumeration = <
 export const decode =
   <Decoded, Encoded>(schema: NativeSborSchema<Decoded, Encoded>) =>
   (input: unknown) =>
-    Schema.decodeUnknown(schema)(input);
+    Schema.decodeUnknownEffect(schema)(input);
 
 export const encode =
   <Decoded, Encoded>(schema: NativeSborSchema<Decoded, Encoded>) =>
   (input: Decoded) =>
-    Schema.encode(schema)(input);
+    Schema.encodeEffect(schema)(input);
 
 export const s = {
   value,

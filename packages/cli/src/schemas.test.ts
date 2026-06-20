@@ -1,8 +1,8 @@
-import { it } from '@effect/vitest';
-import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
+import { assert, describe, it } from '@effect/vitest';
+import { Schema } from 'effect';
 
 import {
+  BatchSignatureFileSchema,
   PLACEHOLDER_PUBLIC_KEY_HEX,
   PLACEHOLDER_SIGNATURE_HEX,
   PublicKeySchema,
@@ -18,131 +18,148 @@ const ed25519Signature =
   '22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222';
 
 describe('CLI workflow schemas', () => {
-  it.effect('requires typed workflow files with versions', () =>
-    Effect.sync(() => {
-      expect(() =>
-        Schema.decodeUnknownSync(SigningRequestSchema)({
-          version: 1,
-          transactionId: 'txid',
-          scope: { kind: 'rootIntent' },
-          account: null,
-          hash: { id: 'intent', hex: 'aa' },
-        }),
-      ).toThrow();
+  it('requires typed workflow files with versions', () => {
+    assert.throws(() =>
+      Schema.decodeUnknownSync(SigningRequestSchema)({
+        version: 1,
+        transactionId: 'txid',
+        scope: { kind: 'rootIntent' },
+        account: null,
+        hash: { id: 'intent', hex: 'aa' },
+      }),
+    );
 
-      expect(() =>
-        Schema.decodeUnknownSync(SigningRequestSchema)({
-          type: 'signingRequest',
-          transactionId: 'txid',
-          scope: { kind: 'rootIntent' },
-          account: null,
-          hash: { id: 'intent', hex: 'aa' },
-        }),
-      ).toThrow();
-    }),
-  );
+    assert.throws(() =>
+      Schema.decodeUnknownSync(SigningRequestSchema)({
+        type: 'signingRequest',
+        transactionId: 'txid',
+        scope: { kind: 'rootIntent' },
+        account: null,
+        hash: { id: 'intent', hex: 'aa' },
+      }),
+    );
+  });
 
-  it.effect('accepts Ed25519 public keys and rejects unsupported curves', () =>
-    Effect.sync(() => {
-      expect(
-        Schema.decodeUnknownSync(PublicKeySchema)({
-          curve: 'Ed25519',
-          hex: ed25519PublicKey,
-        }),
-      ).toEqual({
+  it('accepts Ed25519 public keys and rejects unsupported curves', () => {
+    assert.deepEqual(
+      Schema.decodeUnknownSync(PublicKeySchema)({
         curve: 'Ed25519',
         hex: ed25519PublicKey,
-      });
+      }),
+      {
+        curve: 'Ed25519',
+        hex: ed25519PublicKey,
+      },
+    );
 
-      expect(() =>
-        Schema.decodeUnknownSync(PublicKeySchema)({
-          curve: 'Secp256k1',
-          hex: ed25519PublicKey,
-        }),
-      ).toThrow();
-    }),
-  );
+    assert.throws(() =>
+      Schema.decodeUnknownSync(PublicKeySchema)({
+        curve: 'Secp256k1',
+        hex: ed25519PublicKey,
+      }),
+    );
+  });
 
-  it.effect(
-    'rejects unchanged template placeholders in submitted signature files',
-    () =>
-      Effect.sync(() => {
-        expect(
-          Schema.decodeUnknownSync(SignatureTemplateSchema)({
-            type: 'signatureTemplate',
-            version: 1,
-            transactionId: 'txid',
+  it('rejects unchanged template placeholders in submitted signature files', () => {
+    assert.strictEqual(
+      Schema.decodeUnknownSync(SignatureTemplateSchema)({
+        type: 'signatureTemplate',
+        version: 1,
+        transactionId: 'txid',
+        scope: { kind: 'rootIntent' },
+        account: 'account_rdx1...',
+        hash: { id: 'intent', hex: 'aa' },
+        publicKey: { curve: 'Ed25519', hex: PLACEHOLDER_PUBLIC_KEY_HEX },
+        signature: { curve: 'Ed25519', hex: PLACEHOLDER_SIGNATURE_HEX },
+      }).publicKey.hex,
+      PLACEHOLDER_PUBLIC_KEY_HEX,
+    );
+
+    assert.throws(() =>
+      Schema.decodeUnknownSync(SignatureFileSchema)({
+        type: 'signatureFile',
+        version: 1,
+        transactionId: 'txid',
+        signatures: [
+          {
             scope: { kind: 'rootIntent' },
             account: 'account_rdx1...',
             hash: { id: 'intent', hex: 'aa' },
-            publicKey: { curve: 'Ed25519', hex: PLACEHOLDER_PUBLIC_KEY_HEX },
-            signature: { curve: 'Ed25519', hex: PLACEHOLDER_SIGNATURE_HEX },
-          }).publicKey.hex,
-        ).toBe(PLACEHOLDER_PUBLIC_KEY_HEX);
-
-        expect(() =>
-          Schema.decodeUnknownSync(SignatureFileSchema)({
-            type: 'signatureFile',
-            version: 1,
-            transactionId: 'txid',
-            signatures: [
-              {
-                scope: { kind: 'rootIntent' },
-                account: 'account_rdx1...',
-                hash: { id: 'intent', hex: 'aa' },
-                publicKey: {
-                  curve: 'Ed25519',
-                  hex: PLACEHOLDER_PUBLIC_KEY_HEX,
-                },
-                signature: { curve: 'Ed25519', hex: ed25519Signature },
-              },
-            ],
-          }),
-        ).toThrow();
+            publicKey: {
+              curve: 'Ed25519',
+              hex: PLACEHOLDER_PUBLIC_KEY_HEX,
+            },
+            signature: { curve: 'Ed25519', hex: ed25519Signature },
+          },
+        ],
       }),
-  );
+    );
+  });
 
-  it.effect('validates direct child subintent IDs conservatively', () =>
-    Effect.sync(() => {
-      expect(
-        Schema.decodeUnknownSync(SubintentsFileSchema)({
-          type: 'subintents',
-          version: 1,
-          subintents: {
-            child_1: { manifest: 'child.rtm' },
-            'Child-2': { manifest: 'other.rtm' },
-          },
-        }),
-      ).toMatchObject({
+  it('requires batch signature files to contain at least one signature file', () => {
+    const signatureFile = Schema.decodeUnknownSync(SignatureFileSchema)({
+      type: 'signatureFile',
+      version: 1,
+      transactionId: 'txid',
+      signatures: [],
+    });
+
+    assert.deepEqual(
+      Schema.decodeUnknownSync(BatchSignatureFileSchema)({
+        type: 'batchSignatureFile',
+        version: 1,
+        signatures: [signatureFile],
+      }),
+      {
+        type: 'batchSignatureFile',
+        version: 1,
+        signatures: [signatureFile],
+      },
+    );
+
+    assert.throws(() =>
+      Schema.decodeUnknownSync(BatchSignatureFileSchema)({
+        type: 'batchSignatureFile',
+        version: 1,
+        signatures: [],
+      }),
+    );
+  });
+
+  it('validates direct child subintent IDs conservatively', () => {
+    const decoded = Schema.decodeUnknownSync(SubintentsFileSchema)({
+      type: 'subintents',
+      version: 1,
+      subintents: {
+        child_1: { manifest: 'child.rtm' },
+        'Child-2': { manifest: 'other.rtm' },
+      },
+    });
+
+    assert.deepEqual(decoded.subintents.child_1, { manifest: 'child.rtm' });
+    assert.deepEqual(decoded.subintents['Child-2'], { manifest: 'other.rtm' });
+
+    assert.throws(() =>
+      Schema.decodeUnknownSync(SubintentsFileSchema)({
+        type: 'subintents',
+        version: 1,
         subintents: {
-          child_1: { manifest: 'child.rtm' },
+          'bad id': { manifest: 'child.rtm' },
         },
-      });
+      }),
+    );
+  });
 
-      expect(() =>
-        Schema.decodeUnknownSync(SubintentsFileSchema)({
-          type: 'subintents',
-          version: 1,
-          subintents: {
-            'bad id': { manifest: 'child.rtm' },
-          },
-        }),
-      ).toThrow();
-    }),
-  );
-
-  it.effect('rejects invalid signing scopes', () =>
-    Effect.sync(() => {
-      expect(() =>
-        Schema.decodeUnknownSync(SigningRequestSchema)({
-          type: 'signingRequest',
-          version: 1,
-          transactionId: 'txid',
-          scope: { kind: 'subintent' },
-          account: null,
-          hash: { id: 'intent', hex: 'aa' },
-        }),
-      ).toThrow();
-    }),
-  );
+  it('rejects invalid signing scopes', () => {
+    assert.throws(() =>
+      Schema.decodeUnknownSync(SigningRequestSchema)({
+        type: 'signingRequest',
+        version: 1,
+        transactionId: 'txid',
+        scope: { kind: 'subintent' },
+        account: null,
+        hash: { id: 'intent', hex: 'aa' },
+      }),
+    );
+  });
 });

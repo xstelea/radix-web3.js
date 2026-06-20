@@ -1,6 +1,6 @@
 import type { NetworkId } from '@radix-effects/shared';
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 import type { Manifest } from './schemas';
 
@@ -16,10 +16,10 @@ export class InvalidManifestError extends Data.TaggedError(
   message: string;
 }> {}
 
-export class StaticallyValidateManifest extends Effect.Service<StaticallyValidateManifest>()(
+export class StaticallyValidateManifest extends Context.Service<StaticallyValidateManifest>()(
   '@radix-effects/tx-tool/StaticallyValidateManifest',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       return (input: { manifest: Manifest; networkId: NetworkId }) =>
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise({
@@ -45,4 +45,7 @@ export class StaticallyValidateManifest extends Effect.Service<StaticallyValidat
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

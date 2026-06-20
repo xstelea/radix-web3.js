@@ -1,5 +1,5 @@
 import { Rola as RolaSdk, type RolaError } from '@radixdlt/rola';
-import { Config, Data, Effect, Schema } from 'effect';
+import { Config, Context, Data, Effect, Layer, Schema } from 'effect';
 
 import { GatewayApiClient } from './gatewayApiClient';
 
@@ -12,10 +12,10 @@ export class VerifyRolaProofError extends Data.TaggedError(
 export const ProofSchema = Schema.Struct({
   publicKey: Schema.String,
   signature: Schema.String,
-  curve: Schema.Union(
+  curve: Schema.Union([
     Schema.Literal('curve25519'),
     Schema.Literal('secp256k1'),
-  ),
+  ]),
 });
 
 export const PersonaProofSchema = Schema.Struct({
@@ -32,17 +32,17 @@ export const AccountProofSchema = Schema.Struct({
   proof: ProofSchema,
 });
 
-export const RolaProofSchema = Schema.Union(
+export const RolaProofSchema = Schema.Union([
   PersonaProofSchema,
   AccountProofSchema,
-);
+]);
 
 export type PersonaProof = typeof PersonaProofSchema.Type;
 export type AccountProof = typeof AccountProofSchema.Type;
 export type RolaProof = typeof RolaProofSchema.Type;
 
-export class Rola extends Effect.Service<Rola>()('Rola', {
-  effect: Effect.gen(function* () {
+export class Rola extends Context.Service<Rola>()('Rola', {
+  make: Effect.gen(function* () {
     const applicationName = yield* Config.string('APPLICATION_NAME')
       .pipe(Config.withDefault('@radix-effects/gateway'))
       .pipe(Effect.orDie);
@@ -69,7 +69,7 @@ export class Rola extends Effect.Service<Rola>()('Rola', {
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise(() =>
             verifySignedChallenge(input),
-          ).pipe(Effect.catchTag('UnknownException', Effect.orDie));
+          ).pipe(Effect.catchTag('UnknownError', Effect.orDie));
 
           if (result.isErr())
             return yield* new VerifyRolaProofError({
@@ -78,4 +78,9 @@ export class Rola extends Effect.Service<Rola>()('Rola', {
         }),
     };
   }),
-}) {}
+}) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

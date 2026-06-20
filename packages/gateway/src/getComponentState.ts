@@ -1,5 +1,5 @@
 import type { StateEntityDetailsVaultResponseItem } from '@radixdlt/babylon-gateway-api-sdk';
-import { Effect, Schema } from 'effect';
+import { Context, Effect, Layer, Schema } from 'effect';
 
 import type { AtLedgerState } from './schemas';
 import {
@@ -12,16 +12,15 @@ export class InvalidComponentStateError {
   constructor(readonly error: unknown) {}
 }
 
-export class GetComponentStateService extends Effect.Service<GetComponentStateService>()(
+export class GetComponentStateService extends Context.Service<GetComponentStateService>()(
   'GetComponentStateService',
   {
-    dependencies: [GetEntityDetailsVaultAggregated.Default],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const getEntityDetails = yield* GetEntityDetailsVaultAggregated;
 
       return {
-        run: Effect.fnUntraced(function* <
-          S extends Schema.Schema.AnyNoContext,
+        run: Effect.fn('GetComponentStateService.run')(function* <
+          S extends Schema.Top,
         >(input: {
           addresses: string[];
           at_ledger_state?: AtLedgerState;
@@ -36,7 +35,7 @@ export class GetComponentStateService extends Effect.Service<GetComponentStateSe
 
           const results: {
             address: string;
-            state: Schema.Schema.Type<S>;
+            state: S['Type'];
             details: StateEntityDetailsVaultResponseItem;
           }[] = [];
 
@@ -44,7 +43,7 @@ export class GetComponentStateService extends Effect.Service<GetComponentStateSe
             if (item.details?.type === 'Component') {
               const componentDetails = item.details;
 
-              const parsed = yield* Schema.decodeUnknown(input.schema)(
+              const parsed = yield* Schema.decodeUnknownEffect(input.schema)(
                 componentDetails.state,
               ).pipe(
                 Effect.mapError(
@@ -65,4 +64,9 @@ export class GetComponentStateService extends Effect.Service<GetComponentStateSe
       };
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GetEntityDetailsVaultAggregated.Default),
+  );
+}

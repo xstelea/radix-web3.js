@@ -5,7 +5,7 @@ import {
   TransactionManifestString,
   TransactionMessageString,
 } from '@radix-effects/shared';
-import { Effect, Option, Schema } from 'effect';
+import { Context, Effect, Layer, Option, Schema } from 'effect';
 
 import {
   ManifestSchema,
@@ -29,14 +29,10 @@ const CreateTransactionIntentV2InputSchema = Schema.Struct({
 type CreateTransactionIntentV2Input =
   typeof CreateTransactionIntentV2InputSchema.Type;
 
-export class CreateTransactionIntentV2 extends Effect.Service<CreateTransactionIntentV2>()(
+export class CreateTransactionIntentV2 extends Context.Service<CreateTransactionIntentV2>()(
   '@radix-effects/tx-tool/CreateTransactionIntentV2',
   {
-    dependencies: [
-      StaticallyValidateManifest.Default,
-      TransactionHeaderV2.Default,
-    ],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const staticallyValidateManifest = yield* StaticallyValidateManifest;
       const createTransactionHeaderV2 = yield* TransactionHeaderV2;
       const gatewayApiClient = yield* GatewayApiClient;
@@ -45,17 +41,17 @@ export class CreateTransactionIntentV2 extends Effect.Service<CreateTransactionI
 
       return (input: CreateTransactionIntentV2Input) =>
         Effect.gen(function* () {
-          const parsedInput = yield* Schema.decodeUnknown(
+          const parsedInput = yield* Schema.decodeUnknownEffect(
             CreateTransactionIntentV2InputSchema,
           )(input);
 
           const { transactionHeader, intentHeader } =
             yield* createTransactionHeaderV2({
               networkId,
-              startEpochInclusive: Option.fromNullable(
+              startEpochInclusive: Option.fromNullishOr(
                 parsedInput.startEpochInclusive,
               ),
-              endEpochExclusive: Option.fromNullable(
+              endEpochExclusive: Option.fromNullishOr(
                 parsedInput.endEpochExclusive,
               ),
               tipBasisPoints: parsedInput.tipBasisPoints,
@@ -66,7 +62,7 @@ export class CreateTransactionIntentV2 extends Effect.Service<CreateTransactionI
                 parsedInput.maxProposerTimestampExclusive,
             });
 
-          const manifest = yield* Schema.decodeUnknown(ManifestSchema)(
+          const manifest = yield* Schema.decodeUnknownEffect(ManifestSchema)(
             parsedInput.manifest,
           );
 
@@ -75,7 +71,7 @@ export class CreateTransactionIntentV2 extends Effect.Service<CreateTransactionI
             networkId,
           });
 
-          const message = yield* Schema.decodeUnknown(
+          const message = yield* Schema.decodeUnknownEffect(
             TransactionMessageV2Schema,
           )(
             parsedInput.message
@@ -106,4 +102,10 @@ export class CreateTransactionIntentV2 extends Effect.Service<CreateTransactionI
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(StaticallyValidateManifest.Default),
+    Layer.provide(TransactionHeaderV2.Default),
+  );
+}

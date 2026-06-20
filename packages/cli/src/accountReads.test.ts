@@ -1,6 +1,5 @@
-import { it } from '@effect/vitest';
+import { assert, describe, it } from '@effect/vitest';
 import { Effect } from 'effect';
-import { describe, expect } from 'vitest';
 
 import {
   getAccountFungibles,
@@ -30,7 +29,7 @@ describe('account read workflows', () => {
           ]),
       });
 
-      expect(result).toEqual({
+      assert.deepStrictEqual(result, {
         type: 'commandResult',
         command: 'account fungibles',
         result: [
@@ -70,7 +69,7 @@ describe('account read workflows', () => {
           }),
       });
 
-      expect(result).toEqual({
+      assert.deepStrictEqual(result, {
         type: 'commandResult',
         command: 'account nfts',
         result: {
@@ -103,7 +102,7 @@ describe('account read workflows', () => {
           }),
       });
 
-      expect(result).toEqual({
+      assert.deepStrictEqual(result, {
         type: 'commandResult',
         command: 'account show',
         result: {
@@ -138,7 +137,7 @@ describe('account read workflows', () => {
           }),
       });
 
-      expect(result).toEqual({
+      assert.deepStrictEqual(result, {
         type: 'commandResult',
         command: 'tx history',
         result: {

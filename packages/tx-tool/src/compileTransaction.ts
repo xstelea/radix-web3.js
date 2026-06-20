@@ -7,7 +7,7 @@ import {
   TransactionBuilder as RetTransactionBuilder,
   TransactionV2Builder as RetTransactionV2Builder,
 } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect, Schema, pipe } from 'effect';
+import { Context, Data, Effect, Layer, Schema, pipe } from 'effect';
 
 import { NotaryKeyPair } from './notaryKeyPair';
 import {
@@ -31,7 +31,7 @@ export class FailedToNotarizeTransactionError extends Data.TaggedError(
 }> {}
 
 const CompileTransactionInputSchema = Schema.Struct({
-  intent: Schema.Union(TransactionIntentSchema, TransactionIntentV2Schema),
+  intent: Schema.Union([TransactionIntentSchema, TransactionIntentV2Schema]),
   signatures: Schema.Array(Ed25519SignatureWithPublicKeySchema),
   subintentSignatures: Schema.optional(
     Schema.Array(Schema.Array(Ed25519SignatureWithPublicKeySchema)),
@@ -40,20 +40,19 @@ const CompileTransactionInputSchema = Schema.Struct({
 
 type CompileTransactionInput = typeof CompileTransactionInputSchema.Type;
 
-export class CompileTransaction extends Effect.Service<CompileTransaction>()(
+export class CompileTransaction extends Context.Service<CompileTransaction>()(
   '@radix-effects/tx-tool/CompileTransaction',
   {
-    dependencies: [NotaryKeyPair.Default],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const notaryKeyPair = yield* NotaryKeyPair;
 
       const TransactionBuilder = Effect.tryPromise(() =>
         RetTransactionBuilder.new(),
-      ).pipe(Effect.catchAll(Effect.orDie));
+      ).pipe(Effect.catch(Effect.orDie));
 
       const TransactionV2Builder = Effect.tryPromise(() =>
         RetTransactionV2Builder.new(),
-      ).pipe(Effect.catchAll(Effect.orDie));
+      ).pipe(Effect.catch(Effect.orDie));
 
       const notarySignToSignature = (hash: Uint8Array<ArrayBufferLike>) =>
         pipe(
@@ -127,4 +126,9 @@ export class CompileTransaction extends Effect.Service<CompileTransaction>()(
         );
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(NotaryKeyPair.Default),
+  );
+}

@@ -3,13 +3,13 @@ import type {
   StateEntityDetailsResponseItem,
 } from '@radixdlt/babylon-gateway-api-sdk';
 import { BigNumber } from 'bignumber.js';
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import type { AtLedgerState } from './schemas';
 import { EntityFungiblesPage } from './state/entityFungiblesPage';
 import { StateEntityDetails } from './state/stateEntityDetails';
 
-export type GetFungibleBalanceOutput = Effect.Effect.Success<
+export type GetFungibleBalanceOutput = Effect.Success<
   Awaited<ReturnType<(typeof GetFungibleBalance)['Service']>>
 >;
 
@@ -21,11 +21,10 @@ type GetFungibleBalanceInput = Omit<
   options?: StateEntityDetailsOperationRequest['stateEntityDetailsRequest']['opt_ins'];
 };
 
-export class GetFungibleBalance extends Effect.Service<GetFungibleBalance>()(
+export class GetFungibleBalance extends Context.Service<GetFungibleBalance>()(
   'GetFungibleBalance',
   {
-    dependencies: [EntityFungiblesPage.Default, StateEntityDetails.Default],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const stateEntityDetails = yield* StateEntityDetails;
       const entityFungiblesPage = yield* EntityFungiblesPage;
 
@@ -33,40 +32,34 @@ export class GetFungibleBalance extends Effect.Service<GetFungibleBalance>()(
         'GATEWAY_GET_FUNGIBLE_BALANCE_CONCURRENCY',
       ).pipe(Config.withDefault(5));
 
-      const getAggregatedFungibleBalance = Effect.fnUntraced(function* (
+      const getAggregatedFungibleBalance = Effect.fn(
+        'GetFungibleBalance.getAggregatedFungibleBalance',
+      )(function* (
         item: StateEntityDetailsResponseItem,
         at_ledger_state?: AtLedgerState,
       ) {
         const address = item.address;
-
         const nextCursor = item.fungible_resources?.next_cursor;
-        const totalCount = item.fungible_resources?.total_count ?? 0;
-        const allFungibleResources = item.fungible_resources?.items ?? [];
-        const shouldFetchMore = nextCursor && totalCount > 0;
+        const initialFungibleResources = item.fungible_resources?.items ?? [];
+        const pagedFungibleResources =
+          nextCursor === undefined || nextCursor === null
+            ? []
+            : yield* entityFungiblesPage({
+                address,
+                aggregation_level: 'Global',
+                cursor: nextCursor,
+                at_ledger_state,
+              });
 
-        if (shouldFetchMore) {
-          const result = yield* entityFungiblesPage({
-            address,
-            aggregation_level: 'Global',
-            cursor: nextCursor,
-            at_ledger_state,
-          });
-
-          allFungibleResources.push(...result);
-        }
-
-        const fungibleResources = allFungibleResources
-          .map((item) => {
-            if (item.aggregation_level === 'Global') {
-              const { amount, ...rest } = item;
-
-              return {
-                ...rest,
-                amount: new BigNumber(amount),
-              };
-            }
-          })
-          .filter((item) => item !== undefined)
+        const fungibleResources = [
+          ...initialFungibleResources,
+          ...pagedFungibleResources,
+        ]
+          .filter((item) => item.aggregation_level === 'Global')
+          .map(({ amount, ...rest }) => ({
+            ...rest,
+            amount: new BigNumber(amount),
+          }))
           .filter((item) => item.amount.gt(0));
 
         return {
@@ -75,7 +68,9 @@ export class GetFungibleBalance extends Effect.Service<GetFungibleBalance>()(
         };
       });
 
-      return Effect.fnUntraced(function* (input: GetFungibleBalanceInput) {
+      return Effect.fn('GetFungibleBalance')(function* (
+        input: GetFungibleBalanceInput,
+      ) {
         const stateEntityDetailsResults = yield* stateEntityDetails({
           addresses: input.addresses,
           opt_ins: input.options,
@@ -97,4 +92,11 @@ export class GetFungibleBalance extends Effect.Service<GetFungibleBalance>()(
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(
+      Layer.mergeAll(EntityFungiblesPage.Default, StateEntityDetails.Default),
+    ),
+  );
+}

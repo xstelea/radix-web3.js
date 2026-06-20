@@ -4,7 +4,7 @@ import {
   GetNonFungibleBalanceService,
 } from '@radix-effects/gateway';
 import { PublicKey, RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { ConfigProvider, Data, Effect, Layer, Schema } from 'effect';
+import { ConfigProvider, Context, Data, Effect, Layer, Schema } from 'effect';
 
 import type { Network, ResolvedRdxConfig } from './config';
 import { toJsonValue } from './json';
@@ -36,8 +36,8 @@ const networkId = (network: Network) => (network === 'stokenet' ? 2 : 1);
 const gatewayConfigLayer = (
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>,
 ) =>
-  Layer.setConfigProvider(
-    ConfigProvider.fromJson({
+  ConfigProvider.layer(
+    ConfigProvider.fromUnknown({
       NETWORK_ID: networkId(config.network),
       ...(config.gatewayBaseUrl ? { GATEWAY_URL: config.gatewayBaseUrl } : {}),
     }),
@@ -46,6 +46,18 @@ const gatewayConfigLayer = (
 const gatewayApiClientLayer = (
   config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>,
 ) => GatewayApiClient.Default.pipe(Layer.provide(gatewayConfigLayer(config)));
+
+export const accountReadGatewayLayer = (
+  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>,
+) => {
+  const gatewayLayer = gatewayApiClientLayer(config);
+
+  return Layer.mergeAll(
+    gatewayLayer,
+    GetFungibleBalance.Default.pipe(Layer.provide(gatewayLayer)),
+    GetNonFungibleBalanceService.Default.pipe(Layer.provide(gatewayLayer)),
+  );
+};
 
 export const getAccountFungibles = (input: {
   accountAddress: string;
@@ -72,16 +84,13 @@ export const getAccountNfts = (input: {
   );
 
 export const gatewayAccountFungibles = (input: {
-  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   accountAddress: string;
-}): Effect.Effect<unknown, AccountReadError> => {
-  const gatewayLayer = gatewayApiClientLayer(input.config);
-  const accountFungiblesLayer = Layer.merge(
-    gatewayLayer,
-    GetFungibleBalance.Default.pipe(Layer.provide(gatewayLayer)),
-  );
-
-  return Effect.gen(function* () {
+}): Effect.Effect<
+  unknown,
+  AccountReadError,
+  GatewayApiClient | GetFungibleBalance
+> =>
+  Effect.gen(function* () {
     const gatewayApiClient = yield* GatewayApiClient;
     const status = yield* gatewayApiClient.status.getCurrent();
     const getFungibleBalance = yield* GetFungibleBalance;
@@ -93,25 +102,20 @@ export const gatewayAccountFungibles = (input: {
       options: { explicit_metadata: ['name', 'symbol'] },
     });
   }).pipe(
-    Effect.provide(accountFungiblesLayer),
     Effect.mapError(
       (reason) =>
         new AccountReadError({ accountAddress: input.accountAddress, reason }),
     ),
   );
-};
 
 export const gatewayAccountNfts = (input: {
-  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   accountAddress: string;
-}): Effect.Effect<unknown, AccountReadError> => {
-  const gatewayLayer = gatewayApiClientLayer(input.config);
-  const accountNftsLayer = Layer.merge(
-    gatewayLayer,
-    GetNonFungibleBalanceService.Default.pipe(Layer.provide(gatewayLayer)),
-  );
-
-  return Effect.gen(function* () {
+}): Effect.Effect<
+  unknown,
+  AccountReadError,
+  GatewayApiClient | GetNonFungibleBalanceService
+> =>
+  Effect.gen(function* () {
     const gatewayApiClient = yield* GatewayApiClient;
     const status = yield* gatewayApiClient.status.getCurrent();
     const getNonFungibleBalance = yield* GetNonFungibleBalanceService;
@@ -122,18 +126,15 @@ export const gatewayAccountNfts = (input: {
       },
     });
   }).pipe(
-    Effect.provide(accountNftsLayer),
     Effect.mapError(
       (reason) =>
         new AccountReadError({ accountAddress: input.accountAddress, reason }),
     ),
   );
-};
 
 export const gatewayAccountDetails = (input: {
-  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   accountAddress: string;
-}): Effect.Effect<unknown, AccountReadError> =>
+}): Effect.Effect<unknown, AccountReadError, GatewayApiClient> =>
   Effect.gen(function* () {
     const gatewayApiClient = yield* GatewayApiClient;
     return yield* gatewayApiClient.state.innerClient.stateEntityDetails({
@@ -149,7 +150,6 @@ export const gatewayAccountDetails = (input: {
       },
     });
   }).pipe(
-    Effect.provide(gatewayApiClientLayer(input.config)),
     Effect.mapError(
       (reason) =>
         new AccountReadError({ accountAddress: input.accountAddress, reason }),
@@ -157,10 +157,9 @@ export const gatewayAccountDetails = (input: {
   );
 
 export const gatewayAccountHistory = (input: {
-  config: Pick<ResolvedRdxConfig, 'network' | 'gatewayBaseUrl'>;
   accountAddress: string;
   limit: number;
-}): Effect.Effect<unknown, AccountReadError> =>
+}): Effect.Effect<unknown, AccountReadError, GatewayApiClient> =>
   Effect.gen(function* () {
     const gatewayApiClient = yield* GatewayApiClient;
     return yield* gatewayApiClient.stream.innerClient.streamTransactions({
@@ -170,7 +169,6 @@ export const gatewayAccountHistory = (input: {
       },
     });
   }).pipe(
-    Effect.provide(gatewayApiClientLayer(input.config)),
     Effect.mapError(
       (reason) =>
         new AccountReadError({ accountAddress: input.accountAddress, reason }),
@@ -216,7 +214,7 @@ export const deriveVirtualAccountAddress = (input: {
   unknown
 > =>
   Effect.gen(function* () {
-    const publicKey = yield* Schema.decodeUnknown(PublicKeySchema)({
+    const publicKey = yield* Schema.decodeUnknownEffect(PublicKeySchema)({
       curve: 'Ed25519',
       hex: input.publicKeyHex,
     }).pipe(
@@ -246,10 +244,10 @@ export const deriveVirtualAccountAddress = (input: {
     };
   });
 
-export class AccountReadService extends Effect.Service<AccountReadService>()(
+export class AccountReadService extends Context.Service<AccountReadService>()(
   'AccountReadService',
   {
-    sync: () => ({
+    make: Effect.succeed({
       getAccountDetails,
       getAccountFungibles,
       getAccountNfts,
@@ -261,4 +259,7 @@ export class AccountReadService extends Effect.Service<AccountReadService>()(
       gatewayAccountNfts,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

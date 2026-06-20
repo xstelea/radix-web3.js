@@ -8,7 +8,7 @@ import {
   SignatureWithPublicKey,
   type TransactionIntentV2,
 } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect, Schema } from 'effect';
+import { Context, Data, Effect, Layer, Schema } from 'effect';
 
 import { findTransactionArtifact, writeSubmitResult } from './artifacts';
 import type { ResolvedRdxConfig } from './config';
@@ -141,7 +141,7 @@ const findNotarySignature = (signatures: readonly SignatureEntry[]) =>
 
 const readSigningRequest = (artifactPath: string, requestPath: string) =>
   readJson(join(artifactPath, requestPath)).pipe(
-    Effect.flatMap(Schema.decodeUnknown(SigningRequestSchema)),
+    Effect.flatMap(Schema.decodeUnknownEffect(SigningRequestSchema)),
   );
 
 const requestComplete = (
@@ -161,8 +161,8 @@ const requestComplete = (
 
 const readExistingSubmitResult = (artifactPath: string) =>
   readJson(join(artifactPath, 'submitResult.json')).pipe(
-    Effect.flatMap(Schema.decodeUnknown(SubmitResultSchema)),
-    Effect.catchAll(() => Effect.succeed(undefined)),
+    Effect.flatMap(Schema.decodeUnknownEffect(SubmitResultSchema)),
+    Effect.catch(() => Effect.succeed(undefined)),
   );
 
 const successfulSubmitStatuses = new Set(['CommittedSuccess']);
@@ -182,35 +182,37 @@ export const gatewaySubmitNotarizedTransaction = (input: {
   transactionId: string;
   notarizedTransactionHex: string;
 }) =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(
-        `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/submit`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            notarized_transaction_hex: input.notarizedTransactionHex,
-          }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error(
-          await Effect.runPromise(
-            gatewayErrorMessage('Gateway submit', response),
-          ),
-        );
-      }
-      return NetworkTransactionStatusSchema.make({
-        transactionId: input.transactionId,
-        status: 'Submitted',
-        statusDescription: 'Submitted to Gateway',
-        errorMessage: null,
-        checkedAt: new Date().toISOString(),
-      });
-    },
-    catch: (reason) => new SubmitError({ code: 'WRITE_FAILED', reason }),
-  });
+  Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        fetch(
+          `${input.config.gatewayBaseUrl ?? gatewayBaseUrl(input.config.network)}/transaction/submit`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              notarized_transaction_hex: input.notarizedTransactionHex,
+            }),
+          },
+        ),
+      catch: (reason) => reason,
+    });
+    if (!response.ok) {
+      const message = yield* gatewayErrorMessage('Gateway submit', response);
+      return yield* Effect.fail(new Error(message));
+    }
+    return NetworkTransactionStatusSchema.make({
+      transactionId: input.transactionId,
+      status: 'Submitted',
+      statusDescription: 'Submitted to Gateway',
+      errorMessage: null,
+      checkedAt: new Date().toISOString(),
+    });
+  }).pipe(
+    Effect.mapError(
+      (reason) => new SubmitError({ code: 'WRITE_FAILED', reason }),
+    ),
+  );
 
 export const submitTransactionArtifact = (input: {
   artifactRoot: string;
@@ -233,14 +235,14 @@ export const submitTransactionArtifact = (input: {
     }
 
     const prepared = yield* readJson(join(artifactPath, 'prepared.json')).pipe(
-      Effect.flatMap(Schema.decodeUnknown(PreparedTransactionSchema)),
+      Effect.flatMap(Schema.decodeUnknownEffect(PreparedTransactionSchema)),
     );
     const storedIntentFile = yield* readJson(
       join(artifactPath, prepared.transactionIntentPath),
     ).pipe(Effect.map((value) => value as StoredTransactionIntentFile));
     const signatureFile = yield* readJson(
       join(artifactPath, 'signatures.json'),
-    ).pipe(Effect.flatMap(Schema.decodeUnknown(SignatureFileSchema)));
+    ).pipe(Effect.flatMap(Schema.decodeUnknownEffect(SignatureFileSchema)));
     const generatedRequests = yield* Effect.all(
       prepared.signingRequests.map((requestPath) =>
         readSigningRequest(artifactPath, requestPath),
@@ -355,12 +357,15 @@ export const submitTransactionArtifact = (input: {
     };
   });
 
-export class SubmitLifecycle extends Effect.Service<SubmitLifecycle>()(
+export class SubmitLifecycle extends Context.Service<SubmitLifecycle>()(
   'SubmitLifecycle',
   {
-    sync: () => ({
+    make: Effect.succeed({
       submitTransactionArtifact,
       gatewaySubmitNotarizedTransaction,
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

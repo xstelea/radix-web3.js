@@ -1,18 +1,76 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { it } from '@effect/vitest';
+import { afterEach, assert, describe, it, vi } from '@effect/vitest';
 import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
 
-import { SubmitResultSchema } from './schemas';
+import { NetworkSchema, SubmitResultSchema } from './schemas';
 import {
+  gatewayTransactionStatus,
   listTransactionArtifactsWithNetworkStatus,
   queryTransactionStatus,
 } from './status';
 import { makeTempDir } from './test-helpers';
 
+const mainnet = NetworkSchema.make('mainnet');
+
 describe('tx status workflow', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.effect('reads transaction status from the gateway', () =>
+    Effect.gen(function* () {
+      const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            intent_status: 'CommittedSuccess',
+            intent_status_description: 'Committed',
+            error_message: null,
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = yield* gatewayTransactionStatus({
+        config: { network: mainnet },
+        transactionId: 'txid_gateway',
+      });
+
+      const firstCall = fetchMock.mock.calls[0];
+      assert.isDefined(firstCall);
+      assert.strictEqual(
+        firstCall?.[0],
+        'https://mainnet.radixdlt.com/transaction/status',
+      );
+      assert.strictEqual(result.transactionId, 'txid_gateway');
+      assert.strictEqual(result.status, 'CommittedSuccess');
+      assert.strictEqual(result.statusDescription, 'Committed');
+      assert.isNull(result.errorMessage);
+    }),
+  );
+
+  it.effect('rejects malformed gateway status responses', () =>
+    Effect.gen(function* () {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify([]), { status: 200 }),
+      );
+
+      const result = yield* Effect.result(
+        gatewayTransactionStatus({
+          config: { network: mainnet },
+          transactionId: 'txid_malformed',
+        }),
+      );
+
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.strictEqual(result.failure._tag, 'TransactionStatusError');
+        assert.strictEqual(result.failure.transactionId, 'txid_malformed');
+      }
+    }),
+  );
+
   it.effect('queries transaction status without local artifacts', () =>
     Effect.gen(function* () {
       const artifactRoot = yield* makeTempDir('status-external');
@@ -23,14 +81,12 @@ describe('tx status workflow', () => {
         getNetworkStatus: fakeStatus('CommittedSuccess'),
       });
 
-      expect(result).toMatchObject({
+      assert.deepInclude(result, {
         transactionId: 'txid_external',
         artifactPath: null,
         updatedSubmitResultPath: null,
-        networkStatus: {
-          status: 'CommittedSuccess',
-        },
       });
+      assert.strictEqual(result.networkStatus.status, 'CommittedSuccess');
     }),
   );
 
@@ -46,25 +102,24 @@ describe('tx status workflow', () => {
         getNetworkStatus: fakeStatus('CommittedFailure'),
       });
 
-      expect(result.updatedSubmitResultPath).toBe(
+      assert.strictEqual(
+        result.updatedSubmitResultPath,
         join(artifactPath, 'submitResult.json'),
       );
 
-      const submitResultJson = yield* Effect.promise(() =>
+      const submitResultJson = yield* Effect.tryPromise(() =>
         readFile(join(artifactPath, 'submitResult.json'), 'utf8'),
       );
       const submitResult = Schema.decodeUnknownSync(SubmitResultSchema)(
         JSON.parse(submitResultJson),
       );
 
-      expect(submitResult).toMatchObject({
+      assert.deepInclude(submitResult, {
         type: 'submitResult',
         transactionId: 'txid_local',
-        networkStatus: {
-          status: 'CommittedFailure',
-        },
       });
-      expect(submitResult.attempts).toHaveLength(1);
+      assert.strictEqual(submitResult.networkStatus.status, 'CommittedFailure');
+      assert.lengthOf(submitResult.attempts, 1);
     }),
   );
 
@@ -85,17 +140,17 @@ describe('tx status workflow', () => {
         getNetworkStatus: fakeStatus('CommittedSuccess'),
       });
 
-      const submitResultJson = yield* Effect.promise(() =>
+      const submitResultJson = yield* Effect.tryPromise(() =>
         readFile(result.updatedSubmitResultPath ?? '', 'utf8'),
       );
       const submitResult = Schema.decodeUnknownSync(SubmitResultSchema)(
         JSON.parse(submitResultJson),
       );
 
-      expect(submitResult.attempts.map((attempt) => attempt.status)).toEqual([
-        'Pending',
-        'CommittedSuccess',
-      ]);
+      assert.deepEqual(
+        submitResult.attempts.map((attempt) => attempt.status),
+        ['Pending', 'CommittedSuccess'],
+      );
     }),
   );
 
@@ -112,8 +167,8 @@ describe('tx status workflow', () => {
         getNetworkStatus: fakeStatus('Pending'),
       });
 
-      expect(result.artifactPath).toBe(artifactPath);
-      expect(result.updatedSubmitResultPath).toBe(null);
+      assert.strictEqual(result.artifactPath, artifactPath);
+      assert.isNull(result.updatedSubmitResultPath);
     }),
   );
 
@@ -128,19 +183,25 @@ describe('tx status workflow', () => {
         getNetworkStatus: fakeStatus('Pending'),
       });
 
-      expect(result).toMatchObject([
-        {
-          transactionId: 'txid_local',
-          networkStatus: { status: 'Pending' },
-          updatedSubmitResultPath: null,
-        },
-      ]);
-      const submitResultExists = yield* Effect.promise(() =>
+      assert.lengthOf(result, 1);
+      const [firstResult] = result;
+      assert.isDefined(firstResult);
+      if (firstResult === undefined) {
+        return;
+      }
+      assert.strictEqual(firstResult.transactionId, 'txid_local');
+      assert.isDefined(firstResult.networkStatus);
+      if (firstResult.networkStatus === undefined) {
+        return;
+      }
+      assert.strictEqual(firstResult.networkStatus.status, 'Pending');
+      assert.isNull(firstResult.updatedSubmitResultPath);
+      const submitResultExists = yield* Effect.tryPromise(() =>
         access(join(artifactPath, 'submitResult.json'))
           .then(() => true)
           .catch(() => false),
       );
-      expect(submitResultExists).toBe(false);
+      assert.isFalse(submitResultExists);
     }),
   );
 
@@ -158,17 +219,21 @@ describe('tx status workflow', () => {
           getNetworkStatus: fakeStatus('CommittedSuccess'),
         });
 
-        expect(result[0]?.updatedSubmitResultPath).toBe(
+        assert.strictEqual(
+          result[0]?.updatedSubmitResultPath,
           join(artifactPath, 'submitResult.json'),
         );
         const submitResult = Schema.decodeUnknownSync(SubmitResultSchema)(
           JSON.parse(
-            yield* Effect.promise(() =>
+            yield* Effect.tryPromise(() =>
               readFile(join(artifactPath, 'submitResult.json'), 'utf8'),
             ),
           ),
         );
-        expect(submitResult.networkStatus.status).toBe('CommittedSuccess');
+        assert.strictEqual(
+          submitResult.networkStatus.status,
+          'CommittedSuccess',
+        );
       }),
   );
 });
@@ -187,7 +252,7 @@ const statusPayload = (transactionId: string, status: string) => ({
 });
 
 const writePreparedArtifact = (artifactPath: string, transactionId: string) =>
-  Effect.promise(async () => {
+  Effect.tryPromise(async () => {
     await mkdir(artifactPath, { recursive: true });
     await writeFile(
       join(artifactPath, 'prepared.json'),
@@ -217,7 +282,7 @@ const writeSubmitResultArtifact = (
   artifactPath: string,
   input: { transactionId: string; status: string; checkedAt: string },
 ) =>
-  Effect.promise(() =>
+  Effect.tryPromise(() =>
     writeFile(
       join(artifactPath, 'submitResult.json'),
       JSON.stringify(

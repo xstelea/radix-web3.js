@@ -1,9 +1,14 @@
 import { dirname, join } from 'node:path';
 
-import { Args, Command, Options } from '@effect/cli';
 import { Console, Effect, Option, Schema } from 'effect';
+import {
+  Argument as Args,
+  Command,
+  Flag as Options,
+} from 'effect/unstable/cli';
 
 import {
+  accountReadGatewayLayer,
   deriveVirtualAccountAddress,
   gatewayAccountDetails,
   gatewayAccountFungibles,
@@ -308,7 +313,8 @@ export const renderAccountDerive = (
   return renderJson(result);
 };
 
-const rdxCommand = Command.make('rdx', { format: formatOption }).pipe(
+const rdxCommand = Command.make('rdx').pipe(
+  Command.withSharedFlags({ format: formatOption }),
   Command.withDescription('Agent-first Radix transaction workflow CLI'),
 );
 
@@ -334,11 +340,11 @@ const accountCommand = Command.make('account').pipe(
   Command.withDescription('Read account state'),
 );
 
-const accountAddressArg = Args.text({ name: 'accountAddress' }).pipe(
+const accountAddressArg = Args.string('accountAddress').pipe(
   Args.withDescription('Radix account address'),
 );
 
-const publicKeyOption = Options.text('public-key').pipe(
+const publicKeyOption = Options.string('public-key').pipe(
   Options.withDescription('Ed25519 public key hex'),
 );
 
@@ -364,10 +370,13 @@ const accountFungiblesCommand = Command.make(
     Effect.gen(function* () {
       const { format } = yield* rdxCommand;
       const config = yield* resolveRdxConfig({ cwd: process.cwd() });
+      const accountReadLayer = accountReadGatewayLayer(config);
       const result = yield* getAccountFungibles({
         accountAddress,
         readFungibles: (address) =>
-          gatewayAccountFungibles({ config, accountAddress: address }),
+          gatewayAccountFungibles({ accountAddress: address }).pipe(
+            Effect.provide(accountReadLayer),
+          ),
       });
       yield* Console.log(renderCommandResult(format, result));
     }),
@@ -380,10 +389,13 @@ const accountNftsCommand = Command.make(
     Effect.gen(function* () {
       const { format } = yield* rdxCommand;
       const config = yield* resolveRdxConfig({ cwd: process.cwd() });
+      const accountReadLayer = accountReadGatewayLayer(config);
       const result = yield* getAccountNfts({
         accountAddress,
         readNfts: (address) =>
-          gatewayAccountNfts({ config, accountAddress: address }),
+          gatewayAccountNfts({ accountAddress: address }).pipe(
+            Effect.provide(accountReadLayer),
+          ),
       });
       yield* Console.log(renderCommandResult(format, result));
     }),
@@ -396,10 +408,13 @@ const accountShowCommand = Command.make(
     Effect.gen(function* () {
       const { format } = yield* rdxCommand;
       const config = yield* resolveRdxConfig({ cwd: process.cwd() });
+      const accountReadLayer = accountReadGatewayLayer(config);
       const result = yield* getAccountDetails({
         accountAddress,
         readDetails: (address) =>
-          gatewayAccountDetails({ config, accountAddress: address }),
+          gatewayAccountDetails({ accountAddress: address }).pipe(
+            Effect.provide(accountReadLayer),
+          ),
       });
       yield* Console.log(renderCommandResult(format, result));
     }),
@@ -413,17 +428,17 @@ const subintentCommand = Command.make('subintent').pipe(
   Command.withDescription('Prepare and build standalone Subintent artifacts'),
 );
 
-const manifestOption = Options.file('manifest', { exists: 'yes' }).pipe(
+const manifestOption = Options.file('manifest', { mustExist: true }).pipe(
   Options.withDescription('Root Transaction Manifest V2 file'),
 );
 const subintentManifestOption = Options.file('manifest', {
-  exists: 'yes',
+  mustExist: true,
 }).pipe(Options.withDescription('Subintent Manifest V2 file'));
-const subintentHeaderOption = Options.file('header', { exists: 'yes' }).pipe(
+const subintentHeaderOption = Options.file('header', { mustExist: true }).pipe(
   Options.withDescription('Subintent header workflow file'),
 );
 const rootManifestOption = Options.file('root-manifest', {
-  exists: 'yes',
+  mustExist: true,
 }).pipe(
   Options.optional,
   Options.withDescription('Temporary root manifest for Subintent preview'),
@@ -432,21 +447,21 @@ const noPreviewOption = Options.boolean('no-preview').pipe(
   Options.withDescription('Explicitly skip Subintent preview'),
 );
 const preparedSubintentOption = Options.file('prepared', {
-  exists: 'yes',
+  mustExist: true,
 }).pipe(Options.withDescription('Prepared Subintent workflow file'));
-const signatureOption = Options.file('signature', { exists: 'yes' }).pipe(
+const signatureOption = Options.file('signature', { mustExist: true }).pipe(
   Options.withDescription('Signature file for the prepared Subintent'),
 );
-const notaryFileOption = Options.file('notary-file', { exists: 'yes' }).pipe(
+const notaryFileOption = Options.file('notary-file', { mustExist: true }).pipe(
   Options.optional,
   Options.withDescription('Notary public key workflow file'),
 );
-const subintentsOption = Options.file('subintents', { exists: 'yes' }).pipe(
+const subintentsOption = Options.file('subintents', { mustExist: true }).pipe(
   Options.optional,
   Options.withDescription('Direct child subintents workflow file'),
 );
 
-const transactionIdArg = Args.text({ name: 'transactionId' }).pipe(
+const transactionIdArg = Args.string('transactionId').pipe(
   Args.withDescription('Deterministic Radix transaction ID'),
 );
 
@@ -479,7 +494,7 @@ const txPrepareCommand = Command.make(
       const notaryFilePath = Option.getOrUndefined(notaryFile);
       const notary = notaryFilePath
         ? yield* readJsonFile(notaryFilePath, (reason) => reason).pipe(
-            Effect.flatMap(Schema.decodeUnknown(NotaryFileSchema)),
+            Effect.flatMap(Schema.decodeUnknownEffect(NotaryFileSchema)),
           )
         : config.notary;
       if (!notary) {
@@ -548,8 +563,8 @@ const subintentBuildCommand = Command.make(
     }),
 ).pipe(Command.withDescription('Build a signed partial transaction'));
 
-const patternOption = Options.text('pattern').pipe(Options.optional);
-const regexOption = Options.text('regex').pipe(Options.optional);
+const patternOption = Options.string('pattern').pipe(Options.optional);
+const regexOption = Options.string('regex').pipe(Options.optional);
 const networkOption = Options.choice('network', [
   'mainnet',
   'stokenet',
@@ -609,7 +624,7 @@ const txListCommand = Command.make(
     }),
 ).pipe(Command.withDescription('List local transaction artifacts'));
 
-const signatureFileOption = Options.file('file', { exists: 'yes' }).pipe(
+const signatureFileOption = Options.file('file', { mustExist: true }).pipe(
   Options.atLeast(1),
   Options.withDescription('Signature file, batch file, or filled template'),
 );
@@ -627,7 +642,7 @@ const txAddSignaturesCommand = Command.make(
       const result = yield* addSignaturesToArtifact({
         artifactRoot: config.artifactRoot,
         transactionId,
-        signatureFilePaths: files,
+        signatureFilePaths: [...files],
       });
       yield* Console.log(renderAddSignatures(format, result));
     }),
@@ -713,15 +728,15 @@ const txHistoryCommand = Command.make(
     Effect.gen(function* () {
       const { format } = yield* rdxCommand;
       const config = yield* resolveRdxConfig({ cwd: process.cwd() });
+      const accountReadLayer = accountReadGatewayLayer(config);
       const result = yield* getAccountTransactionHistory({
         accountAddress,
         limit,
         readHistory: (address, itemLimit) =>
           gatewayAccountHistory({
-            config,
             accountAddress: address,
             limit: itemLimit,
-          }),
+          }).pipe(Effect.provide(accountReadLayer)),
       });
       yield* Console.log(renderCommandResult(format, result));
     }),
@@ -731,15 +746,14 @@ const templateCommand = Command.make('template').pipe(
   Command.withDescription('Print workflow file templates'),
 );
 
-const templateKindArg = Args.choice<TemplateKind>(
-  [
-    ['subintents', 'subintents'],
-    ['signing-request', 'signing-request'],
-    ['signature-template', 'signature-template'],
-    ['signature-file', 'signature-file'],
-  ],
-  { name: 'kind' },
-).pipe(Args.withDescription('Workflow template kind'));
+const templateKindArg = Args.choice('kind', [
+  'subintents',
+  'signing-request',
+  'signature-template',
+  'signature-file',
+] satisfies ReadonlyArray<TemplateKind>).pipe(
+  Args.withDescription('Workflow template kind'),
+);
 
 const templatePrintCommand = Command.make(
   'print',
@@ -778,7 +792,6 @@ export const command = rdxCommand.pipe(
   ]),
 );
 
-export const cli = Command.run(command, {
-  name: 'rdx',
+export const cli = Command.runWith(command, {
   version: '0.1.0',
 });

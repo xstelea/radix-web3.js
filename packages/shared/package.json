@@ -24,6 +24,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
+    "test": "vitest run",
     "check-types": "tsc --noEmit",
     "build": "tsdown"
   },
@@ -32,6 +33,8 @@
     "effect": "catalog:"
   },
   "devDependencies": {
-    "tsdown": "catalog:"
+    "@effect/vitest": "catalog:",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
   }
 }

@@ -2,17 +2,16 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { it } from '@effect/vitest';
+import { assert, describe, it } from '@effect/vitest';
 import { Effect } from 'effect';
-import { describe, expect } from 'vitest';
 
 import { resolveRdxConfig } from './config';
 
 const makeTempDir = (name: string) =>
-  Effect.promise(() => mkdtemp(join(tmpdir(), `rdx-${name}-`)));
+  Effect.tryPromise(() => mkdtemp(join(tmpdir(), `rdx-${name}-`)));
 
 const writeJson = (path: string, value: unknown) =>
-  Effect.promise(() => writeFile(path, JSON.stringify(value), 'utf8'));
+  Effect.tryPromise(() => writeFile(path, JSON.stringify(value), 'utf8'));
 
 describe('config resolution', () => {
   it.effect('defaults to mainnet and local artifact storage', () =>
@@ -22,11 +21,12 @@ describe('config resolution', () => {
 
       const config = yield* resolveRdxConfig({ cwd, home });
 
-      expect(config).toMatchObject({
-        network: 'mainnet',
-        artifactScope: 'local',
-        artifactRoot: join(cwd, '.rdx', 'transactions'),
-      });
+      assert.strictEqual(config.network, 'mainnet');
+      assert.strictEqual(config.artifactScope, 'local');
+      assert.strictEqual(
+        config.artifactRoot,
+        join(cwd, '.rdx', 'transactions'),
+      );
     }),
   );
 
@@ -35,8 +35,8 @@ describe('config resolution', () => {
       const cwd = yield* makeTempDir('project');
       const nested = join(cwd, 'a', 'b');
       const home = yield* makeTempDir('home');
-      yield* Effect.promise(() => mkdir(nested, { recursive: true }));
-      yield* Effect.promise(() =>
+      yield* Effect.tryPromise(() => mkdir(nested, { recursive: true }));
+      yield* Effect.tryPromise(() =>
         mkdir(join(home, '.rdx'), { recursive: true }),
       );
       yield* writeJson(join(home, '.rdx', 'config.json'), {
@@ -49,13 +49,20 @@ describe('config resolution', () => {
 
       const config = yield* resolveRdxConfig({ cwd: nested, home });
 
-      expect(config).toMatchObject({
-        network: 'mainnet',
-        artifactScope: 'global',
-        artifactRoot: join(home, '.rdx', 'transactions'),
-      });
-      expect(config.projectConfigPath).toBe(join(cwd, '.rdxconfig.json'));
-      expect(config.globalConfigPath).toBe(join(home, '.rdx', 'config.json'));
+      assert.strictEqual(config.network, 'mainnet');
+      assert.strictEqual(config.artifactScope, 'global');
+      assert.strictEqual(
+        config.artifactRoot,
+        join(home, '.rdx', 'transactions'),
+      );
+      assert.strictEqual(
+        config.projectConfigPath,
+        join(cwd, '.rdxconfig.json'),
+      );
+      assert.strictEqual(
+        config.globalConfigPath,
+        join(home, '.rdx', 'config.json'),
+      );
     }),
   );
 
@@ -71,7 +78,28 @@ describe('config resolution', () => {
 
       const config = yield* resolveRdxConfig({ cwd, home });
 
-      expect(config.artifactRoot).toBe(artifactDirectory);
+      assert.strictEqual(config.artifactRoot, artifactDirectory);
     }),
+  );
+
+  it.effect(
+    'fails with the project config path when project config is invalid',
+    () =>
+      Effect.gen(function* () {
+        const cwd = yield* makeTempDir('invalid-project');
+        const home = yield* makeTempDir('home');
+        const projectConfigPath = join(cwd, '.rdxconfig.json');
+        yield* writeJson(projectConfigPath, {
+          network: 'invalid-network',
+        });
+
+        const result = yield* Effect.result(resolveRdxConfig({ cwd, home }));
+
+        assert.strictEqual(result._tag, 'Failure');
+        if (result._tag === 'Failure') {
+          assert.strictEqual(result.failure._tag, 'ConfigResolutionError');
+          assert.strictEqual(result.failure.path, projectConfigPath);
+        }
+      }),
   );
 });

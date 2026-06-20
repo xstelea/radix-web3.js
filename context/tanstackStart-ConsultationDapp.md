@@ -22,7 +22,7 @@ Radix DLT governance dApp. Users browse proposals/temperature checks, vote with 
 | Markdown   | react-markdown + remark-gfm + rehype-sanitize                            |
 | Server     | Nitro (single endpoint: well-known radix JSON)                           |
 | Test       | Vitest + Testing Library                                                 |
-| Lint       | Biome (single quotes, 2-space indent, no trailing commas, no semicolons) |
+| Lint       | oxlint + oxfmt (single quotes, 2-space indent, no trailing commas, no semicolons) |
 | Drawer     | Vaul (mobile bottom sheet)                                               |
 
 Workspace deps: `shared` package (governance logic, schemas, branded types, manifest builders), `database`, `@radix-effects/gateway`, `@radix-effects/shared`.

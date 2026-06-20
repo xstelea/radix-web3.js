@@ -1,5 +1,5 @@
 import { RadixEngineToolkit } from '@steleaio/radix-engine-toolkit';
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 import type { TransactionIntentV2 } from './schemas';
 
@@ -9,10 +9,10 @@ export class FailedToStaticallyAnalyzeManifestV2Error extends Data.TaggedError(
   error: unknown;
 }> {}
 
-export class StaticallyAnalyzeManifestV2 extends Effect.Service<StaticallyAnalyzeManifestV2>()(
+export class StaticallyAnalyzeManifestV2 extends Context.Service<StaticallyAnalyzeManifestV2>()(
   '@radix-effects/tx-tool/StaticallyAnalyzeManifestV2',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       return (input: { intent: TransactionIntentV2 }) =>
         Effect.tryPromise({
           try: () =>
@@ -24,4 +24,7 @@ export class StaticallyAnalyzeManifestV2 extends Effect.Service<StaticallyAnalyz
         });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

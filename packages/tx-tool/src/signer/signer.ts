@@ -13,7 +13,7 @@ export class FailedToSignTransactionError extends Data.TaggedError(
   error: unknown;
 }> {}
 
-export class Signer extends Context.Tag('Signer')<
+export class Signer extends Context.Service<
   Signer,
   {
     signToSignatureWithPublicKey: (
@@ -25,7 +25,7 @@ export class Signer extends Context.Tag('Signer')<
     >;
     publicKey: () => Effect.Effect<PublicKey, never, never>;
   }
->() {
+>()('Signer') {
   static makePrivateKeySigner = (privateKey: Redacted.Redacted<HexString>) =>
     Layer.effect(
       Signer,
@@ -34,7 +34,7 @@ export class Signer extends Context.Tag('Signer')<
           signToSignatureWithPublicKey: (hash: HexString) =>
             Effect.gen(function* () {
               const value = Redacted.value(privateKey);
-              const Ed25519PrivateKey = yield* Schema.decode(
+              const Ed25519PrivateKey = yield* Schema.decodeUnknownEffect(
                 Ed25519PrivateKeySchema,
               )(value);
               const signatureWithPublicKey =
@@ -58,7 +58,7 @@ export class Signer extends Context.Tag('Signer')<
           publicKey: () =>
             Effect.gen(function* () {
               const value = Redacted.value(privateKey);
-              const Ed25519PrivateKey = yield* Schema.decode(
+              const Ed25519PrivateKey = yield* Schema.decodeUnknownEffect(
                 Ed25519PrivateKeySchema,
               )(value);
               return Ed25519PrivateKey.publicKey();

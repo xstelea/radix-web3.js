@@ -4,32 +4,32 @@ export const PLACEHOLDER_PUBLIC_KEY_HEX =
   '<replace-with-ed25519-public-key-hex>';
 export const PLACEHOLDER_SIGNATURE_HEX = '<replace-with-ed25519-signature-hex>';
 
-export const NetworkSchema = Schema.Literal('mainnet', 'stokenet').pipe(
+export const NetworkSchema = Schema.Literals(['mainnet', 'stokenet']).pipe(
   Schema.brand('Network'),
 );
 export type Network = typeof NetworkSchema.Type;
 
-export const ArtifactScopeSchema = Schema.Literal('local', 'global').pipe(
+export const ArtifactScopeSchema = Schema.Literals(['local', 'global']).pipe(
   Schema.brand('ArtifactScope'),
 );
 export type ArtifactScope = typeof ArtifactScopeSchema.Type;
 
-export const OutputFormatSchema = Schema.Literal('json', 'text').pipe(
+export const OutputFormatSchema = Schema.Literals(['json', 'text']).pipe(
   Schema.brand('OutputFormat'),
 );
 export type OutputFormat = typeof OutputFormatSchema.Type;
 
-export const HexStringSchema = Schema.String.pipe(
-  Schema.pattern(/^[0-9a-fA-F]+$/),
+export const HexStringSchema = Schema.String.check(
+  Schema.isPattern(/^[0-9a-fA-F]+$/),
 );
 export const Ed25519PublicKeyHexSchema = HexStringSchema.pipe(
-  Schema.length(64),
+  Schema.check(Schema.isLengthBetween(64, 64)),
 );
 export const Ed25519SignatureHexSchema = HexStringSchema.pipe(
-  Schema.length(128),
+  Schema.check(Schema.isLengthBetween(128, 128)),
 );
-export const SubintentIdSchema = Schema.String.pipe(
-  Schema.pattern(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/),
+export const SubintentIdSchema = Schema.String.check(
+  Schema.isPattern(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/),
 );
 
 export const PublicKeySchema = Schema.Struct({
@@ -39,10 +39,10 @@ export const PublicKeySchema = Schema.Struct({
 
 const PublicKeyOrPlaceholderSchema = Schema.Struct({
   curve: Schema.Literal('Ed25519'),
-  hex: Schema.Union(
+  hex: Schema.Union([
     Ed25519PublicKeyHexSchema,
     Schema.Literal(PLACEHOLDER_PUBLIC_KEY_HEX),
-  ),
+  ]),
 });
 
 const SignatureValueSchema = Schema.Struct({
@@ -52,13 +52,13 @@ const SignatureValueSchema = Schema.Struct({
 
 const SignatureValueOrPlaceholderSchema = Schema.Struct({
   curve: Schema.Literal('Ed25519'),
-  hex: Schema.Union(
+  hex: Schema.Union([
     Ed25519SignatureHexSchema,
     Schema.Literal(PLACEHOLDER_SIGNATURE_HEX),
-  ),
+  ]),
 });
 
-export const SigningScopeSchema = Schema.Union(
+export const SigningScopeSchema = Schema.Union([
   Schema.Struct({ kind: Schema.Literal('rootIntent') }),
   Schema.Struct({
     kind: Schema.Literal('subintent'),
@@ -66,7 +66,7 @@ export const SigningScopeSchema = Schema.Union(
   }),
   Schema.Struct({ kind: Schema.Literal('notarySignatory') }),
   Schema.Struct({ kind: Schema.Literal('notary') }),
-);
+]);
 
 const HashSchema = Schema.Struct({
   id: Schema.NullOr(Schema.String),
@@ -101,16 +101,20 @@ export const SignatureEntrySchema = Schema.Struct({
   hash: HashSchema,
   signingRequestPath: Schema.optional(Schema.String),
   publicKey: PublicKeySchema.pipe(
-    Schema.filter((value) => value.hex !== PLACEHOLDER_PUBLIC_KEY_HEX, {
-      message: () =>
-        'Replace the public key placeholder before importing signatures',
-    }),
+    Schema.check(
+      Schema.makeFilter((value) => value.hex !== PLACEHOLDER_PUBLIC_KEY_HEX, {
+        message:
+          'Replace the public key placeholder before importing signatures',
+      }),
+    ),
   ),
   signature: SignatureValueSchema.pipe(
-    Schema.filter((value) => value.hex !== PLACEHOLDER_SIGNATURE_HEX, {
-      message: () =>
-        'Replace the signature placeholder before importing signatures',
-    }),
+    Schema.check(
+      Schema.makeFilter((value) => value.hex !== PLACEHOLDER_SIGNATURE_HEX, {
+        message:
+          'Replace the signature placeholder before importing signatures',
+      }),
+    ),
   ),
 });
 
@@ -130,18 +134,20 @@ export const BatchSignatureFileSchema = Schema.Struct({
 export const SubintentsFileSchema = Schema.Struct({
   type: Schema.Literal('subintents'),
   version: Schema.Literal(1),
-  subintents: Schema.Record({
-    key: Schema.String,
-    value: Schema.Struct({
+  subintents: Schema.Record(
+    Schema.String,
+    Schema.Struct({
       manifest: Schema.NonEmptyString,
     }),
-  }).pipe(
-    Schema.filter(
-      (subintents) =>
-        Object.keys(subintents).every((key) =>
-          /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(key),
-        ),
-      { message: () => 'Subintent IDs must be conservative identifiers' },
+  ).pipe(
+    Schema.check(
+      Schema.makeFilter(
+        (subintents) =>
+          Object.keys(subintents).every((key) =>
+            /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(key),
+          ),
+        { message: 'Subintent IDs must be conservative identifiers' },
+      ),
     ),
   ),
 });
@@ -167,18 +173,15 @@ export const NotaryFileSchema = Schema.Struct({
   notaryIsSignatory: Schema.optional(Schema.Boolean),
 });
 
-export const ArtifactStatusSchema = Schema.Union(
+export const ArtifactStatusSchema = Schema.Union([
   Schema.Literal('prepared'),
   Schema.Literal('notarized'),
   Schema.Literal('submitted'),
-);
+]);
 
 export const AuthorizationAnalysisSchema = Schema.Struct({
   rootIntent: Schema.Array(Schema.String),
-  subintents: Schema.Record({
-    key: Schema.String,
-    value: Schema.Array(Schema.String),
-  }),
+  subintents: Schema.Record(Schema.String, Schema.Array(Schema.String)),
 });
 
 export const PreparedTransactionSchema = Schema.Struct({

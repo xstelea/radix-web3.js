@@ -1,4 +1,4 @@
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from '../gatewayApiClient';
 import { chunker } from '../helpers';
@@ -15,16 +15,16 @@ export type GetEntityDetailsOptions =
 export type GetEntityDetailsState =
   GetEntityDetailsVaultAggregatedParameters[2];
 
-export class GetEntityDetailsVaultAggregated extends Effect.Service<GetEntityDetailsVaultAggregated>()(
+export class GetEntityDetailsVaultAggregated extends Context.Service<GetEntityDetailsVaultAggregated>()(
   'GetEntityDetailsVaultAggregated',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(
         'GatewayApi__Endpoint__StateEntityDetailsPageSize',
       ).pipe(Config.withDefault(20));
 
-      return Effect.fnUntraced(function* (
+      return Effect.fn('GetEntityDetailsVaultAggregated')(function* (
         input: GetEntityDetailsInput,
         options: GetEntityDetailsOptions,
         at_ledger_state?: AtLedgerState,
@@ -43,4 +43,9 @@ export class GetEntityDetailsVaultAggregated extends Effect.Service<GetEntityDet
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

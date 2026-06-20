@@ -1,13 +1,13 @@
-import { Config, Effect } from 'effect';
+import { Config, Context, Effect, Layer } from 'effect';
 
 import { GatewayApiClient } from './gatewayApiClient';
 import { chunker } from './helpers';
 import type { AtLedgerState } from './schemas';
 
-export class GetNonFungibleLocationService extends Effect.Service<GetNonFungibleLocationService>()(
+export class GetNonFungibleLocationService extends Context.Service<GetNonFungibleLocationService>()(
   'GetNonFungibleLocationService',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const gatewayClient = yield* GatewayApiClient;
       const pageSize = yield* Config.number(
         'GatewayApi__Endpoint__MaxPageSize',
@@ -33,4 +33,9 @@ export class GetNonFungibleLocationService extends Effect.Service<GetNonFungible
       });
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GatewayApiClient.Default),
+  );
+}

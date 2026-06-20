@@ -1,8 +1,10 @@
-import { it } from '@effect/vitest';
+import { assert, describe, it } from '@effect/vitest';
 import { Effect } from 'effect';
-import { describe, expect } from 'vitest';
 
-import { assembleRootManifest } from './subintentAssembly';
+import {
+  assembleRootManifest,
+  SubintentAssemblyError,
+} from './subintentAssembly';
 
 const rootWithChildren = `
 CALL_METHOD
@@ -27,8 +29,8 @@ describe('subintent assembly', () => {
         childIntentHashes: {},
       });
 
-      expect(assembled.rootManifest).toBe(rootManifest);
-      expect(assembled.subintentOrder).toEqual([]);
+      assert.strictEqual(assembled.rootManifest, rootManifest);
+      assert.deepEqual(assembled.subintentOrder, []);
     }),
   );
 
@@ -42,8 +44,8 @@ describe('subintent assembly', () => {
         },
       });
 
-      expect(assembled.subintentOrder).toEqual(['child_one', 'child-two']);
-      expect(
+      assert.deepEqual(assembled.subintentOrder, ['child_one', 'child-two']);
+      assert.isTrue(
         assembled.rootManifest.trimStart().startsWith(`USE_CHILD
   NamedIntent("child_one")
   Intent("subtxid_child_one")
@@ -53,14 +55,14 @@ USE_CHILD
   NamedIntent("child-two")
   Intent("subtxid_child_two")
 ;`),
-      ).toBe(true);
-      expect(assembled.rootManifest).toContain(rootWithChildren.trim());
+      );
+      assert.include(assembled.rootManifest, rootWithChildren.trim());
     }),
   );
 
   it.effect('fails when the root references a missing child subintent', () =>
     Effect.gen(function* () {
-      const result = yield* Effect.exit(
+      const result = yield* Effect.result(
         assembleRootManifest({
           rootManifest: rootWithChildren,
           childIntentHashes: {
@@ -69,13 +71,18 @@ USE_CHILD
         }),
       );
 
-      expect(result._tag).toBe('Failure');
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.instanceOf(result.failure, SubintentAssemblyError);
+        assert.strictEqual(result.failure.code, 'MISSING_SUBINTENT');
+        assert.strictEqual(result.failure.subintentId, 'child-two');
+      }
     }),
   );
 
   it.effect('fails when a provided child is not yielded by the root', () =>
     Effect.gen(function* () {
-      const result = yield* Effect.exit(
+      const result = yield* Effect.result(
         assembleRootManifest({
           rootManifest: 'YIELD_TO_CHILD NamedIntent("child_one");',
           childIntentHashes: {
@@ -85,7 +92,32 @@ USE_CHILD
         }),
       );
 
-      expect(result._tag).toBe('Failure');
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.instanceOf(result.failure, SubintentAssemblyError);
+        assert.strictEqual(result.failure.code, 'UNREFERENCED_SUBINTENT');
+        assert.strictEqual(result.failure.subintentId, 'unused');
+      }
+    }),
+  );
+
+  it.effect('rejects invalid subintent identifiers before assembly', () =>
+    Effect.gen(function* () {
+      const result = yield* Effect.result(
+        assembleRootManifest({
+          rootManifest: 'YIELD_TO_CHILD NamedIntent("not allowed");',
+          childIntentHashes: {
+            'not allowed': 'subtxid_invalid',
+          },
+        }),
+      );
+
+      assert.strictEqual(result._tag, 'Failure');
+      if (result._tag === 'Failure') {
+        assert.instanceOf(result.failure, SubintentAssemblyError);
+        assert.strictEqual(result.failure.code, 'INVALID_SUBINTENT_ID');
+        assert.strictEqual(result.failure.subintentId, 'not allowed');
+      }
     }),
   );
 });

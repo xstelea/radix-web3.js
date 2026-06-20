@@ -1,8 +1,9 @@
-import { it } from '@effect/vitest';
-import { Effect, Schema } from 'effect';
-import { describe, expect } from 'vitest';
+import { assert, describe, it } from '@effect/vitest';
+import { Schema } from 'effect';
 
 import {
+  PLACEHOLDER_PUBLIC_KEY_HEX,
+  PLACEHOLDER_SIGNATURE_HEX,
   SignatureFileSchema,
   SignatureTemplateSchema,
   SigningRequestSchema,
@@ -11,37 +12,44 @@ import {
 import { workflowTemplate } from './templates';
 
 describe('workflow templates', () => {
-  it.effect('creates valid subintents file templates', () =>
-    Effect.sync(() => {
-      const template = workflowTemplate('subintents');
+  it('creates valid subintents file templates', () => {
+    const template = workflowTemplate('subintents');
 
-      expect(Schema.decodeUnknownSync(SubintentsFileSchema)(template)).toEqual(
-        template,
-      );
-    }),
-  );
+    assert.deepEqual(
+      Schema.decodeUnknownSync(SubintentsFileSchema)(template),
+      template,
+    );
+  });
 
-  it.effect('creates valid signing request templates', () =>
-    Effect.sync(() => {
-      const template = workflowTemplate('signing-request');
+  it('creates valid signing request templates', () => {
+    const template = workflowTemplate('signing-request');
 
-      expect(Schema.decodeUnknownSync(SigningRequestSchema)(template)).toEqual(
-        template,
-      );
-    }),
-  );
+    assert.deepEqual(
+      Schema.decodeUnknownSync(SigningRequestSchema)(template),
+      template,
+    );
+  });
 
-  it.effect('creates valid signature response templates', () =>
-    Effect.sync(() => {
-      const signatureTemplate = workflowTemplate('signature-template');
-      const signatureFile = workflowTemplate('signature-file');
+  it('creates valid signature response templates', () => {
+    const signatureTemplate = workflowTemplate('signature-template');
+    const signatureFile = workflowTemplate('signature-file');
 
-      expect(
-        Schema.decodeUnknownSync(SignatureTemplateSchema)(signatureTemplate),
-      ).toEqual(signatureTemplate);
-      expect(
-        Schema.decodeUnknownSync(SignatureFileSchema)(signatureFile),
-      ).toEqual(signatureFile);
-    }),
-  );
+    const decodedTemplate = Schema.decodeUnknownSync(SignatureTemplateSchema)(
+      signatureTemplate,
+    );
+    const decodedSignatureFile =
+      Schema.decodeUnknownSync(SignatureFileSchema)(signatureFile);
+
+    assert.deepEqual(decodedTemplate, signatureTemplate);
+    assert.strictEqual(
+      decodedTemplate.publicKey.hex,
+      PLACEHOLDER_PUBLIC_KEY_HEX,
+    );
+    assert.strictEqual(
+      decodedTemplate.signature.hex,
+      PLACEHOLDER_SIGNATURE_HEX,
+    );
+    assert.deepEqual(decodedSignatureFile, signatureFile);
+    assert.isEmpty(decodedSignatureFile.signatures);
+  });
 });

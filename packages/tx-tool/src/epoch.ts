@@ -1,6 +1,6 @@
 import { GetLedgerStateService } from '@radix-effects/gateway';
 import { Epoch, type TransactionId } from '@radix-effects/shared';
-import { Data, Effect } from 'effect';
+import { Context, Data, Effect, Layer } from 'effect';
 
 import type { TransactionIntent, TransactionIntentV2 } from './schemas';
 
@@ -18,11 +18,10 @@ export class InvalidStartEpochError extends Data.TaggedError(
   transactionId: TransactionId;
 }> {}
 
-export class EpochService extends Effect.Service<EpochService>()(
+export class EpochService extends Context.Service<EpochService>()(
   '@radix-effects/tx-tool/EpochService',
   {
-    dependencies: [GetLedgerStateService.Default],
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const getLedgerStateService = yield* GetLedgerStateService;
 
       const getCurrentEpoch = () =>
@@ -65,4 +64,9 @@ export class EpochService extends Effect.Service<EpochService>()(
       };
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies.pipe(
+    Layer.provide(GetLedgerStateService.Default),
+  );
+}

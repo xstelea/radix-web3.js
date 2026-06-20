@@ -17,11 +17,22 @@ const parseResponseBody = (text: string): unknown => {
 export const gatewayErrorMessage = (
   label: string,
   response: Response,
-): Effect.Effect<string> =>
+): Effect.Effect<string, unknown> =>
   Effect.gen(function* () {
-    const text = yield* Effect.promise(() => response.text());
+    const text = yield* Effect.tryPromise({
+      try: () => response.text(),
+      catch: (reason) => reason,
+    });
     const body = parseResponseBody(text);
     const detail = body === undefined ? '' : `: ${renderJson(body)}`;
 
     return `${label} failed with status ${response.status}${detail}`;
+  });
+
+export const gatewayResponseJson = (
+  response: Response,
+): Effect.Effect<unknown, unknown> =>
+  Effect.tryPromise({
+    try: () => response.json(),
+    catch: (reason) => reason,
   });

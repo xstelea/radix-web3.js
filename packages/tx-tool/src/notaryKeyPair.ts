@@ -1,13 +1,13 @@
 import type { HexString } from '@radix-effects/shared';
 import { Signature } from '@steleaio/radix-engine-toolkit';
-import { Array as A, Effect, flow, Option } from 'effect';
+import { Array as A, Context, Effect, flow, Layer, Option } from 'effect';
 
 import { Signer } from './signer/signer';
 
-export class NotaryKeyPair extends Effect.Service<NotaryKeyPair>()(
+export class NotaryKeyPair extends Context.Service<NotaryKeyPair>()(
   '@radix-effects/tx-tool/NotaryKeyPair',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const signer = yield* Signer;
 
       return {
@@ -27,4 +27,7 @@ export class NotaryKeyPair extends Effect.Service<NotaryKeyPair>()(
       };
     }),
   },
-) {}
+) {
+  static readonly DefaultWithoutDependencies = Layer.effect(this, this.make);
+  static readonly Default = this.DefaultWithoutDependencies;
+}

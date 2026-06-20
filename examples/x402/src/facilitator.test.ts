@@ -1,5 +1,6 @@
+import { assert, describe, it } from '@effect/vitest';
 import { Effect } from 'effect';
-import { describe, expect, it } from 'vitest';
+
 import { createFacilitatorSettlementBackend } from './facilitator';
 import type { PaymentRequirements } from './paymentRequirements';
 
@@ -19,48 +20,55 @@ const requirements: PaymentRequirements = {
 };
 
 describe('facilitator settlement backend', () => {
-  it('builds sponsored root manifest and waits for CommittedSuccess', async () => {
-    const calls: string[] = [];
-    const settle = createFacilitatorSettlementBackend({
-      feePayerAccount:
-        'account_rdx12fee2he2pm0qdgrwn9nsymr8v3n2dr59u2rwzfq8t2vrlv9av0000',
-      preview: ({ rootManifest }) =>
-        Effect.sync(() => {
-          calls.push('preview');
-          expect(rootManifest).toContain('lock_fee');
-          expect(rootManifest).toContain(
-            'YIELD_TO_CHILD NamedIntent("payment")',
-          );
-          expect(rootManifest).toContain('Intent("subtxid_rdx1paid")');
-        }),
-      submit: () =>
-        Effect.sync(() => {
-          calls.push('submit');
-          return { transactionId: 'txid_rdx1settlement' };
-        }),
-      waitForCommittedSuccess: ({ transactionId }) =>
-        Effect.sync(() => {
-          calls.push(`wait:${transactionId}`);
-        }),
-    });
+  it.effect(
+    'builds sponsored root manifest and waits for CommittedSuccess',
+    () =>
+      Effect.gen(function* () {
+        const calls: string[] = [];
+        const settle = createFacilitatorSettlementBackend({
+          feePayerAccount:
+            'account_rdx12fee2he2pm0qdgrwn9nsymr8v3n2dr59u2rwzfq8t2vrlv9av0000',
+          preview: ({ rootManifest }) =>
+            Effect.sync(() => {
+              calls.push('preview');
+              assert.include(rootManifest, 'lock_fee');
+              assert.include(
+                rootManifest,
+                'YIELD_TO_CHILD NamedIntent("payment")',
+              );
+              assert.include(rootManifest, 'Intent("subtxid_rdx1paid")');
+            }),
+          submit: () =>
+            Effect.sync(() => {
+              calls.push('submit');
+              return { transactionId: 'txid_rdx1settlement' };
+            }),
+          waitForCommittedSuccess: ({ transactionId }) =>
+            Effect.sync(() => {
+              calls.push(`wait:${transactionId}`);
+            }),
+        });
 
-    await expect(
-      Effect.runPromise(
-        settle({
+        const result = yield* settle({
           requirements,
           resourceUrl: requirements.resourceUrl,
           signedPartialTransactionHex: '4d220504',
           payerAccount:
             'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
           subintentHash: 'subtxid_rdx1paid',
-        }),
-      ),
-    ).resolves.toEqual({
-      status: 'CommittedSuccess',
-      payerAccount:
-        'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
-      subintentHash: 'subtxid_rdx1paid',
-    });
-    expect(calls).toEqual(['preview', 'submit', 'wait:txid_rdx1settlement']);
-  });
+        });
+
+        assert.deepStrictEqual(result, {
+          status: 'CommittedSuccess',
+          payerAccount:
+            'account_rdx129a9wuey40lducsne6r8e5q7xmt07068gcede0x0nrwtsnehpkf6zh',
+          subintentHash: 'subtxid_rdx1paid',
+        });
+        assert.deepStrictEqual(calls, [
+          'preview',
+          'submit',
+          'wait:txid_rdx1settlement',
+        ]);
+      }),
+  );
 });
